@@ -1,12 +1,12 @@
 <div align="center">
 
-![OsuPP](https://i.imgur.com/5a0YIEH.png)
+![ParseCore](https://i.imgur.com/35asYBQ.jpeg)
 
 **All-in-one Python library for osu! beatmap parsing, mod handling, and pp calculation. The only osu! lib you'll ever need.**
 
-[![PyPI Version](https://img.shields.io/pypi/v/osupp?style=for-the-badge&color=pink)](https://pypi.org/project/osupp/)
-[![Python](https://img.shields.io/pypi/pyversions/osupp?style=for-the-badge&color=blue)](https://pypi.org/project/osupp/)
-[![License](https://img.shields.io/github/license/O-Lib/osupp?style=for-the-badge&color=green)](LICENSE)
+[![PyPI Version](https://img.shields.io/pypi/v/parsecore?style=for-the-badge&color=pink)](https://pypi.org/project/parsecore/)
+[![Python](https://img.shields.io/pypi/pyversions/parsecore?style=for-the-badge&color=blue)](https://pypi.org/project/parsecore/)
+[![License](https://img.shields.io/github/license/O-Lib/parsecore?style=for-the-badge&color=green)](LICENSE)
 [![Typing](https://img.shields.io/badge/typing-checked-blue?style=for-the-badge)](https://mypy-lang.org/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=for-the-badge&logo=pre-commit)](https://pre-commit.com/)
 [![Code Style](https://img.shields.io/badge/code%20style-ruff-orange?style=for-the-badge)](https://docs.astral.sh/ruff/)
@@ -28,13 +28,13 @@
 ### Installation
 
 ```bash
-pip install osupp
+pip install parsecore
 ```
 
 Or with [uv](https://github.com/astral-sh/uv):
 
 ```bash
-uv add osupp
+uv add parsecore
 ```
 
 **Requires Python 3.10+**
@@ -46,7 +46,7 @@ uv add osupp
 ### Beatmap Parsing
 
 ```python
-from osupp.Beatmap import Beatmap
+from parsecore.Beatmap import Beatmap
 
 beatmap = Beatmap.from_path("path/to/map.osu")
 
@@ -65,7 +65,7 @@ for tp in beatmap.timing_points.control_points.timing_points:
 ### Mod Handling
 
 ```python
-from osupp.Mods import GameMods, GameMode, HardRockOsu, DoubleTimeOsu
+from parsecore.Mods import GameMods, GameMode, HardRockOsu, DoubleTimeOsu
 
 mods = GameMods([HardRockOsu(), DoubleTimeOsu()])
 
@@ -77,7 +77,7 @@ print(legacy.value)
 mods = GameMods.from_acronyms(["HD", "DT"], GameMode.OSU)
 
 # Intermode mods
-from osupp.Mods import GameModsIntermode
+from parsecore.Mods import GameModsIntermode
 intermode = GameModsIntermode.from_acronyms(["HD", "NC"])
 ```
 
@@ -86,7 +86,7 @@ intermode = GameModsIntermode.from_acronyms(["HD", "NC"])
 ### Project Structure
 
 ```
-osupp/
+parsecore/
 ├── Beatmap/ # .osu file parsing and encoding
 │   ├── beatmap.py
 │   ├── reader.py
