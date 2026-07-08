@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'parsecore/**/*.py'
+      - 'pyproject.toml'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'parsecore/**/*.py'
+      - 'pyproject.toml'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Install & import (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+
+      - name: Import smoke test
+        shell: python {0}
+        run: |
+          import parsecore
+          import parsecore.Beatmap
+          from parsecore.Performance import Beatmap, Difficulty, Performance, GameMode
+          from parsecore.Mods import GameMods, GameMode as ModsGameMode
+
+          mods = GameMods.from_acronyms("HDDT", ModsGameMode.Osu)
+          assert mods.as_legacy().bits() == 72
+          assert mods.clock_rate() == 1.5
+          print("smoke ok")
+
+  lint:
+    # Advisory only: the codebase predates the ruff config, so findings
+    # are reported but do not fail the build.
+    name: ruff (advisory)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Run ruff
+        run: |
+          pip install ruff
+          ruff check parsecore/ --output-format=github
