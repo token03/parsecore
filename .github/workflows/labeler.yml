@@ -4,7 +4,7 @@ on:
   issues:
     types: [opened]
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, edited, synchronize, reopened, ready_for_review, converted_to_draft]
 
 jobs:
   triage:
@@ -22,5 +22,68 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              labels: ['status: needs triage']
+              labels: ['Status: Needs Triage']
             })
+
+      - name: Label pull requests by title and changed paths
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            const number = pr.number;
+
+            // --- Type label from the conventional-commit title prefix
+            const TYPE_MAP = {
+              feat: 'Type: Feature',
+              fix: 'Type: Bug',
+              docs: 'Type: Docs',
+              style: 'Type: Refactor',
+              refactor: 'Type: Refactor',
+              perf: 'Type: Performance',
+              test: 'Type: Test',
+              chore: 'Type: Chore',
+              revert: 'Type: Revert',
+            };
+            const labels = new Set();
+            const m = pr.title.match(/^(\w+)(\(.+\))?(!)?:/);
+            if (m && TYPE_MAP[m[1]]) labels.add(TYPE_MAP[m[1]]);
+            if (m && m[3] === '!') labels.add('Breaking Change');
+
+            // --- Scope labels from changed paths
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner, repo, pull_number: number, per_page: 100,
+            });
+            const SCOPE_RULES = [
+              [/^parsecore\/Beatmap\//, 'Scope: Beatmap'],
+              [/^parsecore\/Mods\//, 'Scope: Mods'],
+              [/^parsecore\/Performance\//, 'Scope: PP'],
+              [/^\.github\//, 'Scope: CI'],
+              [/^pyproject\.toml$/, 'Scope: Packaging'],
+              [/\.md$/i, 'Type: Docs'],
+            ];
+            for (const f of files) {
+              for (const [pattern, label] of SCOPE_RULES) {
+                if (pattern.test(f.filename)) labels.add(label);
+              }
+            }
+
+            // --- Draft state (mutually exclusive pair)
+            labels.add(pr.draft ? 'PR: Draft' : 'PR: Ready For Review');
+            const current = new Set(pr.labels.map(l => l.name));
+            const exclusive = pr.draft ? 'PR: Ready For Review' : 'PR: Draft';
+            if (current.has(exclusive)) {
+              await github.rest.issues.removeLabel({
+                owner, repo, issue_number: number, name: exclusive,
+              }).catch(() => {});
+            }
+
+            // Only add missing labels; never remove manually set ones.
+            const toAdd = [...labels].filter(l => !current.has(l));
+            if (toAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: number, labels: toAdd,
+              });
+            }

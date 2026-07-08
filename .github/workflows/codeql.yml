@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'osupp/**/*.py'
+      - 'parsecore/**/*.py'
   pull_request:
     branches: [main]
   schedule:
@@ -37,7 +37,7 @@ jobs:
               pull_number: context.payload.pull_request.number,
             });
             const hasPython = files.some(f =>
-              (f.filename.startsWith('osupp/') || f.filename.startsWith('tests/')) &&
+              (f.filename.startsWith('parsecore/') || f.filename.startsWith('tests/')) &&
               f.filename.endsWith('.py')
             );
             core.setOutput('has_python', hasPython ? 'true' : 'false');
@@ -66,9 +66,9 @@ jobs:
           queries: security-and-quality
           config: |
             paths:
-              - osupp
+              - parsecore
             paths-ignore:
-              - osupp/Mods/generated_mods.py
+              - parsecore/Mods/generated_mods.py
             query-filters:
               - exclude:
                   tags contain: experimental

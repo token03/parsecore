@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'osupp/**/*.py'
+      - 'parsecore/**/*.py'
       - 'tests/**/*.py'
   pull_request:
     branches: [main]
     paths:
-      - 'osupp/**/*.py'
+      - 'parsecore/**/*.py'
       - 'tests/**/*.py'
 
 jobs:
@@ -48,11 +48,11 @@ jobs:
       - name: Run tests
         if: steps.tests.outputs.has_tests == 'true'
         run: |
-          pytest --cov=osupp --cov-report=xml --cov-report=term-missing
+          pytest --cov=parsecore --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
         if: steps.tests.outputs.has_tests == 'true'
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml

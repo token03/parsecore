@@ -1,0 +1,211 @@
+name: ParseCore Bot
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+jobs:
+  review:
+    name: Automated PR review
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run checks & post verdict
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const cfg = JSON.parse(
+              fs.readFileSync('.github/parsecore-bot/config.json', 'utf8')
+            );
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            const number = pr.number;
+            const body = pr.body || '';
+            const emoji = cfg.avatar_emoji;
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner, repo, pull_number: number, per_page: 100,
+            });
+
+            // results: { name, status: 'pass'|'fail'|'warn'|'skip', message }
+            const results = [];
+
+            // ------------------------------------------------ 1. title
+            if (cfg.checks.title.enabled) {
+              const re = new RegExp(cfg.checks.title.pattern);
+              const ok = re.test(pr.title);
+              results.push({
+                name: 'Conventional title',
+                status: ok ? 'pass' : 'fail',
+                blocking: cfg.checks.title.blocking,
+                message: ok ? cfg.checks.title.pass : cfg.checks.title.fail,
+              });
+            }
+
+            // ------------------------------------------------ 2. template
+            if (cfg.checks.template.enabled) {
+              const problems = [];
+
+              // Summary: text between "## Summary" and the next heading/divider
+              const summaryMatch = body.match(/## Summary([\s\S]*?)(\n#|\n---|$)/);
+              const summaryText = (summaryMatch ? summaryMatch[1] : '')
+                .replace(/<!--[\s\S]*?-->/g, '')
+                .replace(/Closes #/g, '')
+                .trim();
+              if (summaryText.length < 10) problems.push('summary missing');
+
+              // At least one "Type of Change" checkbox ticked
+              if (!/- \[x\]/i.test(body)) problems.push('no checkbox ticked');
+
+              const ok = problems.length === 0;
+              results.push({
+                name: 'PR template',
+                status: ok ? 'pass' : 'fail',
+                blocking: cfg.checks.template.blocking,
+                message: ok
+                  ? cfg.checks.template.pass
+                  : `${cfg.checks.template.fail} (${problems.join(', ')})`,
+              });
+            }
+
+            // ------------------------------------------------ 3. parity
+            if (cfg.checks.parity.enabled) {
+              const touchesPerf = files.some(f =>
+                f.filename.startsWith('parsecore/Performance/') &&
+                f.filename.endsWith('.py')
+              );
+              if (!touchesPerf) {
+                results.push({
+                  name: 'Parity statement',
+                  status: 'skip',
+                  blocking: false,
+                  message: cfg.checks.parity.skip,
+                });
+              } else {
+                const parityMatch = body.match(/### Parity([\s\S]*?)(\n#|\n---|$)/);
+                const parityText = (parityMatch ? parityMatch[1] : '')
+                  .replace(/<!--[\s\S]*?-->/g, '')
+                  .trim();
+                const ok = parityText.length > 5 && !/^N\/?A\.?$/i.test(parityText);
+                results.push({
+                  name: 'Parity statement',
+                  status: ok ? 'pass' : 'fail',
+                  blocking: cfg.checks.parity.blocking,
+                  message: ok ? cfg.checks.parity.pass : cfg.checks.parity.fail,
+                });
+              }
+            }
+
+            // ------------------------------------------------ 4. comment policy
+            if (cfg.checks.comment_policy.enabled) {
+              const skipped = body.includes(cfg.checks.comment_policy.skip_marker);
+              if (skipped) {
+                results.push({
+                  name: 'Comment-free code',
+                  status: 'skip',
+                  blocking: false,
+                  message: 'Skipped via `' + cfg.checks.comment_policy.skip_marker + '`',
+                });
+              } else {
+                const offenders = [];
+                for (const f of files) {
+                  if (!f.filename.startsWith('parsecore/')) continue;
+                  if (!f.filename.endsWith('.py')) continue;
+                  if (!f.patch) continue;
+                  for (const line of f.patch.split('\n')) {
+                    if (/^\+\s*#/.test(line)) {
+                      offenders.push(f.filename);
+                      break;
+                    }
+                  }
+                }
+                const ok = offenders.length === 0;
+                results.push({
+                  name: 'Comment-free code',
+                  status: ok ? 'pass' : 'fail',
+                  blocking: cfg.checks.comment_policy.blocking,
+                  message: ok
+                    ? cfg.checks.comment_policy.pass
+                    : `${cfg.checks.comment_policy.fail}\n  Files: ${[...new Set(offenders)].map(f => '`' + f + '`').join(', ')}`,
+                });
+              }
+            }
+
+            // ------------------------------------------------ 5. size
+            if (cfg.checks.size.enabled) {
+              const added = files.reduce((s, f) => s + (f.additions || 0), 0);
+              const limit = cfg.checks.size.warn_added_lines;
+              const ok = added <= limit;
+              results.push({
+                name: 'PR size',
+                status: ok ? 'pass' : 'warn',
+                blocking: false,
+                message: ok
+                  ? `${cfg.checks.size.pass} (+${added} lines)`
+                  : cfg.checks.size.fail.replace('{limit}', String(limit)) + ` (+${added} lines)`,
+              });
+            }
+
+            // ------------------------------------------------ verdict & comment
+            const hardFail = results.some(r => r.status === 'fail' && r.blocking);
+            const hasWarn = results.some(r => r.status === 'warn' || (r.status === 'fail' && !r.blocking));
+
+            const ICON = { pass: '✅', fail: '❌', warn: '⚠️', skip: '➖' };
+            const rows = results
+              .map(r => `| ${ICON[r.status]} | **${r.name}** | ${r.message.split('\n')[0]} |`)
+              .join('\n');
+            const details = results
+              .filter(r => r.status === 'fail')
+              .map(r => `- ${ICON[r.status]} **${r.name}**: ${r.message}`)
+              .join('\n');
+
+            const fill = s => s
+              .replaceAll('{bot_name}', cfg.bot_name)
+              .replaceAll('{emoji}', emoji)
+              .replaceAll('{author}', pr.user.login);
+
+            const verdict = hardFail
+              ? cfg.templates.verdict_fail
+              : hasWarn ? cfg.templates.verdict_warn : cfg.templates.verdict_pass;
+
+            const MARKER = '<!-- parsecore-bot -->';
+            const comment = [
+              MARKER,
+              fill(cfg.templates.header),
+              fill(verdict),
+              '',
+              '| | Check | Result |',
+              '|---|---|---|',
+              rows,
+              details ? '\n### What to fix\n\n' + details : '',
+              fill(cfg.templates.footer),
+            ].join('\n');
+
+            // sticky comment: update mine if it exists, else create
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number: number, per_page: 100,
+            });
+            const mine = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes(MARKER)
+            );
+            if (mine) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: mine.id, body: comment,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: number, body: comment,
+              });
+            }
+
+            if (hardFail) {
+              core.setFailed(cfg.bot_name + ': blocking checks failed — see PR comment.');
+            }
