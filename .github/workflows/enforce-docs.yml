@@ -33,7 +33,7 @@ jobs:
             const changedFiles = files.map(f => f.filename);
 
             const hasPublicApiChanges = changedFiles.some(f =>
-              f.startsWith('osupp/') &&
+              f.startsWith('parsecore/') &&
               f.endsWith('.py') &&
               !f.includes('generated_mods') &&
               !f.includes('__init__') &&
