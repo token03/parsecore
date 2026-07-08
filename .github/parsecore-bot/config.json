@@ -1,0 +1,47 @@
+{
+  "bot_name": "ParseCore Bot",
+  "avatar_emoji": "🤖",
+  "templates": {
+    "header": "## {emoji} {bot_name} — PR Review\n\nHi @{author}! I checked this pull request automatically. Here is my verdict:\n",
+    "verdict_pass": "### ✅ Looks good!\n\nAll automated checks passed. A maintainer will review your changes soon thanks for contributing! 💜",
+    "verdict_fail": "### ❌ Not ready yet\n\nSome checks did not pass. Please fix the points marked with ❌ below and I will re-check automatically on your next push or edit.",
+    "verdict_warn": "### ⚠️ Looks okay, with remarks\n\nNo blocking problems, but please take a look at the ⚠️ items below.",
+    "footer": "\n---\n<sub>{emoji} I am not a human I re-run on every push and edit. Configure me in <code>.github/parsecore-bot/config.json</code>. Override switches: <code>[skip-comment-check]</code>, <code>[skip-docs]</code> in the PR description.</sub>"
+  },
+  "checks": {
+    "title": {
+      "enabled": true,
+      "blocking": true,
+      "pattern": "^(feat|fix|docs|style|refactor|perf|test|chore|revert)(\\((beatmap|mods|pp|ci|packaging)\\))?(!)?: .{1,72}$",
+      "pass": "PR title follows Conventional Commits",
+      "fail": "PR title must follow Conventional Commits: `type(scope): subject` e.g. `fix(pp): correct taiko convert scroll speed`. Allowed types: feat, fix, docs, style, refactor, perf, test, chore, revert. Allowed scopes: beatmap, mods, pp, ci, packaging."
+    },
+    "template": {
+      "enabled": true,
+      "blocking": true,
+      "pass": "PR template is filled out",
+      "fail": "Please fill out the PR template: write a **Summary**, tick at least one **Type of Change**, and complete the **Checklist**."
+    },
+    "parity": {
+      "enabled": true,
+      "blocking": true,
+      "pass": "Parity section provided for Performance changes",
+      "fail": "This PR touches `parsecore/Performance/` but the **Parity** section is empty or `N/A`. Please state which official reference code (ppy/osu file + version) the change mirrors and confirm the parity suite passes with **zero differences**.",
+      "skip": "No `parsecore/Performance/` changes parity statement not required"
+    },
+    "comment_policy": {
+      "enabled": true,
+      "blocking": true,
+      "pass": "No inline comments added to parsecore code",
+      "fail": "This PR adds `#` comments inside `parsecore/`. The codebase is intentionally comment-free (license header only) — please move explanations into the PR description instead. Add `[skip-comment-check]` to the PR description if this is a false positive.",
+      "skip_marker": "[skip-comment-check]"
+    },
+    "size": {
+      "enabled": true,
+      "blocking": false,
+      "warn_added_lines": 800,
+      "pass": "PR size is reviewable",
+      "fail": "This PR adds more than {limit} lines. Consider splitting it into smaller, focused PRs large diffs slow down review and increase parity risk."
+    }
+  }
+}
