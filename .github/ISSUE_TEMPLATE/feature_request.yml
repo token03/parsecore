@@ -1,0 +1,29 @@
+name: ✨ Feature Request
+description: Suggest new functionality for parsecore
+labels: ["Type: Feature", "Status: Needs Triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What can't you do right now? Describe the problem, not just the solution.
+      placeholder: I want to compute pp for every object of a map incrementally, but ...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API
+      description: How would you like to use it? A code example helps a lot.
+      render: python
+      placeholder: |
+        gradual = OsuGradualPerformance(Difficulty().mods(64), bm)
+        for attrs in gradual:
+            print(attrs.pp)
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: I currently work around it by calling passed_objects(n) in a loop, which recalculates everything each time...
