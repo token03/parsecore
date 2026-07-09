@@ -3,11 +3,16 @@ sd_hide_title: true
 ---
 
 ```{raw} html
-<div class="pc-hero">
+<section class="pc-hero" aria-label="parsecore introduction">
+  <div class="pc-hero__eyebrow">Stable Python library for osu! tooling</div>
   <h1>parsecore</h1>
   <p>The all-in-one Python library for osu! beatmap parsing, mod handling, and
   performance-point calculation — bit-exact with the official osu! algorithm.</p>
-</div>
+  <div class="pc-hero__actions">
+    <a class="pc-button pc-button--primary" href="installation.html">Install parsecore</a>
+    <a class="pc-button" href="quickstart/pp.html">Quickstart</a>
+  </div>
+</section>
 ```
 
 **parsecore** parses `.osu` files, models every osu! mod, and computes star ratings
@@ -17,11 +22,12 @@ implementation — currently the **2026 Q2 pp/star-rating rework** (`2026.702.1`
 
 ::::{grid} 1 2 2 2
 :gutter: 3
-:class-container: sd-mb-4
+:class-container: pc-card-grid sd-mb-4
 
 :::{grid-item-card} 🚀 Installation
 :link: installation
 :link-type: doc
+:class-card: pc-feature-card
 
 Get parsecore from PyPI and be ready in seconds.
 :::
@@ -29,6 +35,7 @@ Get parsecore from PyPI and be ready in seconds.
 :::{grid-item-card} 🎯 Quickstart
 :link: quickstart/pp
 :link-type: doc
+:class-card: pc-feature-card
 
 Compute pp and star ratings in just a few lines.
 :::
@@ -36,6 +43,7 @@ Compute pp and star ratings in just a few lines.
 :::{grid-item-card} 🧠 How pp works
 :link: guide/how-pp-works
 :link-type: doc
+:class-card: pc-feature-card
 
 The parse → convert → skills → performance pipeline.
 :::
@@ -43,6 +51,7 @@ The parse → convert → skills → performance pipeline.
 :::{grid-item-card} 📖 API Reference
 :link: api/performance
 :link-type: doc
+:class-card: pc-feature-card
 
 Every class and function, generated from the source.
 :::
@@ -51,7 +60,6 @@ Every class and function, generated from the source.
 
 ## Why parsecore?
 
-```{eval-rst}
 - **Bit-exact** verified identical to the official osu! C# implementation across a
   4,400+ case test matrix (all rulesets, mods, converts, lazer & stable scores).
 - **Up to date** implements the 2026 Q2 rework: the new Reading skill, Snap/Flow aim,
@@ -59,7 +67,6 @@ Every class and function, generated from the source.
 - **Complete** parsing, mods, star rating and pp for osu!, taiko, catch and mania,
   including faithful osu! → other-mode converts.
 - **Type-safe & dependency-light** fully typed, mypy-checked, pure-Python core.
-```
 
 ```{toctree}
 :hidden:
