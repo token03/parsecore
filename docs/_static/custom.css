@@ -1,0 +1,86 @@
+:root {
+  --pc-mauve: #cba6f7;
+  --pc-lavender: #b4befe;
+  --pc-pink: #f5c2e7;
+  --pc-radius: 10px;
+}
+
+/* Rounded, softly-bordered code blocks */
+.highlight pre,
+div[class^="highlight"] {
+  border-radius: var(--pc-radius);
+}
+body[data-theme="dark"] div[class^="highlight"] {
+  border: 1px solid #313244;
+}
+
+/* Inline code a touch more prominent */
+code.literal {
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+}
+
+/* Sidebar brand / title */
+.sidebar-brand-text {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* Gradient hero used on the landing page (`.pc-hero`) */
+.pc-hero {
+  border-radius: 16px;
+  padding: 2.4rem 2rem;
+  margin-bottom: 2rem;
+  background: linear-gradient(135deg, rgba(203, 166, 247, 0.18), rgba(180, 190, 254, 0.10));
+  border: 1px solid rgba(203, 166, 247, 0.35);
+}
+.pc-hero h1 {
+  margin-top: 0;
+  font-size: 2.4rem;
+  background: linear-gradient(90deg, var(--pc-mauve), var(--pc-lavender));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.pc-hero p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 0;
+}
+
+/* sphinx-design cards: purple hover lift */
+.sd-card {
+  border-radius: 14px !important;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.sd-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--pc-mauve) !important;
+}
+.sd-card-title {
+  font-weight: 700;
+}
+
+/* Buttons */
+.sd-btn-primary {
+  background-color: var(--pc-mauve) !important;
+  border-color: var(--pc-mauve) !important;
+  color: #1e1e2e !important;
+  border-radius: 8px !important;
+}
+
+/* API signatures: rounded, subtle background */
+dl.py > dt {
+  border-radius: 8px;
+}
+
+/* Version badge in the sidebar */
+.sidebar-version {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--pc-mauve);
+  border: 1px solid var(--pc-mauve);
+}

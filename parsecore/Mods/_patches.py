@@ -138,13 +138,12 @@ def _patch_gamemods():
             intermode = GameModsIntermode.parse(raw)
             if mode is not None:
                 return intermode.with_mode(mode)
-            for _m_try in (None,):
-                for item in intermode:
-                    result.insert(
-                        GameMod.new(str(item), mode)
-                        if mode
-                        else _guess_mode_for_acronym(str(item))
-                    )
+            for item in intermode:
+                result.insert(
+                    GameMod.new(str(item), mode)
+                    if mode
+                    else _guess_mode_for_acronym(str(item))
+                )
             return result
         if isinstance(raw, int):
             from .game_mods_intermode import GameModsIntermode

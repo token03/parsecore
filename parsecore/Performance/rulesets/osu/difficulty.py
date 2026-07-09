@@ -33,7 +33,6 @@ from ...data.attributes import AdjustedBeatmapAttributes, as_override
 from ...data.mode import GameMode
 from ...data.mods import PerformanceMods
 from ...utils import lerp, norm, reverse_lerp
-from .convert import convert_objects
 from .hit_objects import (
     OsuDifficultyObject,
     OsuDifficultyObjects,
@@ -380,6 +379,8 @@ def calculate_difficulty(
     if reflection is None:
         from ...data.mods import Reflection
         reflection = Reflection.NONE
+
+    from .convert import convert_objects
 
     osu_objects = convert_objects(
         beatmap=pm,
