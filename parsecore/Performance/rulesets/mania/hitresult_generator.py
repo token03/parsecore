@@ -1,4 +1,5 @@
-"""
+"""Generation of mania hit-result counts from partial score information.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -29,6 +30,7 @@ from dataclasses import dataclass
 
 @dataclass(slots=True)
 class ManiaHitResults:
+    """A complete set of mania hit-result counts (geki/300/katu/100/50/miss)."""
     n320: int = 0
     n300: int = 0
     n200: int = 0
@@ -37,9 +39,11 @@ class ManiaHitResults:
     misses: int = 0
 
     def total_hits(self) -> int:
+        """Return the total number of judged objects."""
         return self.n320 + self.n300 + self.n200 + self.n100 + self.n50 + self.misses
 
     def accuracy(self, classic: bool) -> float:
+        """Return the accuracy in the ``0``-``1`` range."""
         total_hits = self.total_hits()
         if total_hits == 0:
             return 0.0
@@ -55,6 +59,7 @@ class ManiaHitResults:
         return numerator / denominator
 
 def _round_ties_even(x: float) -> int:
+    """Round half-to-even (banker's rounding), matching osu!/C#."""
     return int(round(x))
 
 def generate_hitresults(
@@ -68,6 +73,7 @@ def generate_hitresults(
         explicit_n100: int | None,
         explicit_n50: int | None,
 ) -> ManiaHitResults:
+    """Generate a complete mania hit-result state from the requested inputs."""
     total_hits = n_objects
     misses = target_misses if target_misses is not None else 0
     misses = min(misses, total_hits)

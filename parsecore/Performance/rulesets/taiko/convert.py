@@ -1,4 +1,5 @@
-"""
+"""Conversion of parsed objects into osu!taiko hit objects.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -49,6 +50,7 @@ _F64_EPSILON = 2.220446049250313e-16
 
 
 def _as_u32(x: float) -> int:
+    """Cast a float to an unsigned 32-bit integer, saturating like Rust ``as u32``."""
     if math.isnan(x):
         return 0
     if x <= 0.0:
@@ -59,6 +61,7 @@ def _as_u32(x: float) -> int:
 
 
 def _insert_effect_point(points: list[EffectPoint], ep: EffectPoint) -> None:
+    """Insert an effect point into a time-sorted list (replacing an exact-time match)."""
     lo, hi = 0, len(points)
     while lo < hi:
         mid = (lo + hi) // 2
@@ -77,6 +80,18 @@ def convert_to_taiko_objects(
         pm: PerformanceBeatmap,
         mods: "PerformanceMods",
 ) -> list[TaikoObject]:
+    """Convert a beatmap's objects into taiko hit objects.
+
+    For converts, sliders may be split into a run of don/kat circles and their
+    scroll-speed effect points are inserted (the reading skill depends on these).
+
+    Args:
+        pm: The performance beatmap.
+        mods: The mods (unused for object shape; kept for API symmetry).
+
+    Returns:
+        The taiko objects in time order.
+    """
     out: list[TaikoObject] = []
     is_convert = pm.is_convert
 
@@ -136,6 +151,21 @@ def _maybe_split_slider(
         slider: Slider,
         slider_velocity: float,
 ) -> list[tuple[float, int]] | None:
+    """Return the tick circles a slider splits into, or ``None`` to keep it whole.
+
+    Reproduces osu!-stable's drum-roll-to-hits conversion (tick spacing, velocity
+    and the ``2 * beat_len`` split threshold).
+
+    Args:
+        pm: The performance beatmap.
+        obj: The slider hit object.
+        slider: The slider path data.
+        slider_velocity: The active slider velocity multiplier.
+
+    Returns:
+        A list of ``(time, hit_sound)`` tick circles, or ``None`` if the slider
+        stays a drum roll.
+    """
     spans = float(slider.span_count)
     dist = slider.expected_dist if slider.expected_dist is not None else 0.0
     dist *= VELOCITY_MULTIPLIER

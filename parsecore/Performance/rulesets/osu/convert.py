@@ -1,4 +1,5 @@
-"""
+"""Preparation of osu! objects for calculation (stacking and mod reflection).
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -47,6 +48,15 @@ _STACK_DISTANCE: float = 3.0
 def prepare_beatmap(
         difficulty: "Difficulty", beatmap: "PerformanceBeatmap"
 ) -> "PerformanceBeatmap":
+    """Convert and stack a beatmap's objects ready for the osu! calculators.
+
+    Args:
+        pm: The performance beatmap.
+        mods: The mods and clock rate.
+
+    Returns:
+        The prepared osu! objects.
+    """
     return beatmap
 
 def convert_objects(
@@ -57,6 +67,7 @@ def convert_objects(
         take: int,
         attrs: "OsuDifficultyAttributes",
 ) -> list[OsuObject]:
+    """Build osu! objects from the beatmap and apply mod reflections."""
     osu_objects = [OsuObject.new(h, beatmap, reflection) for h in beatmap.hit_objects]
 
     for obj in osu_objects[: max(take, 0)]:
@@ -99,6 +110,7 @@ def convert_objects(
     return osu_objects
 
 def _new_stacking(hit_objects: list[OsuObject], stack_threshold: float) -> None:
+    """Apply osu!lazer's stacking algorithm (format v6+)."""
     if not hit_objects:
         return
 
@@ -177,6 +189,7 @@ def _new_stacking(hit_objects: list[OsuObject], stack_threshold: float) -> None:
                     obj_i_idx = n
 
 def _old_stacking(hit_objects: list[OsuObject], stack_threshold: float) -> None:
+    """Apply osu!-stable's legacy stacking algorithm (pre-v6)."""
     for i in range(len(hit_objects)):
         h_i = hit_objects[i]
         if h_i.stack_height != 0 and not h_i.is_slider():

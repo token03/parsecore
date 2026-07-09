@@ -1,4 +1,5 @@
-"""
+"""osu!taiko star-rating calculation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -36,6 +37,7 @@ from .skills import create_taiko_difficulty_objects, eval_skills, run_skills
 
 @dataclass(slots=True)
 class TaikoDifficultyAttributes:
+    """Difficulty attributes of a taiko beatmap (stars, per-skill values, hit windows)."""
     stamina: float = 0.0
     rhythm: float = 0.0
     color: float = 0.0
@@ -66,6 +68,15 @@ def calculate_difficulty(
         passed_objects: int | None = None,
         **_: Any,
 ) -> TaikoDifficultyAttributes:
+    """Compute the taiko difficulty attributes for a beatmap and mods.
+
+    Args:
+        pm: The performance beatmap.
+        mods: The mods and clock rate.
+
+    Returns:
+        The taiko difficulty attributes.
+    """
     adjusted = AdjustedBeatmapAttributes.create(
         base_cs=pm.base_cs, base_ar=pm.base_ar,
         base_od=pm.base_od, base_hp=pm.base_hp,

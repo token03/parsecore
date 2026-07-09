@@ -1,4 +1,5 @@
-"""
+"""Post-mod beatmap attributes and hit-window computation (AR/OD/CS/HP).
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -38,6 +39,17 @@ _GIVEN = "given"
 _FIXED = "fixed"
 
 def _difficulty_range(difficulty: float, min_val: float, mid_val: float, max_val: float) -> float:
+    """Map a difficulty value to a time window via osu!'s piecewise-linear curve.
+
+    Args:
+        difficulty: The AR/OD value.
+        min_val: The window at difficulty 0.
+        mid_val: The window at difficulty 5.
+        max_val: The window at difficulty 10.
+
+    Returns:
+        The interpolated time window in milliseconds.
+    """
     if difficulty > 5.0:
         return mid_val + (max_val - mid_val) * (difficulty - 5.0) / 5.0
     if difficulty < 5.0:
@@ -45,6 +57,17 @@ def _difficulty_range(difficulty: float, min_val: float, mid_val: float, max_val
     return mid_val
 
 def _inverse_difficulty_range(time: float, min_val: float, mid_val: float, max_val: float) -> float:
+    """Map a time window back to a difficulty value (inverse of the curve).
+
+    Args:
+        time: The time window in milliseconds.
+        min_val: The window at difficulty 0.
+        mid_val: The window at difficulty 5.
+        max_val: The window at difficulty 10.
+
+    Returns:
+        The corresponding AR/OD value.
+    """
     if time > mid_val:
         return 5.0 - (time - mid_val) * 5.0 / (min_val - mid_val)
     if time < mid_val:
@@ -53,14 +76,17 @@ def _inverse_difficulty_range(time: float, min_val: float, mid_val: float, max_v
 
 @dataclass(slots=True)
 class GameModeHitWindows:
+    """The great/ok/meh window boundaries and the mode's difficulty curve."""
     min: float
     mid: float
     max: float
 
     def difficulty_range(self, difficulty: float) -> float:
+        """Convert a difficulty to its time window for this mode."""
         return _difficulty_range(difficulty, self.min, self.mid, self.max)
 
     def inverse_difficulty_range(self, time: float) -> float:
+        """Convert a time window back to a difficulty for this mode."""
         return _inverse_difficulty_range(time, self.min, self.mid, self.max)
 
 AR_WINDOWS = GameModeHitWindows(min=1800.0, mid=1200.0, max=450.0)
@@ -80,6 +106,7 @@ MANIA_MEH = GameModeHitWindows(min=151.0, mid=136.0, max=121.0)
 
 @dataclass(slots=True)
 class HitWindows:
+    """The resolved hit windows (great/ok/meh) for a beatmap."""
     ar: float | None = None
     od_perfect: float | None = None
     od_great: float | None = None
@@ -89,6 +116,7 @@ class HitWindows:
 
 @dataclass(slots=True)
 class AdjustedBeatmapAttributes:
+    """Beatmap AR/CS/OD/HP and clock rate after mods and difficulty overrides."""
     cs: float
     ar: float
     od: float
@@ -116,7 +144,21 @@ class AdjustedBeatmapAttributes:
             cs_override: "tuple[float, bool] | None" = None,
             hp_override: "tuple[float, bool] | None" = None,
     ) -> "AdjustedBeatmapAttributes":
+        """Compute the adjusted attributes for a beatmap and mods.
+
+        Args:
+            base_cs: The map's raw circle size.
+            base_ar: The map's raw approach rate.
+            base_od: The map's raw overall difficulty.
+            base_hp: The map's raw HP drain.
+            mode: The (possibly converted) ruleset.
+            mods: The mods and clock rate to apply.
+
+        Returns:
+            The adjusted attributes, including derived hit windows.
+        """
         def _state(base: float, clamp01: bool, override: "tuple[float, bool] | None"):
+            """Return the running value/override state for one attribute."""
             if override is not None:
                 value, fixed = override
                 return [f32(max(-20.0, min(20.0, value))), _FIXED if fixed else _GIVEN]
@@ -130,6 +172,7 @@ class AdjustedBeatmapAttributes:
         hp_s = _state(base_hp, False, hp_override)
 
         def _try_mutate(state, fn) -> None:
+            """Apply a mutation to an attribute unless it is a fixed override."""
             if state[1] != _FIXED:
                 state[0] = fn(state[0])
 
@@ -186,6 +229,14 @@ class AdjustedBeatmapAttributes:
         )
 
 def as_override(value) -> "tuple[float, bool] | None":
+    """Normalise an override argument to a ``(value, fixed)`` pair or ``None``.
+
+    Args:
+        value: A raw value, a ``(value, fixed)`` tuple, or ``None``.
+
+    Returns:
+        The normalised override, or ``None`` if unset.
+    """
     if value is None:
         return None
     if isinstance(value, tuple):
@@ -202,6 +253,7 @@ def _compute_hit_windows(
         is_convert: bool,
         classic_and_not_v2: bool,
 ) -> HitWindows:
+    """Build the osu!/taiko/catch hit windows from difficulty settings."""
     ar, ar_kind = ar_state
     od, od_kind = od_state
 
@@ -214,6 +266,7 @@ def _compute_hit_windows(
             hw.ar = AR_WINDOWS.difficulty_range(float(ar)) / clock_rate
 
     def osu_taiko_set_difficulty(windows: GameModeHitWindows) -> float:
+        """Return the great window for a given difficulty."""
         if od_kind == _FIXED:
             f_value = windows.difficulty_range(float(od)) * clock_rate
             return (math.floor(f_value) - 0.5) / clock_rate
@@ -241,6 +294,7 @@ def _compute_mania_hit_windows(
         is_convert: bool,
         classic_and_not_v2: bool,
 ) -> HitWindows:
+    """Build the osu!mania hit windows (which use fixed, OD-scaled values)."""
     speed_multiplier = 1.0
     difficulty_multiplier = 1.0
     total_multiplier = speed_multiplier / difficulty_multiplier
@@ -259,6 +313,7 @@ def _compute_mania_hit_windows(
             inverted_od = max(0.0, min(10.0, 10.0 - od))
 
             def hw_value(add: float) -> float:
+                """Return a mania window offset by a fixed amount."""
                 return math.floor((add + 3.0 * inverted_od) * total_multiplier) + 0.5
 
             perfect = math.floor(16.0 * total_multiplier) + 0.5
@@ -268,6 +323,7 @@ def _compute_mania_hit_windows(
             meh = hw_value(121.0)
     else:
         def hw_from_range(windows: GameModeHitWindows) -> float:
+            """Return a mania window from its range boundaries."""
             return math.floor(windows.difficulty_range(od) * total_multiplier) + 0.5
 
         perfect = hw_from_range(MANIA_PERFECT)
@@ -286,4 +342,12 @@ def _compute_mania_hit_windows(
     )
 
 def _round_ties_even(x: float) -> float:
+    """Round half-to-even (banker's rounding), matching osu!/C#.
+
+    Args:
+        x: The value to round.
+
+    Returns:
+        ``x`` rounded to the nearest integer, ties going to the even neighbour.
+    """
     return float(round(x))

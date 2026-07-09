@@ -1,4 +1,5 @@
-"""
+"""osu!mania star-rating calculation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -35,6 +36,7 @@ from .convert import convert_to_mania_objects
 from .skills import create_mania_difficulty_objects, run_strain, _osu_legacy_sort_in_place
 
 def _cmp_mania_round_start(a: Any, b: Any) -> int:
+    """Compare two mania objects by their round-half-even start time (legacy sort key)."""
     ra = int(round(a.start_time))
     rb = int(round(b.start_time))
     return (ra > rb) - (ra < rb)
@@ -43,6 +45,7 @@ DIFFICULTY_MULTIPLIER = 0.018
 
 @dataclass(slots=True)
 class ManiaDifficultyAttributes:
+    """Difficulty attributes of a mania beatmap (stars, object/hold counts, hit windows)."""
     stars: float = 0.0
     n_objects: int = 0
     n_hold_notes: int = 0
@@ -68,6 +71,15 @@ def calculate_difficulty(
         passed_objects: int | None = None,
         **_: Any,
 ) -> ManiaDifficultyAttributes:
+    """Compute the mania difficulty attributes for a beatmap and mods.
+
+    Args:
+        pm: The performance beatmap.
+        mods: The mods and clock rate.
+
+    Returns:
+        The mania difficulty attributes.
+    """
     adjusted = AdjustedBeatmapAttributes.create(
         base_cs=pm.base_cs, base_ar=pm.base_ar,
         base_od=pm.base_od, base_hp=pm.base_hp,

@@ -1,4 +1,5 @@
-"""
+"""Conversion of parsed objects into osu!catch fruits, droplets and juice streams.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -52,12 +53,22 @@ _F32_0_8 = float(f32(0.8))
 _F32_TIME_OFFSET = f32(f32(1000.0 / 60.0) / 4.0)
 
 def calculate_catch_width(cs: float) -> float:
+    """Return the catcher width for a circle size.
+
+    Args:
+        cs: The circle size.
+
+    Returns:
+        The catcher width in osu! pixels.
+    """
     return _catch_width_by_scale(_calculate_scale(cs))
 
 def _catch_width_by_scale(scale: float) -> float:
+    """Return the catcher width for a given catcher scale."""
     return f32(f32(_AREA_CATCHER_SIZE * abs(scale)) * _F32_0_8)
 
 def _calculate_scale(cs: float) -> float:
+    """Return the catcher scale for a circle size (f32-faithful)."""
     inner = 1.0 - _F32_0_7 * ((cs - 5.0) / 5.0)
     return f32(f32(f32(f32(inner) / 2.0) * 1.0) * 2.0)
 
@@ -68,6 +79,18 @@ def convert_objects(
         hr_offsets: bool,
         cs: float,
 ) -> list[PalpableObject]:
+    """Convert a beatmap's objects into catch palpable objects.
+
+    Args:
+        beatmap: The performance beatmap.
+        count: The object-count builder to record fruits/droplets into.
+        reflection: How Hard Rock reflects object positions.
+        hr_offsets: Whether Hard Rock position offsets are applied.
+        cs: The circle size.
+
+    Returns:
+        The generated palpable objects in time order.
+    """
     palpable_objects: list[PalpableObject] = []
 
     rng = OsuRandom(RNG_SEED)
@@ -133,6 +156,7 @@ def _apply_hr_offset(
         hr_state: list,
         rng: OsuRandom,
 ) -> float:
+    """Apply the Hard Rock horizontal position offset to a fruit."""
     offset_pos = x
 
     last_pos = hr_state[0]
@@ -163,6 +187,7 @@ def _apply_hr_offset(
     return x_offset
 
 def _apply_random_offset(pos: float, max_offset: float, rng: OsuRandom) -> float:
+    """Apply a legacy-RNG horizontal jitter to a droplet position."""
     right = rng.next_bool()
     rand = min(f32(rng.next_double_range(0.0, max(max_offset, 0.0))), 20.0)
 
@@ -179,6 +204,7 @@ def _apply_random_offset(pos: float, max_offset: float, rng: OsuRandom) -> float
     return pos
 
 def _apply_offset(pos: float, amount: float) -> float:
+    """Shift a position horizontally, clamped to the playfield."""
     if amount > 0.0:
         if f32(pos + amount) < PLAYFIELD_WIDTH:
             pos = f32(pos + amount)
@@ -188,6 +214,7 @@ def _apply_offset(pos: float, amount: float) -> float:
     return pos
 
 def _initialize_hyper_dash(cs: float, palpable_objects: list[PalpableObject]) -> None:
+    """Mark objects requiring a hyperdash and record the needed dash distance."""
     half_catcher_width = float(f32(calculate_catch_width(cs) / 2.0))
     half_catcher_width /= _F32_0_8
 

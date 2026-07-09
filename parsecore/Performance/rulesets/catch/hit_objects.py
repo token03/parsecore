@@ -1,4 +1,5 @@
-"""
+"""osu!catch object model: fruits, droplets, juice streams and difficulty objects.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -57,55 +58,71 @@ _DEFAULT_SLIDER_VELOCITY = 1.0
 
 class ObjectCountBuilder:
 
+    """Tallies fruits, droplets and tiny droplets while converting a map."""
     __slots__ = ("fruits", "droplets", "tiny_droplets", "take")
 
     def __init__(self, take: int) -> None:
+        """Initialise the counter.
+
+        Args:
+            take: The number of objects to count (for partial maps).
+        """
         self.fruits = 0
         self.droplets = 0
         self.tiny_droplets = 0
         self.take = take
 
     def record_fruit(self) -> None:
+        """Count one caught fruit."""
         if self.take > 0:
             self.take -= 1
             self.fruits += 1
 
     def record_droplet(self) -> None:
+        """Count one droplet."""
         if self.take > 0:
             self.take -= 1
             self.droplets += 1
 
     def record_tiny_droplets(self, n: int) -> None:
+        """Count a number of tiny droplets."""
         if self.take > 0:
             self.tiny_droplets += n
 
 @dataclass(slots=True)
 class GradualObjectCount:
+    """A running snapshot of object counts for gradual calculation."""
     fruit: bool = False
     tiny_droplets: int = 0
 
 class GradualObjectCountBuilder:
 
+    """Like :class:`ObjectCountBuilder` but keeps per-object snapshots."""
     __slots__ = ("_current", "all")
 
     def __init__(self) -> None:
+        """Initialise with empty counts."""
         self._current = GradualObjectCount()
         self.all: list[GradualObjectCount] = []
 
     def record_fruit(self) -> None:
+        """Count one fruit and snapshot the running totals."""
         self._current.fruit = True
         self.all.append(self._current)
         self._current = GradualObjectCount()
 
     def record_droplet(self) -> None:
+        """Count one droplet and snapshot the running totals."""
         self.all.append(self._current)
         self._current = GradualObjectCount()
 
     def record_tiny_droplets(self, n: int) -> None:
+        """Count tiny droplets and snapshot the running totals."""
         self._current.tiny_droplets += n
 
 @dataclass(slots=True)
 class PalpableObject:
+    """A catchable object (fruit or droplet) at a position and time."""
     x: float
     x_offset: float
     start_time: float
@@ -113,21 +130,25 @@ class PalpableObject:
     hyper_dash: bool = False
 
     def effective_x(self) -> float:
+        """Return the horizontal position used for movement, accounting for hyperdash."""
         return clamp(f32(self.x + self.x_offset), 0.0, PLAYFIELD_WIDTH)
 
 class NestedKind(Enum):
+    """The kind of a nested juice-stream object (droplet, tiny droplet or fruit)."""
     FRUIT = 0
     DROPLET = 1
     TINY_DROPLET = 2
 
 @dataclass(slots=True)
 class NestedJuiceStreamObject:
+    """A single nested object generated along a juice stream."""
     pos: float
     start_time: float
     kind: NestedKind
 
 @dataclass(slots=True)
 class JuiceStream:
+    """A slider converted to a stream of fruits and droplets."""
     control_points: list[Any]
     nested_objects: list[NestedJuiceStreamObject] = field(default_factory=list)
 
@@ -138,6 +159,18 @@ def build_juice_stream(
         beatmap: PerformanceBeatmap,
         count: ObjectCountBuilder,
 ) -> JuiceStream:
+    """Generate the nested fruits/droplets of a slider (juice stream).
+
+    Args:
+        effective_x: The stream's start x position.
+        start_time: The slider start time.
+        slider: The source slider.
+        beatmap: The performance beatmap (for timing and tick rate).
+        count: The object-count builder to record into.
+
+    Returns:
+        The generated juice stream.
+    """
     slider_multiplier = beatmap.slider_multiplier
     slider_tick_rate = beatmap.slider_tick_rate
 
@@ -173,6 +206,7 @@ def build_juice_stream(
     span_duration = duration / span_count
 
     def _position_x(progress: float) -> float:
+        """Return the stream x position at a given path progress."""
         if path is None:
             return 0.0
         pos = _interpolate_curve_position(path, progress)
@@ -237,6 +271,15 @@ def build_juice_stream(
     )
 
 def banana_count(start_time: float, end_time: float) -> int:
+    """Return the number of bananas in a banana shower.
+
+    Args:
+        start_time: The shower start time.
+        end_time: The shower end time.
+
+    Returns:
+        The banana count (osu!-stable integer stepping).
+    """
     start_i = int(start_time)
     end_i = int(end_time)
     spacing = f32(end_i - start_i)
@@ -259,12 +302,14 @@ def banana_count(start_time: float, end_time: float) -> int:
 
 @dataclass(slots=True)
 class LastObject:
+    """The trailing catch object plus the cursor position after it."""
     hyper_dash: bool
     dist_to_hyper_dash: float
     player_pos: float | None
 
 @dataclass(slots=True)
 class CatchDifficultyObject:
+    """One object's movement context (distance, time) for the movement skill."""
     idx: int
     start_time: float
     delta_time: float
@@ -283,6 +328,15 @@ class CatchDifficultyObject:
     def previous(
             self, backwards_idx: int, diff_objects: list["CatchDifficultyObject"],
     ) -> "CatchDifficultyObject | None":
+        """Return the difficulty object ``backwards_idx`` steps before this one.
+
+        Args:
+            backwards_idx: How far back to look (0 = the immediately previous object).
+            diff_objects: The full list of difficulty objects.
+
+        Returns:
+            The earlier difficulty object, or ``None`` if out of range.
+        """
         target = self.idx - (backwards_idx + 1)
         if 0 <= target < len(diff_objects):
             return diff_objects[target]
@@ -298,6 +352,19 @@ class CatchDifficultyObject:
             last_player_pos: float | None,
             idx: int,
     ) -> "CatchDifficultyObject":
+        """Build a difficulty object from a catch object and its predecessor.
+
+        Args:
+            hit_object: The current palpable object.
+            last_object: The previous object and cursor position.
+            clock_rate: The active clock rate.
+            scaling_factor: The catcher-size scaling factor.
+            last_player_pos: The assumed cursor position after the last object.
+            idx: The object's index.
+
+        Returns:
+            The constructed difficulty object.
+        """
         normalized_pos = f32(hit_object.effective_x() * scaling_factor)
         last_normalized_pos = f32(last_object.effective_x() * scaling_factor)
 
@@ -328,6 +395,7 @@ class CatchDifficultyObject:
         return this
 
     def _set_movement_state(self) -> None:
+        """Compute and store this object's movement distance and timing."""
         self.last_player_pos = (
             self.last_object.player_pos
             if self.last_object.player_pos is not None

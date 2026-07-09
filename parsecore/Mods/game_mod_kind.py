@@ -1,4 +1,5 @@
-"""
+"""The :class:`GameModKind` enum grouping mods by their gameplay effect.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -35,6 +36,7 @@ _KIND_RANK = {
 
 
 class GameModKind(Enum):
+    """The category of a mod (difficulty reduction/increase, conversion, automation, ...)."""
     DifficultyReduction = "DifficultyReduction"
     DifficultyIncrease = "DifficultyIncrease"
     Conversion = "Conversion"
@@ -43,7 +45,13 @@ class GameModKind(Enum):
     System = "System"
 
     def __str__(self) -> str:
+        """Return the kind's human-readable name."""
         return self.value
 
     def rank(self) -> int:
+        """Return a sort rank so mods group by kind in a stable order.
+
+        Returns:
+            An integer ordering used when sorting mods for display.
+        """
         return _KIND_RANK[self.value]

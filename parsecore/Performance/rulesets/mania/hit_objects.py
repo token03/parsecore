@@ -1,4 +1,5 @@
-"""
+"""osu!mania object model (notes and hold notes in columns).
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -28,14 +29,25 @@ from dataclasses import dataclass
 
 @dataclass(slots=True)
 class ManiaObject:
+    """A mania note or hold note in a column, with start and end times."""
     start_time: float
     end_time: float
     column: int
 
     def is_long_note(self) -> bool:
+        """Return whether this is a hold note (has a positive duration)."""
         return self.end_time > self.start_time
 
 def column_for_x(x: float, total_columns: int) -> int:
+    """Return the column index for an x position.
+
+    Args:
+        x: The object's x coordinate.
+        total_columns: The stage's column count.
+
+    Returns:
+        The zero-based column index.
+    """
     if total_columns <= 0:
         return 0
     x_divisor = 512.0 / total_columns

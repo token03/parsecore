@@ -1,4 +1,5 @@
-"""
+"""Parser and data model for the ``[General]`` section of a ``.osu`` file.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -39,11 +40,18 @@ from ..utils import (
 
 
 class ParseGeneralError(Exception):
+    """Raised when a line in the ``[General]`` section cannot be parsed."""
     def __init__(self, message: str):
+        """Initialise the error with a message.
+
+        Args:
+            message: Human-readable description of the parse failure.
+        """
         super().__init__(message)
 
 
 class GeneralKey(Enum):
+    """Recognised keys of the ``[General]`` section."""
     AudioFilename = "AudioFilename"
     AudioLeadIn = "AudioLeadIn"
     AudioHash = "AudioHash"
@@ -66,6 +74,17 @@ class GeneralKey(Enum):
 
     @classmethod
     def from_str(cls, s: str) -> GeneralKey:
+        """Return the ``GeneralKey`` matching a raw key string.
+
+        Args:
+            s: The key text as it appears in the file.
+
+        Returns:
+            The matching enum member.
+
+        Raises:
+            ValueError: If the key is not a recognised general key.
+        """
         try:
             return cls(s)
         except ValueError:
@@ -74,6 +93,7 @@ class GeneralKey(Enum):
 
 @dataclass(slots=True, eq=True)
 class General:
+    """Parsed contents of the ``[General]`` section with osu!-stable defaults."""
     audio_filename: str
     audio_lead_in: int
     preview_time: int
@@ -88,6 +108,7 @@ class General:
     samples_match_playback_rate: bool
 
     def __init__(self):
+        """Initialise every field to its osu!-stable default value."""
         self.audio_filename = ""
         self.audio_lead_in = 0
         self.preview_time = -1
@@ -102,6 +123,17 @@ class General:
         self.samples_match_playback_rate = False
 
     def parse_general(self, line: str) -> None:
+        """Parse a single ``[General]`` line into this instance.
+
+        Unknown keys are ignored. Recognised keys update the corresponding field in
+        place.
+
+        Args:
+            line: One raw ``key: value`` line from the section.
+
+        Raises:
+            ParseGeneralError: If a value fails to parse as its expected type.
+        """
         clean_line = trim_comment(line)
 
         kv = KeyValue.parse(clean_line, GeneralKey.from_str)

@@ -1,4 +1,5 @@
-"""
+"""osu!taiko difficulty skills: stamina, rhythm, colour and reading.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -63,79 +64,97 @@ COMMON_RATIOS = [
 
 
 def _strain_decay(ms: float, base: float) -> float:
+    """Return the strain decay multiplier over a time span in milliseconds."""
     return base ** (ms / 1000.0)
 
 def _logistic(x: float, midpoint_offset: float, multiplier: float, max_value: float = 1.0) -> float:
+    """Return the value of a logistic (sigmoid) curve."""
     return max_value / (1.0 + math.exp(multiplier * (midpoint_offset - x)))
 
 _logistic_via_rust = _logistic
 
 def _logistic_exp(neg_x: float, multiplier: Optional[float] = None) -> float:
+    """Return a logistic curve evaluated on an exponent argument."""
     m = multiplier if multiplier is not None else 1.0
     return m / (1.0 + math.exp(neg_x))
 
 def _reverse_lerp(value: float, start: float, end: float) -> float:
+    """Return the clamped ``0``-``1`` position of a value between two bounds."""
     if end == start:
         return 0.0
     return max(0.0, min(1.0, (value - start) / (end - start)))
 
 def _smootherstep(x: float, start: float, end: float) -> float:
+    """Return the smootherstep interpolation of a value between two edges."""
     t = _reverse_lerp(x, start, end)
     return t * t * t * (t * (6.0 * t - 15.0) + 10.0)
 
 def _bell_curve(x: float, mean: float, width: float, multiplier: Optional[float] = None) -> float:
+    """Return a bell-curve weight peaking at a given centre."""
     m = multiplier if multiplier is not None else 1.0
     return m * math.exp(math.e * -(((x - mean) * (x - mean)) / (width * width)))
 
 def _norm(p: float, values: list[float]) -> float:
+    """Return the p-norm of several values (with Rust ``powf`` NaN semantics)."""
     s = 0.0
     for v in values:
         s += ieee_pow(v, p)
     return ieee_pow(s, 1.0 / p)
 
 def _almost_eq(a: float, b: float, margin: float) -> bool:
+    """Return whether two values are equal within a small margin."""
     return abs(a - b) <= margin
 
 @dataclass(slots=True)
 class MonoIndex:
+    """Indices locating an object within the mono-streak colour hierarchy."""
     kind: int
     idx: int
 
 @dataclass
 class MonoStreak:
+    """A run of consecutive same-colour (all don or all kat) hits."""
     hit_objects: list["TaikoDifficultyObject"] = field(default_factory=list)
     parent: Optional["AlternatingMonoPattern"] = None
     idx: int = 0
 
     def run_len(self) -> int:
+        """Return the number of hits in the streak."""
         return len(self.hit_objects)
 
     def hit_type(self) -> Optional[TaikoHitType]:
+        """Return the streak's shared hit type (don or kat)."""
         if not self.hit_objects:
             return None
         return self.hit_objects[0].base_hit_type
 
     def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+        """Return the streak's first difficulty object."""
         return self.hit_objects[0] if self.hit_objects else None
 
     def last_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+        """Return the streak's last difficulty object."""
         return self.hit_objects[-1] if self.hit_objects else None
 
 @dataclass
 class AlternatingMonoPattern:
+    """A pattern of alternating mono streaks (e.g. ddkk ddkk)."""
     mono_streaks: list[MonoStreak] = field(default_factory=list)
     parent: Optional["RepeatingHitPatterns"] = None
     idx: int = 0
 
     def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+        """Return the pattern's first difficulty object."""
         if not self.mono_streaks:
             return None
         return self.mono_streaks[0].first_hit_object()
 
     def has_identical_mono_len(self, other: "AlternatingMonoPattern") -> bool:
+        """Return whether all its mono streaks share the same length."""
         return self.mono_streaks[0].run_len() == other.mono_streaks[0].run_len()
 
     def is_repetition_of(self, other: "AlternatingMonoPattern") -> bool:
+        """Return whether this pattern repeats another."""
         if not (self.has_identical_mono_len(other)
                 and len(self.mono_streaks) == len(other.mono_streaks)):
             return False
@@ -143,16 +162,19 @@ class AlternatingMonoPattern:
 
 @dataclass
 class RepeatingHitPatterns:
+    """A sequence of alternating patterns that repeats, used for colour repetition."""
     alternating_mono_patterns: list[AlternatingMonoPattern] = field(default_factory=list)
     prev: Optional["RepeatingHitPatterns"] = None
     repetition_interval: int = 0
 
     def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+        """Return the sequence's first difficulty object."""
         if not self.alternating_mono_patterns:
             return None
         return self.alternating_mono_patterns[0].first_hit_object()
 
     def is_repetition_of(self, other: "RepeatingHitPatterns") -> bool:
+        """Return whether this sequence repeats another."""
         if len(self.alternating_mono_patterns) != len(other.alternating_mono_patterns):
             return False
         for a, b in zip(self.alternating_mono_patterns[:2], other.alternating_mono_patterns[:2]):
@@ -161,6 +183,7 @@ class RepeatingHitPatterns:
         return True
 
     def find_repetition_interval(self) -> None:
+        """Find how many patterns back this sequence repeats, if any."""
         if self.prev is None:
             self.repetition_interval = MAX_REPETITION_INTERVAL + 1
             return
@@ -178,6 +201,7 @@ class RepeatingHitPatterns:
 
 @dataclass
 class SameRhythmHitObjectGrouping:
+    """A group of consecutive objects sharing the same time interval."""
     hit_objects: list["TaikoDifficultyObject"] = field(default_factory=list)
     previous: Optional["SameRhythmHitObjectGrouping"] = None
     hit_object_interval: Optional[float] = None
@@ -185,33 +209,40 @@ class SameRhythmHitObjectGrouping:
     interval: float = math.inf
 
     def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+        """Return the group's first object."""
         return self.hit_objects[0] if self.hit_objects else None
 
     def start_time(self) -> Optional[float]:
+        """Return the group's start time."""
         return self.hit_objects[0].start_time if self.hit_objects else None
 
     def duration(self) -> Optional[float]:
+        """Return the group's total duration."""
         if not self.hit_objects:
             return None
         return self.hit_objects[-1].start_time - self.hit_objects[0].start_time
 
 @dataclass
 class SamePatternsGroupedHitObjects:
+    """A group of same-rhythm groupings sharing a repeating interval pattern."""
     groups: list[SameRhythmHitObjectGrouping] = field(default_factory=list)
     previous: Optional["SamePatternsGroupedHitObjects"] = None
 
     def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+        """Return the group's first object."""
         if not self.groups:
             return None
         return self.groups[0].first_hit_object()
 
     def group_interval(self) -> Optional[float]:
+        """Return the interval between the grouped rhythms."""
         if not self.groups:
             return None
         g = self.groups[1] if len(self.groups) > 1 else self.groups[0]
         return g.interval
 
     def interval_ratio(self) -> float:
+        """Return the ratio of this group's interval to the previous one."""
         curr = self.group_interval()
         prev = self.previous.group_interval() if self.previous is not None else None
         if curr is None or prev is None or prev == 0.0:
@@ -220,18 +251,25 @@ class SamePatternsGroupedHitObjects:
 
 @dataclass(slots=True)
 class ColorData:
+    """Per-object colour-skill state (its place in the mono/pattern hierarchy)."""
     mono_streak: Optional[MonoStreak] = None
     alternating_mono_pattern: Optional[AlternatingMonoPattern] = None
     repeating_hit_patterns: Optional[RepeatingHitPatterns] = None
 
 @dataclass(slots=True)
 class RhythmData:
+    """Per-object rhythm-skill state (interval, ratio and grouping links)."""
     same_rhythm_grouped_hit_objects: Optional[SameRhythmHitObjectGrouping] = None
     same_patterns_grouped_hit_objects: Optional[SamePatternsGroupedHitObjects] = None
     ratio: float = 1.0
 
     @classmethod
     def create(cls, delta_time: float, prev_delta_time: Optional[float]) -> "RhythmData":
+        """Build the rhythm data for one object from its neighbours.
+
+        Returns:
+            The rhythm data (delta time, ratio to the previous interval, ...).
+        """
         if prev_delta_time is None:
             return cls(ratio=1.0)
         actual_ratio = delta_time / prev_delta_time if prev_delta_time != 0.0 else 1.0
@@ -240,6 +278,7 @@ class RhythmData:
 
 @dataclass(slots=True)
 class TaikoDifficultyObject:
+    """One taiko object enriched with rhythm and colour preprocessing state."""
     idx: int
     delta_time: float
     start_time: float
@@ -251,24 +290,29 @@ class TaikoDifficultyObject:
     effective_bpm: float
 
 class TaikoDifficultyObjects:
+    """The ordered collection of taiko difficulty objects with navigation helpers."""
     __slots__ = ("objects", "center_hit_objects", "rim_hit_objects", "note_objects")
 
     def __init__(self) -> None:
+        """Initialise an empty collection."""
         self.objects: list[TaikoDifficultyObject] = []
         self.center_hit_objects: list[TaikoDifficultyObject] = []
         self.rim_hit_objects: list[TaikoDifficultyObject] = []
         self.note_objects: list[TaikoDifficultyObject] = []
 
     def push(self, obj: TaikoDifficultyObject) -> None:
+        """Append a difficulty object."""
         self.objects.append(obj)
 
     def previous(self, curr: TaikoDifficultyObject, backwards_idx: int) -> Optional[TaikoDifficultyObject]:
+        """Return the object ``n`` steps before the given index, or ``None``."""
         target = curr.idx - backwards_idx - 1
         if 0 <= target < len(self.objects):
             return self.objects[target]
         return None
 
     def previous_mono(self, curr: TaikoDifficultyObject, backwards_idx: int) -> Optional[TaikoDifficultyObject]:
+        """Return the previous object of the same colour, or ``None``."""
         backwards_idx += 1
         if curr.mono_idx.kind == 0:
             target = curr.mono_idx.idx - backwards_idx
@@ -281,12 +325,14 @@ class TaikoDifficultyObjects:
         return None
 
     def previous_note(self, curr: TaikoDifficultyObject, backwards_idx: int) -> Optional[TaikoDifficultyObject]:
+        """Return the previous hit note, skipping non-hits, or ``None``."""
         target = curr.note_idx - backwards_idx - 1
         if 0 <= target < len(self.note_objects):
             return self.note_objects[target]
         return None
 
     def next_note(self, curr: TaikoDifficultyObject, forwards_idx: int) -> Optional[TaikoDifficultyObject]:
+        """Return the next hit note, skipping non-hits, or ``None``."""
         target = curr.note_idx + forwards_idx + 1
         if 0 <= target < len(self.note_objects):
             return self.note_objects[target]
@@ -298,6 +344,15 @@ def create_taiko_difficulty_objects(
         clock_rate: float,
         global_slider_velocity: float,
 ) -> TaikoDifficultyObjects:
+    """Build the difficulty objects for a list of taiko objects.
+
+    Args:
+        objects: The taiko objects.
+        clock_rate: The active clock rate.
+
+    Returns:
+        The preprocessed difficulty-object collection.
+    """
     out = TaikoDifficultyObjects()
     if len(taiko_objects) < 3:
         return out
@@ -357,8 +412,10 @@ def create_taiko_difficulty_objects(
     return out
 
 class ColorDifficultyPreprocessor:
+    """Builds the mono-streak/alternating/repeating colour hierarchy."""
     @staticmethod
     def process_and_assign(diff_objects: TaikoDifficultyObjects) -> None:
+        """Encode the colour hierarchy and assign it back onto each object."""
         hit_patterns = ColorDifficultyPreprocessor._encode(diff_objects)
         for repeating in hit_patterns:
             for i, mono_pattern in enumerate(repeating.alternating_mono_patterns):
@@ -374,12 +431,14 @@ class ColorDifficultyPreprocessor:
 
     @staticmethod
     def _encode(diff_objects: TaikoDifficultyObjects) -> list[RepeatingHitPatterns]:
+        """Encode the full colour hierarchy from the objects."""
         mono_streaks = ColorDifficultyPreprocessor._encode_mono_streaks(diff_objects)
         mono_patterns = ColorDifficultyPreprocessor._encode_alternating_mono_pattern(mono_streaks)
         return ColorDifficultyPreprocessor._encode_repeating_hit_patterns(mono_patterns)
 
     @staticmethod
     def _encode_mono_streaks(diff_objects: TaikoDifficultyObjects) -> list[MonoStreak]:
+        """Group consecutive same-colour hits into mono streaks."""
         if not diff_objects.objects:
             return []
 
@@ -399,6 +458,7 @@ class ColorDifficultyPreprocessor:
 
     @staticmethod
     def _encode_alternating_mono_pattern(mono_streaks: list[MonoStreak]) -> list[AlternatingMonoPattern]:
+        """Group mono streaks into alternating patterns."""
         if not mono_streaks:
             return []
 
@@ -420,6 +480,7 @@ class ColorDifficultyPreprocessor:
 
     @staticmethod
     def _encode_repeating_hit_patterns(patterns: list[AlternatingMonoPattern]) -> list[RepeatingHitPatterns]:
+        """Group alternating patterns into repeating sequences."""
         hit_patterns: list[RepeatingHitPatterns] = []
         data: list[AlternatingMonoPattern] = list(patterns)
         curr_hit_pattern: Optional[RepeatingHitPatterns] = None
@@ -429,6 +490,7 @@ class ColorDifficultyPreprocessor:
             curr_hit_pattern = RepeatingHitPatterns(prev=prev_for_link)
 
             def is_coupled() -> bool:
+                """Return whether two patterns are coupled (repeat within the interval)."""
                 return len(data) > 2 and data[0].is_repetition_of(data[2])
 
             if is_coupled():
@@ -448,6 +510,7 @@ class ColorDifficultyPreprocessor:
         return hit_patterns
 
 def _interval_of(item: object) -> float:
+    """Return the time interval between two objects."""
     if isinstance(item, TaikoDifficultyObject):
         return item.delta_time
     if isinstance(item, SameRhythmHitObjectGrouping):
@@ -455,6 +518,7 @@ def _interval_of(item: object) -> float:
     raise TypeError(f"no interval for {type(item)}")
 
 def _group_by_interval(items: list) -> list[list]:
+    """Group objects that share (nearly) the same interval."""
     out: list[list] = []
     i = 0
     n = len(items)
@@ -481,6 +545,7 @@ def _normalize_delta_times(
         hit_objects: list[TaikoDifficultyObject],
         margin_of_error: float,
 ) -> dict[int, float]:
+    """Snap near-equal delta times together to stabilise grouping."""
     distinct: list[float] = []
     for h in hit_objects:
         d = h.delta_time
@@ -522,13 +587,16 @@ def _normalize_delta_times(
     return out
 
 def _round_ties_even(x: float) -> float:
+    """Round half-to-even (banker's rounding), matching osu!/C#."""
     return float(round(x))
 
 class RhythmDifficultyPreprocessor:
+    """Builds the same-rhythm and same-pattern groupings for the rhythm skill."""
     SNAP_TOLERANCE = INTERVAL_MARGIN_OF_ERROR
 
     @staticmethod
     def process_and_assign(diff_objects: TaikoDifficultyObjects) -> None:
+        """Build the rhythm groupings and assign them back onto each object."""
         rhythm_groups = RhythmDifficultyPreprocessor._create_same_rhythm_groups(
             diff_objects.note_objects
         )
@@ -546,6 +614,7 @@ class RhythmDifficultyPreprocessor:
     def _create_same_rhythm_groups(
             notes: list[TaikoDifficultyObject],
     ) -> list[SameRhythmHitObjectGrouping]:
+        """Group consecutive objects that share a time interval."""
         groups: list[SameRhythmHitObjectGrouping] = []
         prev: Optional[SameRhythmHitObjectGrouping] = None
         for grouped in _group_by_interval(notes):
@@ -559,6 +628,7 @@ class RhythmDifficultyPreprocessor:
             previous: Optional[SameRhythmHitObjectGrouping],
             hit_objects: list[TaikoDifficultyObject],
     ) -> SameRhythmHitObjectGrouping:
+        """Build one same-rhythm grouping from a run of objects."""
         normalized = _normalize_delta_times(
             hit_objects, RhythmDifficultyPreprocessor.SNAP_TOLERANCE,
         )
@@ -609,6 +679,7 @@ class RhythmDifficultyPreprocessor:
     def _create_same_pattern_groups(
             rhythm_groups: list[SameRhythmHitObjectGrouping],
     ) -> list[SamePatternsGroupedHitObjects]:
+        """Group same-rhythm groupings that share a repeating interval pattern."""
         out: list[SamePatternsGroupedHitObjects] = []
         prev: Optional[SamePatternsGroupedHitObjects] = None
         for grouped in _group_by_interval(rhythm_groups):
@@ -618,8 +689,10 @@ class RhythmDifficultyPreprocessor:
         return out
 
 class StaminaEvaluator:
+    """Evaluates the stamina (finger-speed) difficulty of a hit."""
     @staticmethod
     def evaluate_diff_of(curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Return the stamina difficulty of one object."""
         if not curr.base_hit_type.is_hit():
             return 0.0
 
@@ -641,6 +714,7 @@ class StaminaEvaluator:
 
     @staticmethod
     def _available_fingers_for(curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> int:
+        """Return how many fingers are assumed available for a hit."""
         ms = curr.color_data.mono_streak
         if ms is not None:
             first = ms.first_hit_object()
@@ -659,12 +733,15 @@ class StaminaEvaluator:
 
     @staticmethod
     def _speed_bonus(interval: float) -> float:
+        """Return the stamina bonus for very fast intervals."""
         interval = max(interval, 1.0)
         return 20.0 / interval
 
 class ColorEvaluator:
+    """Evaluates the colour (don/kat variation) difficulty of a hit."""
     @staticmethod
     def evaluate_difficulty_of(curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Return the colour difficulty of one object."""
         difficulty = 0.0
         cd = curr.color_data
 
@@ -690,6 +767,7 @@ class ColorEvaluator:
 
     @staticmethod
     def _eval_mono_streak_diff(mono_streak: MonoStreak) -> float:
+        """Return the difficulty contribution of a mono streak."""
         parent_eval = (
             ColorEvaluator._eval_alternating_mono_pattern_diff(mono_streak.parent)
             if mono_streak.parent is not None else 1.0
@@ -698,6 +776,7 @@ class ColorEvaluator:
 
     @staticmethod
     def _eval_alternating_mono_pattern_diff(pattern: AlternatingMonoPattern) -> float:
+        """Return the difficulty contribution of an alternating pattern."""
         parent_eval = (
             ColorEvaluator._eval_repeating_hit_patterns_diff(pattern.parent)
             if pattern.parent is not None else 1.0
@@ -706,6 +785,7 @@ class ColorEvaluator:
 
     @staticmethod
     def _eval_repeating_hit_patterns_diff(repeating: RepeatingHitPatterns) -> float:
+        """Return the difficulty contribution of a repeating sequence."""
         interval = float(repeating.repetition_interval)
         return 2.0 * (1.0 - _logistic_exp(math.e * interval - 2.0 * math.e))
 
@@ -716,11 +796,13 @@ class ColorEvaluator:
             threshold: float = 0.01,
             max_objects_to_check: int = 64,
     ) -> float:
+        """Penalise long stretches of a consistent interval ratio."""
         consistent_ratio_count = 0
         total_ratio_count = 0.0
         recent_ratios: list[float] = []
 
         def iteration(current: TaikoDifficultyObject, previous_hit_object: TaikoDifficultyObject) -> bool:
+            """Accumulate the penalty over one look-back step."""
             nonlocal consistent_ratio_count, total_ratio_count
             if current.idx <= 1:
                 return True
@@ -753,8 +835,10 @@ class ColorEvaluator:
         return 0.7 + 0.3 * _smootherstep(max_dev, 0.0, 1.0)
 
 class RhythmEvaluator:
+    """Evaluates the rhythm-complexity difficulty of a hit."""
     @staticmethod
     def evaluate_diff_of(hit_object: TaikoDifficultyObject, hit_window: float) -> float:
+        """Return the rhythm difficulty of one object."""
         rd = hit_object.rhythm_data
         difficulty = 0.0
         same_rhythm = 0.0
@@ -777,6 +861,7 @@ class RhythmEvaluator:
 
     @staticmethod
     def _long_gap_penalty(previous: Optional["SameRhythmHitObjectGrouping"]) -> float:
+        """Penalise groupings preceded by a long gap."""
         if previous is None:
             return 1.0
         gap_interval = previous.first_hit_object().delta_time
@@ -796,6 +881,7 @@ class RhythmEvaluator:
             srg: SameRhythmHitObjectGrouping,
             hit_window: float,
     ) -> float:
+        """Compute the core rhythm difficulty before the gap penalty."""
         interval_diff = RhythmEvaluator._ratio_difficulty(srg.hit_object_interval_ratio)
         prev_interval = srg.previous.hit_object_interval if srg.previous is not None else None
 
@@ -819,7 +905,9 @@ class RhythmEvaluator:
             hit_window: float,
             threshold: float = 0.1,
     ) -> float:
+        """Penalise repeated identical rhythm intervals."""
         def same_interval(start: SameRhythmHitObjectGrouping, interval_count: int) -> float:
+            """Return whether two groupings share an interval."""
             intervals: list[float] = []
             curr: Optional[SameRhythmHitObjectGrouping] = start
             for _ in range(interval_count):
@@ -854,6 +942,7 @@ class RhythmEvaluator:
 
     @staticmethod
     def _ratio_difficulty(ratio: float, terms: int = 8) -> float:
+        """Return the difficulty of a given interval ratio."""
         if math.isnan(ratio) or math.isinf(ratio) or ratio == 0.0 or abs(ratio) < 1e-300:
             ratio = 0.0
 
@@ -869,8 +958,10 @@ class RhythmEvaluator:
         return difficulty
 
 class ReadingEvaluator:
+    """Evaluates the reading (variable scroll-speed) difficulty of a hit."""
     @staticmethod
     def evaluate_diff_of(curr: TaikoDifficultyObject) -> float:
+        """Return the reading difficulty of one object from its effective BPM."""
         mid_center = (360.0 + 480.0) / 2.0
         mid_range = 480.0 - 360.0
         high_center = (480.0 + 640.0) / 2.0
@@ -896,22 +987,27 @@ class ReadingEvaluator:
         return mid_velocity_diff + high_velocity_diff
 
 class _StrainSkillBase:
+    """Base class for the taiko strain skills (peak tracking and aggregation)."""
     DECAY_WEIGHT: float = DECAY_WEIGHT
     SECTION_LENGTH: float = SECTION_LENGTH_MS
 
     def __init__(self) -> None:
+        """Initialise the skill's strain and peak state."""
         self._current_section_peak: float = 0.0
         self._current_section_end: float = 0.0
         self._strain_peaks: list[float] = []
         self._object_strains: list[float] = []
 
     def _strain_value_at(self, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Advance and return the strain at the current object."""
         raise NotImplementedError
 
     def _calculate_initial_strain(self, time: float, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Return the decayed strain carried into a new section."""
         raise NotImplementedError
 
     def process(self, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> None:
+        """Process one object, updating the running strain and section peaks."""
         section = self.SECTION_LENGTH
 
         if curr.idx == 0:
@@ -927,19 +1023,24 @@ class _StrainSkillBase:
         self._object_strains.append(strain)
 
     def _save_current_peak(self) -> None:
+        """Record the current strain as a section peak."""
         self._strain_peaks.append(self._current_section_peak)
 
     def _start_new_section_from(self, time: float, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> None:
+        """Begin a new strain section from a decayed baseline."""
         self._current_section_peak = self._calculate_initial_strain(time, curr, objects)
 
     def get_current_strain_peaks(self) -> list[float]:
+        """Return the recorded strain peaks."""
         return [*self._strain_peaks, self._current_section_peak]
 
     def object_strains(self) -> list[float]:
+        """Return the per-object strain values."""
         return self._object_strains
 
     @staticmethod
     def _difficulty_value(peaks: list[float], decay_weight: float) -> float:
+        """Aggregate strain peaks into a difficulty value."""
         filtered = [p for p in peaks if p > 0.0]
         filtered.sort(reverse=True)
         difficulty = 0.0
@@ -950,12 +1051,15 @@ class _StrainSkillBase:
         return difficulty
 
     def cloned_difficulty_value(self) -> float:
+        """Return the difficulty value without consuming the peaks."""
         return self._difficulty_value(self.get_current_strain_peaks(), self.DECAY_WEIGHT)
 
     def into_difficulty_value(self) -> float:
+        """Consume the peaks and return the difficulty value."""
         return self.cloned_difficulty_value()
 
     def count_top_weighted_strains(self, difficulty_value: float) -> float:
+        """Return the effective count of high strains (difficulty consistency)."""
         strains = self._object_strains
         if not strains:
             return 0.0
@@ -968,13 +1072,16 @@ class _StrainSkillBase:
         return total
 
 class Stamina(_StrainSkillBase):
+    """The taiko stamina strain skill."""
     def __init__(self, single_color: bool, is_convert: bool) -> None:
+        """Initialise the stamina skill."""
         super().__init__()
         self.single_color = single_color
         self.is_convert = is_convert
         self._current_strain = 0.0
 
     def _calculate_initial_strain(self, time: float, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Return the decayed stamina strain into a new section."""
         if self.single_color:
             return 0.0
         prev = objects.previous(curr, 0)
@@ -982,6 +1089,7 @@ class Stamina(_StrainSkillBase):
         return self._current_strain * _strain_decay(time - prev_start_time, STAMINA_STRAIN_DECAY_BASE)
 
     def _strain_value_at(self, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Advance and return the stamina strain at the current object."""
         self._current_strain *= _strain_decay(curr.delta_time, STAMINA_STRAIN_DECAY_BASE)
         stamina_difficulty = StaminaEvaluator.evaluate_diff_of(curr, objects) * STAMINA_SUBSKILL_MULTIPLIER
 
@@ -1007,19 +1115,23 @@ class Stamina(_StrainSkillBase):
         return self._current_strain
 
 class Rhythm(_StrainSkillBase):
+    """The taiko rhythm strain skill."""
     SKILL_MULTIPLIER = 1.0
 
     def __init__(self, great_hit_window: float) -> None:
+        """Initialise the rhythm skill."""
         super().__init__()
         self.great_hit_window = great_hit_window
         self._current_strain = 0.0
 
     def _calculate_initial_strain(self, time: float, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Return the decayed rhythm strain into a new section."""
         prev = objects.previous(curr, 0)
         prev_start_time = prev.start_time if prev is not None else 0.0
         return self._current_strain * _strain_decay(time - prev_start_time, RHYTHM_STRAIN_DECAY_BASE)
 
     def _strain_value_at(self, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Advance and return the rhythm strain at the current object."""
         self._current_strain *= _strain_decay(curr.delta_time, RHYTHM_STRAIN_DECAY_BASE)
 
         difficulty = RhythmEvaluator.evaluate_diff_of(curr, self.great_hit_window)
@@ -1031,38 +1143,46 @@ class Rhythm(_StrainSkillBase):
         return self._current_strain
 
 class Color(_StrainSkillBase):
+    """The taiko colour strain skill."""
     SKILL_MULTIPLIER = COLOR_SUBSKILL_MULTIPLIER
 
     def __init__(self) -> None:
+        """Initialise the colour skill."""
         super().__init__()
         self._current_strain = 0.0
 
     def _calculate_initial_strain(self, time: float, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Return the decayed colour strain into a new section."""
         prev = objects.previous(curr, 0)
         prev_start_time = prev.start_time if prev is not None else 0.0
         return self._current_strain * _strain_decay(time - prev_start_time, COLOR_STRAIN_DECAY_BASE)
 
     def _strain_value_at(self, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Advance and return the colour strain at the current object."""
         self._current_strain *= _strain_decay(curr.delta_time, COLOR_STRAIN_DECAY_BASE)
         difficulty = ColorEvaluator.evaluate_difficulty_of(curr, objects) * self.SKILL_MULTIPLIER
         self._current_strain += difficulty
         return self._current_strain
 
 class Reading(_StrainSkillBase):
+    """The taiko reading strain skill."""
     SKILL_MULTIPLIER = 1.0
     STRAIN_DECAY_BASE = 0.4
 
     def __init__(self) -> None:
+        """Initialise the reading skill."""
         super().__init__()
         self._current_strain = 0.0
         self._reading_strain = 0.0
 
     def _calculate_initial_strain(self, time: float, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Return the decayed reading strain into a new section."""
         prev = objects.previous(curr, 0)
         prev_start_time = prev.start_time if prev is not None else 0.0
         return self._current_strain * _strain_decay(time - prev_start_time, self.STRAIN_DECAY_BASE)
 
     def _strain_value_at(self, curr: TaikoDifficultyObject, objects: TaikoDifficultyObjects) -> float:
+        """Advance and return the reading strain at the current object."""
         self._current_strain *= _strain_decay(curr.delta_time, self.STRAIN_DECAY_BASE)
 
         if curr.base_hit_type.is_hit():
@@ -1087,6 +1207,7 @@ class Reading(_StrainSkillBase):
 
 @dataclass(slots=True)
 class TaikoSkills:
+    """Bundle of the processed taiko skills for one beatmap."""
     rhythm: Rhythm
     reading: Reading
     color: Color
@@ -1099,6 +1220,14 @@ def run_skills(
         is_convert: bool,
         skill_limit: Optional[int] = None,
 ) -> TaikoSkills:
+    """Run every taiko skill over the difficulty objects.
+
+    Args:
+        diff_objects: The preprocessed taiko difficulty objects.
+
+    Returns:
+        The processed skills.
+    """
     ColorDifficultyPreprocessor.process_and_assign(diff_objects)
     RhythmDifficultyPreprocessor.process_and_assign(diff_objects)
 
@@ -1124,6 +1253,7 @@ def run_skills(
     return skills
 
 def _rescale(stars: float) -> float:
+    """Rescale a raw star value onto the final taiko star-rating curve."""
     if stars < 0.0:
         return stars
     return 10.43 * math.log(stars / 8.0 + 1.0)
@@ -1138,6 +1268,7 @@ def _combine_peaks(
         pattern_multiplier: float,
         strain_length_bonus: float,
 ) -> list[float]:
+    """Combine the per-skill strain peaks into unified peaks."""
     out: list[float] = []
     n = min(len(rhythm_peaks), len(reading_peaks), len(color_peaks), len(stamina_peaks))
     for i in range(n):
@@ -1158,6 +1289,7 @@ def _combined_difficulty_value(
         pattern_multiplier: float,
         strain_length_bonus: float,
 ) -> tuple[float, float]:
+    """Aggregate the combined peaks into the mechanical difficulty and consistency."""
     hit_object_strain_peaks = _combine_peaks(
         skills.rhythm.object_strains(),
         skills.reading.object_strains(),
@@ -1199,6 +1331,7 @@ def _combined_difficulty_value(
 
 @dataclass(slots=True)
 class TaikoEvalResult:
+    """The combined taiko skill outputs (rhythm, colour, stamina, reading, consistency)."""
     rhythm: float
     reading: float
     color: float
@@ -1213,6 +1346,14 @@ def eval_skills(
         is_convert: bool,
         is_relax: bool = False,
 ) -> TaikoEvalResult:
+    """Evaluate all taiko skills into combined difficulty values.
+
+    Args:
+        skills: The processed taiko skills.
+
+    Returns:
+        The combined evaluation result.
+    """
     rhythm_difficulty_value = skills.rhythm.cloned_difficulty_value()
     reading_difficulty_value = skills.reading.cloned_difficulty_value()
     color_difficulty_value = skills.color.cloned_difficulty_value()

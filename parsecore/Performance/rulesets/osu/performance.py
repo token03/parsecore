@@ -1,4 +1,5 @@
-"""
+"""osu! performance (pp) calculation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -56,10 +57,12 @@ _SQRT2: float = 1.4142135623730950
 
 
 def _dtp(difficulty: float) -> float:
+    """Convert a difficulty rating to a performance value (``4 * d^3``)."""
     return 4.0 * (difficulty * difficulty * difficulty)
 
 
 def _sum_cognition_difficulty(reading: float, flashlight: float) -> float:
+    """Combine reading and flashlight performance into the cognition value."""
     if reading <= 0.0:
         return flashlight
     if flashlight <= 0.0:
@@ -71,6 +74,7 @@ def _sum_cognition_difficulty(reading: float, flashlight: float) -> float:
 
 class OsuLegacyScoreMissCalculator:
 
+    """Estimates misses of a classic score from its total ScoreV1 value."""
     def __init__(
             self,
             state: OsuScoreState,
@@ -78,12 +82,14 @@ class OsuLegacyScoreMissCalculator:
             mods: PerformanceMods,
             attrs: OsuDifficultyAttributes,
     ) -> None:
+        """Initialise with the score and difficulty attributes."""
         self.state = state
         self.acc = acc
         self.mods = mods
         self.attrs = attrs
 
     def calculate(self) -> float:
+        """Return the score-based estimated miss count."""
         state = self.state
         attrs = self.attrs
 
@@ -125,6 +131,7 @@ class OsuLegacyScoreMissCalculator:
             relevant_combo_per_object: float,
             score_v1_multiplier: float,
     ) -> float:
+        """Return the expected ScoreV1 at a given combo."""
         state = self.state
         attrs = self.attrs
         total_hits = state.hit_results.total_hits()
@@ -153,6 +160,7 @@ class OsuLegacyScoreMissCalculator:
         return combo_score + non_combo_score
 
     def _relevant_score_combo_per_object(self) -> float:
+        """Return the average combo score per object."""
         attrs = self.attrs
         combo_score = attrs.maximum_legacy_combo_score
 
@@ -168,6 +176,7 @@ class OsuLegacyScoreMissCalculator:
         return result
 
     def _maximum_combo_based_miss_count(self) -> float:
+        """Return a harsh combo-based upper bound on the miss count."""
         state = self.state
         attrs = self.attrs
 
@@ -208,6 +217,7 @@ class OsuLegacyScoreMissCalculator:
         return miss_count
 
     def _legacy_score_multiplier(self) -> float:
+        """Return the ScoreV1 mod multiplier for the score's mods."""
         mods = self.mods
         score_v2 = getattr(mods, "sv2", False)
         multiplier = 1.0
@@ -243,6 +253,7 @@ class OsuLegacyScoreMissCalculator:
 
 @dataclass(slots=True)
 class OsuPerformanceAttributes:
+    """osu! performance result (total pp and its aim/speed/acc/reading/flashlight parts)."""
     pp: float = 0.0
     pp_aim: float = 0.0
     pp_speed: float = 0.0
@@ -260,9 +271,11 @@ class OsuPerformanceAttributes:
     difficulty: OsuDifficultyAttributes = field(default_factory=OsuDifficultyAttributes)
 
     def n_objects(self) -> int:
+        """Return the total object count."""
         return self.difficulty.n_objects()
 
 class OsuPerformanceCalculator:
+    """Computes osu! pp from difficulty attributes and a score state."""
     def __init__(
             self,
             attrs: OsuDifficultyAttributes,
@@ -271,6 +284,7 @@ class OsuPerformanceCalculator:
             state: OsuScoreState,
             using_classic_slider_acc: bool,
     ) -> None:
+        """Initialise with the beatmap, attributes, mods and score state."""
         self.attrs = attrs
         self.mods = mods
         self.acc = acc
@@ -278,6 +292,7 @@ class OsuPerformanceCalculator:
         self.using_classic_slider_acc = using_classic_slider_acc
 
     def calculate(self) -> OsuPerformanceAttributes:
+        """Compute and return the osu! performance attributes."""
         total_hits = self.state.hit_results.total_hits()
 
         if total_hits == 0:
@@ -376,6 +391,7 @@ class OsuPerformanceCalculator:
     def _compute_aim_value(
             self, effective_miss_count: float, aim_est_breaks: list[float]
     ) -> float:
+        """Compute the aim pp component (with slider-nerf and miss penalty)."""
         if getattr(self.mods, "ap", False):
             return 0.0
 
@@ -451,6 +467,7 @@ class OsuPerformanceCalculator:
             effective_miss_count: float,
             speed_est_breaks: list[float],
     ) -> float:
+        """Compute the speed pp component (with deviation scaling)."""
         if speed_deviation is None or getattr(self.mods, "rx", False):
             return 0.0
 
@@ -478,6 +495,7 @@ class OsuPerformanceCalculator:
         return speed_value
 
     def _compute_accuracy_value(self) -> float:
+        """Compute the accuracy pp component."""
         if getattr(self.mods, "rx", False):
             return 0.0
 
@@ -515,6 +533,7 @@ class OsuPerformanceCalculator:
         return acc_value
 
     def _compute_flashlight_value(self, effective_miss_count: float) -> float:
+        """Compute the flashlight pp component."""
         if not getattr(self.mods, "fl", False):
             return 0.0
 
@@ -535,6 +554,7 @@ class OsuPerformanceCalculator:
     def _compute_reading_value(
             self, effective_miss_count: float, aim_est_breaks: list[float]
     ) -> float:
+        """Compute the reading pp component."""
         reading_value = _dtp(self.attrs.reading)
 
         if effective_miss_count > 0.0:
@@ -548,6 +568,7 @@ class OsuPerformanceCalculator:
         return reading_value
 
     def _calculate_combo_based_estimated_miss_count(self) -> float:
+        """Estimate misses from dropped combo (slider-break aware)."""
         if self.attrs.n_sliders == 0:
             return float(self.state.hit_results.misses)
 
@@ -592,6 +613,7 @@ class OsuPerformanceCalculator:
     def _calculate_estimated_slider_breaks(
             self, top_weighted_slider_factor: float, effective_miss_count: float
     ) -> float:
+        """Estimate how many of the misses were slider breaks."""
         non_miss_mistakes = self.state.hit_results.n100 + self.state.hit_results.n50
 
         if not self.using_classic_slider_acc or non_miss_mistakes == 0:
@@ -618,6 +640,7 @@ class OsuPerformanceCalculator:
         )
 
     def _calculate_speed_deviation(self) -> Optional[float]:
+        """Estimate the player's speed-note hit deviation."""
         if self._total_successful_hits() == 0:
             return None
 
@@ -651,6 +674,7 @@ class OsuPerformanceCalculator:
             relevant_count_ok: float,
             relevant_count_meh: float,
     ) -> Optional[float]:
+        """Estimate the hit deviation from great/ok/meh counts and the hit window."""
         if (
                 relevant_count_great + relevant_count_ok + relevant_count_meh
                 <= 0.0
@@ -711,6 +735,7 @@ class OsuPerformanceCalculator:
         return final
 
     def _calculate_speed_high_deviation_nerf(self, speed_deviation: float) -> float:
+        """Nerf speed pp at very high estimated deviation."""
         speed_value = _dtp(self.attrs.speed)
         if speed_deviation <= 0:
             return 1.0
@@ -730,10 +755,12 @@ class OsuPerformanceCalculator:
 
     @staticmethod
     def _calculate_miss_penalty(miss_count: float, diff_strain_count: float) -> float:
+        """Return the pp multiplier penalising misses."""
         denom = 4.0 * ieee_ln(diff_strain_count)
         return 0.93 / (ieee_div(miss_count, denom) + 1.0)
 
     def _get_combo_scaling_factor(self) -> float:
+        """Return the pp scaling from achieved vs maximum combo."""
         if self.attrs.max_combo == 0:
             return 1.0
         return min(
@@ -743,20 +770,25 @@ class OsuPerformanceCalculator:
             )
 
     def _total_hits(self) -> float:
+        """Return the total number of judged objects."""
         return float(self.state.hit_results.total_hits())
 
     def _total_successful_hits(self) -> int:
+        """Return the number of non-miss judgements."""
         hr = self.state.hit_results
         return hr.n300 + hr.n100 + hr.n50
 
     def _total_imperfect_hits(self) -> float:
+        """Return the number of non-great judgements (100s, 50s, misses)."""
         hr = self.state.hit_results
         return float(hr.n100 + hr.n50 + hr.misses)
 
     def _n_slider_ends_dropped(self) -> int:
+        """Return how many slider ends were not hit."""
         return self.attrs.n_sliders - self.state.hit_results.slider_end_hits
 
     def _n_large_tick_miss(self) -> int:
+        """Return how many large slider ticks were missed."""
         if self.using_classic_slider_acc:
             return 0
         return self.attrs.n_large_ticks - self.state.hit_results.large_tick_hits
@@ -780,6 +812,17 @@ def calculate_performance(
         priority: HitResultPriority = HitResultPriority.BEST_CASE,
         **_: Any,
 ) -> OsuPerformanceAttributes:
+    """Compute the osu! pp for a beatmap, mods and score state.
+
+    Args:
+        pm: The performance beatmap.
+        attrs: Pre-computed difficulty attributes, or ``None`` to compute them.
+        mods: The mods and clock rate.
+        state: The score state (or partial input to generate one from).
+
+    Returns:
+        The osu! performance attributes.
+    """
     using_classic_slider_acc = mods.no_slider_head_acc(lazer)
     if not lazer:
         origin = OsuScoreOrigin.STABLE
@@ -919,6 +962,7 @@ def performance(
         mods: PerformanceMods,
         **kwargs: Any,
 ) -> OsuPerformanceAttributes:
+    """Public entry point returning the osu! performance attributes."""
     from ...data.score_state import ScoreState
     state = kwargs.pop("state", None) or ScoreState()
     return calculate_performance(pm, attrs, mods, state, **kwargs)

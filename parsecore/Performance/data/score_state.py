@@ -1,4 +1,5 @@
-"""
+"""The score state (hit-result counts) and the hit-result value types.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -30,6 +31,7 @@ from .mode import GameMode
 
 @dataclass(slots=True)
 class ScoreState:
+    """A complete set of hit-result counts describing one play."""
     max_combo: int = 0
     osu_large_tick_hits: int = 0
     osu_small_tick_hits: int = 0
@@ -43,6 +45,14 @@ class ScoreState:
     legacy_total_score: int | None = None
 
     def total_hits(self, mode: GameMode) -> int:
+        """Return the total number of judged objects for a mode.
+
+        Args:
+            mode: The ruleset (its object types decide which counts contribute).
+
+        Returns:
+            The sum of the relevant hit-result counts.
+        """
         amount = self.n300 + self.n100 + self.misses
 
         if mode != GameMode.TAIKO:
@@ -55,6 +65,7 @@ class ScoreState:
         return amount
 
 class HitResult(Enum):
+    """A single hit-result kind (great, ok, meh, miss, ticks, slider ends, ...)."""
     NONE = auto()
     MISS = auto()
     MEH = auto()
@@ -75,6 +86,14 @@ class HitResult(Enum):
     LEGACY_COMBO_INCREASE = auto()
 
     def base_score(self, mode: GameMode) -> int:
+        """Return the base score value of this result in a ruleset.
+
+        Args:
+            mode: The ruleset.
+
+        Returns:
+            The unscaled score contribution of one such judgement.
+        """
         if mode == GameMode.OSU:
             return _OSU_BASE_SCORES.get(self, 0)
         raise NotImplementedError(
@@ -95,9 +114,15 @@ _OSU_BASE_SCORES: dict["HitResult", int] = {
 }
 
 class HitResultPriority(Enum):
+    """Whether to prefer more or fewer great hits when generating a score state."""
     BEST_CASE = auto()
     WORST_CASE = auto()
 
     @classmethod
     def default(cls) -> "HitResultPriority":
+        """Return the default priority.
+
+        Returns:
+            The priority used when none is specified.
+        """
         return cls.BEST_CASE

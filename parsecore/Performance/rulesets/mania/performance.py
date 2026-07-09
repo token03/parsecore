@@ -1,4 +1,5 @@
-"""
+"""osu!mania performance (pp) calculation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -35,12 +36,14 @@ from .hitresult_generator import ManiaHitResults, generate_hitresults
 
 @dataclass(slots=True)
 class ManiaPerformanceAttributes:
+    """Mania performance result (pp plus the difficulty attributes used)."""
     pp: float = 0.0
     pp_difficulty: float = 0.0
     stars: float = 0.0
     max_combo: int = 0
 
 def _custom_accuracy(hitresults: ManiaHitResults) -> float:
+    """Return mania's weighted custom accuracy used by the pp formula."""
     total_hits = hitresults.total_hits()
     if total_hits == 0:
         return 0.0
@@ -71,6 +74,17 @@ def calculate_performance(
         explicit_n50: int | None = None,
         **_: Any,
 ) -> ManiaPerformanceAttributes:
+    """Compute the mania pp for a beatmap, mods and score state.
+
+    Args:
+        pm: The performance beatmap.
+        attrs: Pre-computed difficulty attributes, or ``None`` to compute them.
+        mods: The mods and clock rate.
+        state: The score state (or partial input to generate one from).
+
+    Returns:
+        The mania performance attributes.
+    """
     is_classic = mods.no_slider_head_acc(lazer)
 
     if is_classic:

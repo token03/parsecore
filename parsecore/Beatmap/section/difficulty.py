@@ -1,4 +1,5 @@
-"""
+"""Parser and data model for the ``[Difficulty]`` section of a ``.osu`` file.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -31,11 +32,18 @@ from ..utils import KeyValue, ParseNumberError, parse_float, trim_comment
 
 
 class ParseDifficultyError(Exception):
+    """Raised when a line in the ``[Difficulty]`` section cannot be parsed."""
     def __init__(self, message: str):
+        """Initialise the error with a message.
+
+        Args:
+            message: Human-readable description of the parse failure.
+        """
         super().__init__(message)
 
 
 class DifficultyKey(Enum):
+    """Recognised keys of the ``[Difficulty]`` section."""
     HPDrainRate = "HPDrainRate"
     CircleSize = "CircleSize"
     OverallDifficulty = "OverallDifficulty"
@@ -45,6 +53,17 @@ class DifficultyKey(Enum):
 
     @classmethod
     def from_str(cls, s: str) -> DifficultyKey:
+        """Return the ``DifficultyKey`` matching a raw key string.
+
+        Args:
+            s: The key text as it appears in the file.
+
+        Returns:
+            The matching enum member.
+
+        Raises:
+            ValueError: If the key is not a recognised difficulty key.
+        """
         try:
             return cls(s)
         except ValueError:
@@ -53,6 +72,7 @@ class DifficultyKey(Enum):
 
 @dataclass(slots=True, eq=True)
 class Difficulty:
+    """Difficulty settings of a beatmap (HP, CS, OD, AR, slider multiplier/tick rate)."""
     hp_drain_rate: float
     circle_size: float
     overall_difficulty: float
@@ -61,6 +81,7 @@ class Difficulty:
     slider_tick_rate: float
 
     def __init__(self):
+        """Initialise every difficulty setting to its osu!-stable default."""
         self.hp_drain_rate = 5.0
         self.circle_size = 5.0
         self.overall_difficulty = 5.0
@@ -70,13 +91,31 @@ class Difficulty:
 
 
 class DifficultyState:
+    """Accumulates ``[Difficulty]`` values while decoding.
+
+    The beatmap format version is tracked because older versions default the
+    approach rate to the overall difficulty when ``ApproachRate`` is absent.
+    """
     __slots__ = ("has_approach_rate", "difficulty")
 
     def __init__(self, format_version: int = 14):
+        """Initialise with defaults for the given format version.
+
+        Args:
+            format_version: The ``osu file format v<N>`` version of the map.
+        """
         self.has_approach_rate: bool = False
         self.difficulty: Difficulty = Difficulty()
 
     def parse_difficulty(self, line: str) -> None:
+        """Parse a single ``[Difficulty]`` line into this instance.
+
+        Args:
+            line: One raw ``key:value`` line from the section.
+
+        Raises:
+            ParseDifficultyError: If a value fails to parse as a number.
+        """
         clean_line = trim_comment(line)
 
         kv = KeyValue.parse(clean_line, DifficultyKey.from_str)

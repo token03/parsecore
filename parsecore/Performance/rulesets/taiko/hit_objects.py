@@ -1,4 +1,5 @@
-"""
+"""osu!taiko object model (don/kat hits and drum rolls).
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -28,11 +29,13 @@ from dataclasses import dataclass
 from enum import Enum
 
 class TaikoHitType(Enum):
+    """The type of a taiko object (don/centre, kat/rim, or non-hit)."""
     CENTER = 0
     RIM = 1
     NON_HIT = 2
 
     def is_hit(self) -> bool:
+        """Return whether this type is an actual hit (don or kat)."""
         return self is not TaikoHitType.NON_HIT
 
 HIT_SOUND_NORMAL = 1
@@ -44,11 +47,22 @@ RIM_SOUND_MASK = HIT_SOUND_CLAP | HIT_SOUND_WHISTLE
 
 @dataclass(slots=True)
 class TaikoObject:
+    """A taiko object at a time, with its hit type."""
     start_time: float
     hit_type: TaikoHitType
 
     @classmethod
     def from_hit(cls, start_time: float, is_circle: bool, hit_sound: int) -> "TaikoObject":
+        """Build a taiko object from a converted hit.
+
+        Args:
+            start_time: The object's time.
+            is_circle: Whether it is a hittable circle (vs a drum roll/swell).
+            hit_sound: The hit-sound flags deciding don vs kat.
+
+        Returns:
+            The taiko object.
+        """
         if not is_circle:
             hit_type = TaikoHitType.NON_HIT
         elif hit_sound & RIM_SOUND_MASK:
@@ -59,4 +73,5 @@ class TaikoObject:
         return cls(start_time=float(start_time), hit_type=hit_type)
 
     def is_hit(self) -> bool:
+        """Return whether this object is an actual hit (don or kat)."""
         return self.hit_type.is_hit()

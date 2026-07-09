@@ -1,4 +1,5 @@
-"""
+"""Lightweight hit-object types used by the performance calculators.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -27,11 +28,13 @@ from typing import Any
 
 @dataclass(slots=True)
 class Pos:
+    """A 2D position used by the calculators."""
     x: float
     y: float
 
 @dataclass(slots=True)
 class Slider:
+    """A slider: expected distance, repeats, control points and per-node sounds."""
     expected_dist: float | None
     repeats: int
     control_points: list[Any] = field(default_factory=list)
@@ -39,37 +42,54 @@ class Slider:
 
     @property
     def span_count(self) -> int:
+        """Return the number of spans (traversals).
+
+        Returns:
+            ``repeats + 1``.
+        """
         return self.repeats + 1
 
 @dataclass(slots=True)
 class Spinner:
+    """A spinner given by its duration."""
     duration: float
 
 @dataclass(slots=True)
 class HoldNote:
+    """An osu!mania hold note given by its duration."""
     duration: float
 
 @dataclass(slots=True)
 class HitObject:
+    """A calculation hit object: a start time plus its kind (circle/slider/spinner/hold)."""
     pos: Pos
     start_time: float
     kind: Slider | Spinner | HoldNote | None = None
     hit_sound: int = 0
 
     def is_circle(self) -> bool:
+        """Return whether this object is a hit circle."""
         return self.kind is None
 
     def is_slider(self) -> bool:
+        """Return whether this object is a slider."""
         return isinstance(self.kind, Slider)
 
     def is_spinner(self) -> bool:
+        """Return whether this object is a spinner."""
         return isinstance(self.kind, Spinner)
 
     def is_hold_note(self) -> bool:
+        """Return whether this object is a mania hold note."""
         return isinstance(self.kind, HoldNote)
 
     @property
     def end_time(self) -> float:
+        """Return the object's end time.
+
+        Returns:
+            The end time for sliders/spinners/holds, or the start time for circles.
+        """
         if isinstance(self.kind, (Spinner, HoldNote)):
             return self.start_time + self.kind.duration
         return self.start_time

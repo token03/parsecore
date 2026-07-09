@@ -1,4 +1,5 @@
-"""
+"""Ruleset-agnostic mod identity: the :class:`GameModIntermode` enum and helpers.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -24,616 +25,568 @@ SOFTWARE.
 
 from __future__ import annotations
 
+from enum import Enum
+from typing import Union
+
 from .acronym import Acronym
 from .game_mod_kind import GameModKind
-from .game_mode import GameMode
-from .generated_mods import (
-    AccuracyChallengeCatch,
-    AccuracyChallengeMania,
-    AccuracyChallengeOsu,
-    AccuracyChallengeTaiko,
-    AdaptiveSpeedMania,
-    AdaptiveSpeedOsu,
-    AdaptiveSpeedTaiko,
-    AlternateOsu,
-    ApproachDifferentOsu,
-    AutopilotOsu,
-    AutoplayCatch,
-    AutoplayMania,
-    AutoplayOsu,
-    AutoplayTaiko,
-    BarrelRollOsu,
-    BlindsOsu,
-    BloomOsu,
-    BubblesOsu,
-    CinemaCatch,
-    CinemaMania,
-    CinemaOsu,
-    CinemaTaiko,
-    ClassicCatch,
-    ClassicMania,
-    ClassicOsu,
-    ClassicTaiko,
-    ConstantSpeedMania,
-    ConstantSpeedTaiko,
-    CoverMania,
-    DaycoreCatch,
-    DaycoreMania,
-    DaycoreOsu,
-    DaycoreTaiko,
-    DeflateOsu,
-    DepthOsu,
-    DifficultyAdjustCatch,
-    DifficultyAdjustMania,
-    DifficultyAdjustOsu,
-    DifficultyAdjustTaiko,
-    DoubleTimeCatch,
-    DoubleTimeMania,
-    DoubleTimeOsu,
-    DoubleTimeTaiko,
-    DualStagesMania,
-    EasyCatch,
-    EasyMania,
-    EasyOsu,
-    EasyTaiko,
-    EightKeysMania,
-    FadeInMania,
-    FiveKeysMania,
-    FlashlightCatch,
-    FlashlightMania,
-    FlashlightOsu,
-    FlashlightTaiko,
-    FloatingFruitsCatch,
-    FourKeysMania,
-    FreezeFrameOsu,
-    GrowOsu,
-    HalfTimeCatch,
-    HalfTimeMania,
-    HalfTimeOsu,
-    HalfTimeTaiko,
-    HardRockCatch,
-    HardRockMania,
-    HardRockOsu,
-    HardRockTaiko,
-    HiddenCatch,
-    HiddenMania,
-    HiddenOsu,
-    HiddenTaiko,
-    HoldOffMania,
-    InvertMania,
-    MagnetisedOsu,
-    MirrorCatch,
-    MirrorMania,
-    MirrorOsu,
-    MovingFastCatch,
-    MutedCatch,
-    MutedMania,
-    MutedOsu,
-    MutedTaiko,
-    NightcoreCatch,
-    NightcoreMania,
-    NightcoreOsu,
-    NightcoreTaiko,
-    NineKeysMania,
-    NoFailCatch,
-    NoFailMania,
-    NoFailOsu,
-    NoFailTaiko,
-    NoReleaseMania,
-    NoScopeCatch,
-    NoScopeOsu,
-    OneKeyMania,
-    PerfectCatch,
-    PerfectMania,
-    PerfectOsu,
-    PerfectTaiko,
-    RandomMania,
-    RandomOsu,
-    RandomTaiko,
-    RelaxCatch,
-    RelaxOsu,
-    RelaxTaiko,
-    RepelOsu,
-    ScoreV2Catch,
-    ScoreV2Mania,
-    ScoreV2Osu,
-    ScoreV2Taiko,
-    SevenKeysMania,
-    SimplifiedRhythmTaiko,
-    SingleTapOsu,
-    SingleTapTaiko,
-    SixKeysMania,
-    SpinInOsu,
-    SpunOutOsu,
-    StrictTrackingOsu,
-    SuddenDeathCatch,
-    SuddenDeathMania,
-    SuddenDeathOsu,
-    SuddenDeathTaiko,
-    SwapTaiko,
-    SynesthesiaOsu,
-    TargetPracticeOsu,
-    TenKeysMania,
-    ThreeKeysMania,
-    TouchDeviceOsu,
-    TraceableOsu,
-    TransformOsu,
-    TwoKeysMania,
-    UnknownCatch,
-    UnknownMania,
-    UnknownMod,
-    UnknownOsu,
-    UnknownTaiko,
-    WiggleOsu,
-    WindDownCatch,
-    WindDownMania,
-    WindDownOsu,
-    WindDownTaiko,
-    WindUpCatch,
-    WindUpMania,
-    WindUpOsu,
-    WindUpTaiko,
-)
-
-_VARIANT_MAP: dict[str, tuple[type, GameMode | None]] = {
-    "EasyOsu": (EasyOsu, GameMode.Osu),
-    "NoFailOsu": (NoFailOsu, GameMode.Osu),
-    "HalfTimeOsu": (HalfTimeOsu, GameMode.Osu),
-    "DaycoreOsu": (DaycoreOsu, GameMode.Osu),
-    "HardRockOsu": (HardRockOsu, GameMode.Osu),
-    "SuddenDeathOsu": (SuddenDeathOsu, GameMode.Osu),
-    "PerfectOsu": (PerfectOsu, GameMode.Osu),
-    "DoubleTimeOsu": (DoubleTimeOsu, GameMode.Osu),
-    "NightcoreOsu": (NightcoreOsu, GameMode.Osu),
-    "HiddenOsu": (HiddenOsu, GameMode.Osu),
-    "TraceableOsu": (TraceableOsu, GameMode.Osu),
-    "FlashlightOsu": (FlashlightOsu, GameMode.Osu),
-    "BlindsOsu": (BlindsOsu, GameMode.Osu),
-    "StrictTrackingOsu": (StrictTrackingOsu, GameMode.Osu),
-    "AccuracyChallengeOsu": (AccuracyChallengeOsu, GameMode.Osu),
-    "TargetPracticeOsu": (TargetPracticeOsu, GameMode.Osu),
-    "DifficultyAdjustOsu": (DifficultyAdjustOsu, GameMode.Osu),
-    "ClassicOsu": (ClassicOsu, GameMode.Osu),
-    "RandomOsu": (RandomOsu, GameMode.Osu),
-    "MirrorOsu": (MirrorOsu, GameMode.Osu),
-    "AlternateOsu": (AlternateOsu, GameMode.Osu),
-    "SingleTapOsu": (SingleTapOsu, GameMode.Osu),
-    "AutoplayOsu": (AutoplayOsu, GameMode.Osu),
-    "CinemaOsu": (CinemaOsu, GameMode.Osu),
-    "RelaxOsu": (RelaxOsu, GameMode.Osu),
-    "AutopilotOsu": (AutopilotOsu, GameMode.Osu),
-    "SpunOutOsu": (SpunOutOsu, GameMode.Osu),
-    "TransformOsu": (TransformOsu, GameMode.Osu),
-    "WiggleOsu": (WiggleOsu, GameMode.Osu),
-    "SpinInOsu": (SpinInOsu, GameMode.Osu),
-    "GrowOsu": (GrowOsu, GameMode.Osu),
-    "DeflateOsu": (DeflateOsu, GameMode.Osu),
-    "WindUpOsu": (WindUpOsu, GameMode.Osu),
-    "WindDownOsu": (WindDownOsu, GameMode.Osu),
-    "BarrelRollOsu": (BarrelRollOsu, GameMode.Osu),
-    "ApproachDifferentOsu": (ApproachDifferentOsu, GameMode.Osu),
-    "MutedOsu": (MutedOsu, GameMode.Osu),
-    "NoScopeOsu": (NoScopeOsu, GameMode.Osu),
-    "MagnetisedOsu": (MagnetisedOsu, GameMode.Osu),
-    "RepelOsu": (RepelOsu, GameMode.Osu),
-    "AdaptiveSpeedOsu": (AdaptiveSpeedOsu, GameMode.Osu),
-    "FreezeFrameOsu": (FreezeFrameOsu, GameMode.Osu),
-    "BubblesOsu": (BubblesOsu, GameMode.Osu),
-    "SynesthesiaOsu": (SynesthesiaOsu, GameMode.Osu),
-    "DepthOsu": (DepthOsu, GameMode.Osu),
-    "BloomOsu": (BloomOsu, GameMode.Osu),
-    "TouchDeviceOsu": (TouchDeviceOsu, GameMode.Osu),
-    "ScoreV2Osu": (ScoreV2Osu, GameMode.Osu),
-    "EasyTaiko": (EasyTaiko, GameMode.Taiko),
-    "NoFailTaiko": (NoFailTaiko, GameMode.Taiko),
-    "HalfTimeTaiko": (HalfTimeTaiko, GameMode.Taiko),
-    "DaycoreTaiko": (DaycoreTaiko, GameMode.Taiko),
-    "SimplifiedRhythmTaiko": (SimplifiedRhythmTaiko, GameMode.Taiko),
-    "HardRockTaiko": (HardRockTaiko, GameMode.Taiko),
-    "SuddenDeathTaiko": (SuddenDeathTaiko, GameMode.Taiko),
-    "PerfectTaiko": (PerfectTaiko, GameMode.Taiko),
-    "DoubleTimeTaiko": (DoubleTimeTaiko, GameMode.Taiko),
-    "NightcoreTaiko": (NightcoreTaiko, GameMode.Taiko),
-    "HiddenTaiko": (HiddenTaiko, GameMode.Taiko),
-    "FlashlightTaiko": (FlashlightTaiko, GameMode.Taiko),
-    "AccuracyChallengeTaiko": (AccuracyChallengeTaiko, GameMode.Taiko),
-    "RandomTaiko": (RandomTaiko, GameMode.Taiko),
-    "DifficultyAdjustTaiko": (DifficultyAdjustTaiko, GameMode.Taiko),
-    "ClassicTaiko": (ClassicTaiko, GameMode.Taiko),
-    "SwapTaiko": (SwapTaiko, GameMode.Taiko),
-    "SingleTapTaiko": (SingleTapTaiko, GameMode.Taiko),
-    "ConstantSpeedTaiko": (ConstantSpeedTaiko, GameMode.Taiko),
-    "AutoplayTaiko": (AutoplayTaiko, GameMode.Taiko),
-    "CinemaTaiko": (CinemaTaiko, GameMode.Taiko),
-    "RelaxTaiko": (RelaxTaiko, GameMode.Taiko),
-    "WindUpTaiko": (WindUpTaiko, GameMode.Taiko),
-    "WindDownTaiko": (WindDownTaiko, GameMode.Taiko),
-    "MutedTaiko": (MutedTaiko, GameMode.Taiko),
-    "AdaptiveSpeedTaiko": (AdaptiveSpeedTaiko, GameMode.Taiko),
-    "ScoreV2Taiko": (ScoreV2Taiko, GameMode.Taiko),
-    "EasyCatch": (EasyCatch, GameMode.Catch),
-    "NoFailCatch": (NoFailCatch, GameMode.Catch),
-    "HalfTimeCatch": (HalfTimeCatch, GameMode.Catch),
-    "DaycoreCatch": (DaycoreCatch, GameMode.Catch),
-    "HardRockCatch": (HardRockCatch, GameMode.Catch),
-    "SuddenDeathCatch": (SuddenDeathCatch, GameMode.Catch),
-    "PerfectCatch": (PerfectCatch, GameMode.Catch),
-    "DoubleTimeCatch": (DoubleTimeCatch, GameMode.Catch),
-    "NightcoreCatch": (NightcoreCatch, GameMode.Catch),
-    "HiddenCatch": (HiddenCatch, GameMode.Catch),
-    "FlashlightCatch": (FlashlightCatch, GameMode.Catch),
-    "AccuracyChallengeCatch": (AccuracyChallengeCatch, GameMode.Catch),
-    "DifficultyAdjustCatch": (DifficultyAdjustCatch, GameMode.Catch),
-    "ClassicCatch": (ClassicCatch, GameMode.Catch),
-    "MirrorCatch": (MirrorCatch, GameMode.Catch),
-    "AutoplayCatch": (AutoplayCatch, GameMode.Catch),
-    "CinemaCatch": (CinemaCatch, GameMode.Catch),
-    "RelaxCatch": (RelaxCatch, GameMode.Catch),
-    "WindUpCatch": (WindUpCatch, GameMode.Catch),
-    "WindDownCatch": (WindDownCatch, GameMode.Catch),
-    "FloatingFruitsCatch": (FloatingFruitsCatch, GameMode.Catch),
-    "MutedCatch": (MutedCatch, GameMode.Catch),
-    "NoScopeCatch": (NoScopeCatch, GameMode.Catch),
-    "MovingFastCatch": (MovingFastCatch, GameMode.Catch),
-    "ScoreV2Catch": (ScoreV2Catch, GameMode.Catch),
-    "EasyMania": (EasyMania, GameMode.Mania),
-    "NoFailMania": (NoFailMania, GameMode.Mania),
-    "HalfTimeMania": (HalfTimeMania, GameMode.Mania),
-    "DaycoreMania": (DaycoreMania, GameMode.Mania),
-    "NoReleaseMania": (NoReleaseMania, GameMode.Mania),
-    "HardRockMania": (HardRockMania, GameMode.Mania),
-    "SuddenDeathMania": (SuddenDeathMania, GameMode.Mania),
-    "PerfectMania": (PerfectMania, GameMode.Mania),
-    "DoubleTimeMania": (DoubleTimeMania, GameMode.Mania),
-    "NightcoreMania": (NightcoreMania, GameMode.Mania),
-    "FadeInMania": (FadeInMania, GameMode.Mania),
-    "HiddenMania": (HiddenMania, GameMode.Mania),
-    "CoverMania": (CoverMania, GameMode.Mania),
-    "FlashlightMania": (FlashlightMania, GameMode.Mania),
-    "AccuracyChallengeMania": (AccuracyChallengeMania, GameMode.Mania),
-    "RandomMania": (RandomMania, GameMode.Mania),
-    "DualStagesMania": (DualStagesMania, GameMode.Mania),
-    "MirrorMania": (MirrorMania, GameMode.Mania),
-    "DifficultyAdjustMania": (DifficultyAdjustMania, GameMode.Mania),
-    "ClassicMania": (ClassicMania, GameMode.Mania),
-    "InvertMania": (InvertMania, GameMode.Mania),
-    "ConstantSpeedMania": (ConstantSpeedMania, GameMode.Mania),
-    "HoldOffMania": (HoldOffMania, GameMode.Mania),
-    "OneKeyMania": (OneKeyMania, GameMode.Mania),
-    "TwoKeysMania": (TwoKeysMania, GameMode.Mania),
-    "ThreeKeysMania": (ThreeKeysMania, GameMode.Mania),
-    "FourKeysMania": (FourKeysMania, GameMode.Mania),
-    "FiveKeysMania": (FiveKeysMania, GameMode.Mania),
-    "SixKeysMania": (SixKeysMania, GameMode.Mania),
-    "SevenKeysMania": (SevenKeysMania, GameMode.Mania),
-    "EightKeysMania": (EightKeysMania, GameMode.Mania),
-    "NineKeysMania": (NineKeysMania, GameMode.Mania),
-    "TenKeysMania": (TenKeysMania, GameMode.Mania),
-    "AutoplayMania": (AutoplayMania, GameMode.Mania),
-    "CinemaMania": (CinemaMania, GameMode.Mania),
-    "WindUpMania": (WindUpMania, GameMode.Mania),
-    "WindDownMania": (WindDownMania, GameMode.Mania),
-    "MutedMania": (MutedMania, GameMode.Mania),
-    "AdaptiveSpeedMania": (AdaptiveSpeedMania, GameMode.Mania),
-    "ScoreV2Mania": (ScoreV2Mania, GameMode.Mania),
-    "UnknownOsu": (UnknownOsu, GameMode.Osu),
-    "UnknownTaiko": (UnknownTaiko, GameMode.Taiko),
-    "UnknownCatch": (UnknownCatch, GameMode.Catch),
-    "UnknownMania": (UnknownMania, GameMode.Mania),
-    "UnknownMod": (UnknownMod, None),
-}
-
-_ACR_MODE_MAP: dict[tuple[str, GameMode], type] = {
-    ("EZ", GameMode.Osu): EasyOsu,
-    ("NF", GameMode.Osu): NoFailOsu,
-    ("HT", GameMode.Osu): HalfTimeOsu,
-    ("DC", GameMode.Osu): DaycoreOsu,
-    ("HR", GameMode.Osu): HardRockOsu,
-    ("SD", GameMode.Osu): SuddenDeathOsu,
-    ("PF", GameMode.Osu): PerfectOsu,
-    ("DT", GameMode.Osu): DoubleTimeOsu,
-    ("NC", GameMode.Osu): NightcoreOsu,
-    ("HD", GameMode.Osu): HiddenOsu,
-    ("TC", GameMode.Osu): TraceableOsu,
-    ("FL", GameMode.Osu): FlashlightOsu,
-    ("BL", GameMode.Osu): BlindsOsu,
-    ("ST", GameMode.Osu): StrictTrackingOsu,
-    ("AC", GameMode.Osu): AccuracyChallengeOsu,
-    ("TP", GameMode.Osu): TargetPracticeOsu,
-    ("DA", GameMode.Osu): DifficultyAdjustOsu,
-    ("CL", GameMode.Osu): ClassicOsu,
-    ("RD", GameMode.Osu): RandomOsu,
-    ("MR", GameMode.Osu): MirrorOsu,
-    ("AL", GameMode.Osu): AlternateOsu,
-    ("SG", GameMode.Osu): SingleTapOsu,
-    ("AT", GameMode.Osu): AutoplayOsu,
-    ("CN", GameMode.Osu): CinemaOsu,
-    ("RX", GameMode.Osu): RelaxOsu,
-    ("AP", GameMode.Osu): AutopilotOsu,
-    ("SO", GameMode.Osu): SpunOutOsu,
-    ("TR", GameMode.Osu): TransformOsu,
-    ("WG", GameMode.Osu): WiggleOsu,
-    ("SI", GameMode.Osu): SpinInOsu,
-    ("GR", GameMode.Osu): GrowOsu,
-    ("DF", GameMode.Osu): DeflateOsu,
-    ("WU", GameMode.Osu): WindUpOsu,
-    ("WD", GameMode.Osu): WindDownOsu,
-    ("BR", GameMode.Osu): BarrelRollOsu,
-    ("AD", GameMode.Osu): ApproachDifferentOsu,
-    ("MU", GameMode.Osu): MutedOsu,
-    ("NS", GameMode.Osu): NoScopeOsu,
-    ("MG", GameMode.Osu): MagnetisedOsu,
-    ("RP", GameMode.Osu): RepelOsu,
-    ("AS", GameMode.Osu): AdaptiveSpeedOsu,
-    ("FR", GameMode.Osu): FreezeFrameOsu,
-    ("BU", GameMode.Osu): BubblesOsu,
-    ("SY", GameMode.Osu): SynesthesiaOsu,
-    ("DP", GameMode.Osu): DepthOsu,
-    ("BM", GameMode.Osu): BloomOsu,
-    ("TD", GameMode.Osu): TouchDeviceOsu,
-    ("SV2", GameMode.Osu): ScoreV2Osu,
-    ("EZ", GameMode.Taiko): EasyTaiko,
-    ("NF", GameMode.Taiko): NoFailTaiko,
-    ("HT", GameMode.Taiko): HalfTimeTaiko,
-    ("DC", GameMode.Taiko): DaycoreTaiko,
-    ("SR", GameMode.Taiko): SimplifiedRhythmTaiko,
-    ("HR", GameMode.Taiko): HardRockTaiko,
-    ("SD", GameMode.Taiko): SuddenDeathTaiko,
-    ("PF", GameMode.Taiko): PerfectTaiko,
-    ("DT", GameMode.Taiko): DoubleTimeTaiko,
-    ("NC", GameMode.Taiko): NightcoreTaiko,
-    ("HD", GameMode.Taiko): HiddenTaiko,
-    ("FL", GameMode.Taiko): FlashlightTaiko,
-    ("AC", GameMode.Taiko): AccuracyChallengeTaiko,
-    ("RD", GameMode.Taiko): RandomTaiko,
-    ("DA", GameMode.Taiko): DifficultyAdjustTaiko,
-    ("CL", GameMode.Taiko): ClassicTaiko,
-    ("SW", GameMode.Taiko): SwapTaiko,
-    ("SG", GameMode.Taiko): SingleTapTaiko,
-    ("CS", GameMode.Taiko): ConstantSpeedTaiko,
-    ("AT", GameMode.Taiko): AutoplayTaiko,
-    ("CN", GameMode.Taiko): CinemaTaiko,
-    ("RX", GameMode.Taiko): RelaxTaiko,
-    ("WU", GameMode.Taiko): WindUpTaiko,
-    ("WD", GameMode.Taiko): WindDownTaiko,
-    ("MU", GameMode.Taiko): MutedTaiko,
-    ("AS", GameMode.Taiko): AdaptiveSpeedTaiko,
-    ("SV2", GameMode.Taiko): ScoreV2Taiko,
-    ("EZ", GameMode.Catch): EasyCatch,
-    ("NF", GameMode.Catch): NoFailCatch,
-    ("HT", GameMode.Catch): HalfTimeCatch,
-    ("DC", GameMode.Catch): DaycoreCatch,
-    ("HR", GameMode.Catch): HardRockCatch,
-    ("SD", GameMode.Catch): SuddenDeathCatch,
-    ("PF", GameMode.Catch): PerfectCatch,
-    ("DT", GameMode.Catch): DoubleTimeCatch,
-    ("NC", GameMode.Catch): NightcoreCatch,
-    ("HD", GameMode.Catch): HiddenCatch,
-    ("FL", GameMode.Catch): FlashlightCatch,
-    ("AC", GameMode.Catch): AccuracyChallengeCatch,
-    ("DA", GameMode.Catch): DifficultyAdjustCatch,
-    ("CL", GameMode.Catch): ClassicCatch,
-    ("MR", GameMode.Catch): MirrorCatch,
-    ("AT", GameMode.Catch): AutoplayCatch,
-    ("CN", GameMode.Catch): CinemaCatch,
-    ("RX", GameMode.Catch): RelaxCatch,
-    ("WU", GameMode.Catch): WindUpCatch,
-    ("WD", GameMode.Catch): WindDownCatch,
-    ("FF", GameMode.Catch): FloatingFruitsCatch,
-    ("MU", GameMode.Catch): MutedCatch,
-    ("NS", GameMode.Catch): NoScopeCatch,
-    ("MF", GameMode.Catch): MovingFastCatch,
-    ("SV2", GameMode.Catch): ScoreV2Catch,
-    ("EZ", GameMode.Mania): EasyMania,
-    ("NF", GameMode.Mania): NoFailMania,
-    ("HT", GameMode.Mania): HalfTimeMania,
-    ("DC", GameMode.Mania): DaycoreMania,
-    ("NR", GameMode.Mania): NoReleaseMania,
-    ("HR", GameMode.Mania): HardRockMania,
-    ("SD", GameMode.Mania): SuddenDeathMania,
-    ("PF", GameMode.Mania): PerfectMania,
-    ("DT", GameMode.Mania): DoubleTimeMania,
-    ("NC", GameMode.Mania): NightcoreMania,
-    ("FI", GameMode.Mania): FadeInMania,
-    ("HD", GameMode.Mania): HiddenMania,
-    ("CO", GameMode.Mania): CoverMania,
-    ("FL", GameMode.Mania): FlashlightMania,
-    ("AC", GameMode.Mania): AccuracyChallengeMania,
-    ("RD", GameMode.Mania): RandomMania,
-    ("DS", GameMode.Mania): DualStagesMania,
-    ("MR", GameMode.Mania): MirrorMania,
-    ("DA", GameMode.Mania): DifficultyAdjustMania,
-    ("CL", GameMode.Mania): ClassicMania,
-    ("IN", GameMode.Mania): InvertMania,
-    ("CS", GameMode.Mania): ConstantSpeedMania,
-    ("HO", GameMode.Mania): HoldOffMania,
-    ("1K", GameMode.Mania): OneKeyMania,
-    ("2K", GameMode.Mania): TwoKeysMania,
-    ("3K", GameMode.Mania): ThreeKeysMania,
-    ("4K", GameMode.Mania): FourKeysMania,
-    ("5K", GameMode.Mania): FiveKeysMania,
-    ("6K", GameMode.Mania): SixKeysMania,
-    ("7K", GameMode.Mania): SevenKeysMania,
-    ("8K", GameMode.Mania): EightKeysMania,
-    ("9K", GameMode.Mania): NineKeysMania,
-    ("10K", GameMode.Mania): TenKeysMania,
-    ("AT", GameMode.Mania): AutoplayMania,
-    ("CN", GameMode.Mania): CinemaMania,
-    ("WU", GameMode.Mania): WindUpMania,
-    ("WD", GameMode.Mania): WindDownMania,
-    ("MU", GameMode.Mania): MutedMania,
-    ("AS", GameMode.Mania): AdaptiveSpeedMania,
-    ("SV2", GameMode.Mania): ScoreV2Mania,
-}
-
-_UNKNOWN_FOR_MODE: dict[GameMode, type] = {
-    GameMode.Osu: UnknownOsu,
-    GameMode.Taiko: UnknownTaiko,
-    GameMode.Catch: UnknownCatch,
-    GameMode.Mania: UnknownMania,
-}
 
 
-class GameMod:
-    __slots__ = ("_variant", "_inner")
+class UnknownGameMod:
+    """An intermode mod whose acronym is not one of the known mods."""
+    __slots__ = ("_acronym",)
 
-    def __init__(self, inner) -> None:
-        self._inner = inner
-        self._variant = type(inner).__name__
+    def __init__(self, acronym: str) -> None:
+        """Store the unrecognised acronym.
 
-    @classmethod
-    def new(cls, acronym: str | Acronym, mode: GameMode) -> GameMod:
-        s = str(acronym).upper()
-        inner_cls = _ACR_MODE_MAP.get((s, mode))
-        if inner_cls is not None:
-            return cls(inner_cls())
-        unknown_cls = _UNKNOWN_FOR_MODE.get(mode, UnknownMod)
-        return cls(unknown_cls(acronym_str=s))
-
-    @property
-    def inner(self):
-        return self._inner
-
-    @property
-    def variant(self) -> str:
-        return self._variant
+        Args:
+            acronym: The acronym that did not match a known mod.
+        """
+        self._acronym = acronym.upper()
 
     def acronym(self) -> Acronym:
-        return self._inner.acronym()
-
-    def description(self) -> str:
-        return type(self._inner).description()
-
-    def kind(self) -> GameModKind:
-        return type(self._inner).kind()
+        """Return the mod's acronym."""
+        return _RawAcronym(self._acronym)
 
     def bits(self) -> int | None:
-        return type(self._inner).bits()
+        """Return ``None``; unknown mods have no legacy bit."""
+        return None
 
-    def incompatible_mods(self) -> list:
-        return type(self._inner).incompatible_mods()
+    def kind(self) -> GameModKind:
+        """Return the fallback kind for an unknown mod."""
+        from .game_mod_kind import GameModKind
 
-    def mode(self) -> GameMode | None:
-        return _VARIANT_MAP.get(self._variant, (None, None))[1]
+        return GameModKind.System
 
-    def intermode(self):
-        from .game_mod_intermode import GameModIntermode
+    def _order_key(self) -> tuple:
+        """Return the sort key used to order this mod among others."""
+        return (self.kind().rank(), self._acronym)
 
-        return GameModIntermode.from_acronym(str(self.acronym()))
+    def __lt__(self, other: object) -> bool:
+        """Order unknown mods after known ones, then by acronym."""
+        if isinstance(other, (GameModIntermode, UnknownGameMod)):
+            return self._order_key() < _order_key_of(other)
+        return NotImplemented
 
-    def into_simple(self):
-        return self._inner.to_simple()
+    def __le__(self, other: object) -> bool:
+        """Order unknown mods after known ones, then by acronym."""
+        if isinstance(other, (GameModIntermode, UnknownGameMod)):
+            return self._order_key() <= _order_key_of(other)
+        return NotImplemented
 
-    def is_unknown(self) -> bool:
-        return isinstance(self._inner, UnknownMod)
+    def __gt__(self, other: object) -> bool:
+        """Order unknown mods after known ones, then by acronym."""
+        if isinstance(other, (GameModIntermode, UnknownGameMod)):
+            return self._order_key() > _order_key_of(other)
+        return NotImplemented
 
-    def to_dict(self) -> dict:
-        from dataclasses import fields as dc_fields
-
-        settings = {}
-        try:
-            for f in dc_fields(self._inner):
-                val = getattr(self._inner, f.name)
-                if val is not None and f.name != "acronym_str":
-                    settings[f.name] = val
-        except TypeError:
-            pass
-        result: dict = {"acronym": str(self.acronym())}
-        if settings:
-            result["settings"] = settings
-        return result
-
-    @classmethod
-    def from_dict(
-        cls,
-        data: dict,
-        mode: GameMode | None = None,
-        deny_unknown_fields: bool = False,
-    ) -> GameMod:
-        from dataclasses import fields as dc_fields
-
-        acronym = data.get("acronym", "")
-        settings = data.get("settings", {})
-
-        def _apply(gm: GameMod) -> GameMod:
-            inner = gm._inner
-            if not settings:
-                return gm
-            try:
-                valid = {f.name for f in dc_fields(inner)}
-            except TypeError:
-                return gm
-            for k, v in settings.items():
-                if k in valid:
-                    setattr(inner, k, v)
-                elif deny_unknown_fields:
-                    raise ValueError(f"Unknown field {k!r} for mod {acronym!r}")
-            return gm
-
-        if mode is not None:
-            return _apply(cls.new(acronym, mode))
-        for m in (GameMode.Osu, GameMode.Taiko, GameMode.Catch, GameMode.Mania):
-            candidate = cls.new(acronym, m)
-            if isinstance(candidate._inner, UnknownMod):
-                continue
-            if deny_unknown_fields:
-                try:
-                    return _apply(cls.new(acronym, m))
-                except ValueError:
-                    continue
-            return _apply(candidate)
-        return _apply(cls.new(acronym, GameMode.Osu))
-
-    def to_json(self) -> str:
-        import json
-
-        return json.dumps(self.to_dict())
-
-    @classmethod
-    def from_json(
-        cls,
-        s: str,
-        mode: GameMode | None = None,
-        deny_unknown_fields: bool = False,
-    ) -> GameMod:
-        import json
-
-        return cls.from_dict(
-            json.loads(s), mode=mode, deny_unknown_fields=deny_unknown_fields
-        )
+    def __ge__(self, other: object) -> bool:
+        """Order unknown mods after known ones, then by acronym."""
+        if isinstance(other, (GameModIntermode, UnknownGameMod)):
+            return self._order_key() >= _order_key_of(other)
+        return NotImplemented
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, GameMod):
-            return self._variant == other._variant and self._inner == other._inner
+        """Return whether two unknown mods share the same acronym."""
+        if isinstance(other, UnknownGameMod):
+            return self._acronym == other._acronym
+        return False
+
+    def __hash__(self) -> int:
+        """Return a hash consistent with equality."""
+        return hash(("__unknown__", self._acronym))
+
+    def __str__(self) -> str:
+        """Return the mod's acronym."""
+        return self._acronym
+
+    def __repr__(self) -> str:
+        """Return an unambiguous representation."""
+        return f"UnknownGameMod({self._acronym!r})"
+
+
+class _RawAcronym:
+    """A lightweight acronym wrapper used when parsing before validation."""
+    __slots__ = ("_s",)
+
+    def __init__(self, s: str) -> None:
+        """Store the raw acronym text.
+
+        Args:
+            s: The acronym string.
+        """
+        self._s = s
+
+    def as_str(self) -> str:
+        """Return the acronym as a plain string."""
+        return self._s
+
+    def __str__(self) -> str:
+        """Return the acronym text."""
+        return self._s
+
+    def __repr__(self) -> str:
+        """Return an unambiguous representation."""
+        return f"Acronym({self._s!r})"
+
+    def __eq__(self, other: object) -> bool:
+        """Return whether two raw acronyms are equal."""
+        if isinstance(other, (_RawAcronym, Acronym)):
+            return self._s == str(other)
+        if isinstance(other, str):
+            return self._s == other.upper()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self._variant, str(self.acronym())))
+        """Return a hash consistent with equality."""
+        return hash(self._s)
 
-    def __repr__(self) -> str:
-        return f"GameMod({self._inner!r})"
+
+def _order_key_of(m: AnyIntermode) -> tuple:
+    """Return the ordering key for any intermode mod.
+
+    Args:
+        m: The intermode mod (known or unknown).
+
+    Returns:
+        A tuple used to sort mods into a stable display order.
+    """
+    if isinstance(m, UnknownGameMod):
+        return m._order_key()
+    return (m.kind().rank(), _ACRONYM_MAP[m])
+
+
+AnyIntermode = Union["GameModIntermode", UnknownGameMod]
+
+
+class GameModIntermode(Enum):
+    """Every known mod as a ruleset-agnostic identity.
+
+    Each member carries the acronym, legacy bit and kind shared by that mod across
+    all rulesets.
+    """
+    AccuracyChallenge = "AccuracyChallenge"
+    AdaptiveSpeed = "AdaptiveSpeed"
+    Alternate = "Alternate"
+    ApproachDifferent = "ApproachDifferent"
+    Autopilot = "Autopilot"
+    Autoplay = "Autoplay"
+    BarrelRoll = "BarrelRoll"
+    Blinds = "Blinds"
+    Bloom = "Bloom"
+    Bubbles = "Bubbles"
+    Cinema = "Cinema"
+    Classic = "Classic"
+    ConstantSpeed = "ConstantSpeed"
+    Cover = "Cover"
+    Daycore = "Daycore"
+    Deflate = "Deflate"
+    Depth = "Depth"
+    DifficultyAdjust = "DifficultyAdjust"
+    DoubleTime = "DoubleTime"
+    DualStages = "DualStages"
+    Easy = "Easy"
+    EightKeys = "EightKeys"
+    FadeIn = "FadeIn"
+    FiveKeys = "FiveKeys"
+    Flashlight = "Flashlight"
+    FloatingFruits = "FloatingFruits"
+    FourKeys = "FourKeys"
+    FreezeFrame = "FreezeFrame"
+    Grow = "Grow"
+    HalfTime = "HalfTime"
+    HardRock = "HardRock"
+    Hidden = "Hidden"
+    HoldOff = "HoldOff"
+    Invert = "Invert"
+    Magnetised = "Magnetised"
+    Mirror = "Mirror"
+    MovingFast = "MovingFast"
+    Muted = "Muted"
+    Nightcore = "Nightcore"
+    NineKeys = "NineKeys"
+    NoFail = "NoFail"
+    NoRelease = "NoRelease"
+    NoScope = "NoScope"
+    OneKey = "OneKey"
+    Perfect = "Perfect"
+    Random = "Random"
+    Relax = "Relax"
+    Repel = "Repel"
+    ScoreV2 = "ScoreV2"
+    SevenKeys = "SevenKeys"
+    SimplifiedRhythm = "SimplifiedRhythm"
+    SingleTap = "SingleTap"
+    SixKeys = "SixKeys"
+    SpinIn = "SpinIn"
+    SpunOut = "SpunOut"
+    StrictTracking = "StrictTracking"
+    SuddenDeath = "SuddenDeath"
+    Swap = "Swap"
+    Synesthesia = "Synesthesia"
+    TargetPractice = "TargetPractice"
+    TenKeys = "TenKeys"
+    ThreeKeys = "ThreeKeys"
+    TouchDevice = "TouchDevice"
+    Traceable = "Traceable"
+    Transform = "Transform"
+    TwoKeys = "TwoKeys"
+    Wiggle = "Wiggle"
+    WindDown = "WindDown"
+    WindUp = "WindUp"
+    Unknown = "Unknown"
+
+    def acronym(self) -> Acronym:
+        """Return the mod's acronym."""
+        return Acronym(_ACRONYM_MAP[self])
+
+    def bits(self) -> int | None:
+        """Return the mod's legacy bit value, or ``None`` if it has none."""
+        return _BITS_MAP.get(self)
+
+    def kind(self) -> GameModKind:
+        """Return the mod's kind."""
+        return _KIND_MAP[self]
+
+    @classmethod
+    def from_acronym(cls, acronym) -> AnyIntermode:
+        """Return the mod for an acronym, or an unknown mod.
+
+        Args:
+            acronym: The acronym to resolve.
+
+        Returns:
+            The matching :class:`GameModIntermode`, or an :class:`UnknownGameMod`.
+        """
+        s = str(acronym).upper()
+        if s in _FROM_ACRONYM:
+            return _FROM_ACRONYM[s]
+        return UnknownGameMod(s)
+
+    @classmethod
+    def try_from_bits(cls, bits: int) -> GameModIntermode | None:
+        """Return the single mod matching a legacy bit, if any.
+
+        Args:
+            bits: A single legacy mod bit.
+
+        Returns:
+            The matching mod, or ``None`` if the bit is unknown.
+        """
+        return _FROM_BITS.get(bits)
+
+    def _order_key(self) -> tuple:
+        """Return the sort key used to order this mod among others."""
+        return (self.kind().rank(), _ACRONYM_MAP[self])
+
+    def __lt__(self, other: AnyIntermode) -> bool:
+        """Order mods by kind then acronym."""
+        return self._order_key() < _order_key_of(other)
+
+    def __le__(self, other: AnyIntermode) -> bool:
+        """Order mods by kind then acronym."""
+        return self._order_key() <= _order_key_of(other)
+
+    def __gt__(self, other: AnyIntermode) -> bool:
+        """Order mods by kind then acronym."""
+        return self._order_key() > _order_key_of(other)
+
+    def __ge__(self, other: AnyIntermode) -> bool:
+        """Order mods by kind then acronym."""
+        return self._order_key() >= _order_key_of(other)
 
     def __str__(self) -> str:
-        return str(self.acronym())
+        """Return the mod's acronym."""
+        return _ACRONYM_MAP[self]
 
-    def __lt__(self, other: GameMod) -> bool:
-        m_self = self.mode()
-        m_other = other.mode()
-        mv = lambda m: m.value if m is not None else -1
-        return (mv(m_self), str(self.acronym())) < (mv(m_other), str(other.acronym()))
-
-
-def _attach_constructors():
-    for name, (inner_cls, _) in _VARIANT_MAP.items():
-
-        def make_factory(ic):
-            @staticmethod
-            def factory(**kwargs):
-                return GameMod(ic(**kwargs))
-
-            return factory
-
-        setattr(GameMod, name, make_factory(inner_cls))
+    def __repr__(self) -> str:
+        """Return an unambiguous representation."""
+        return f"GameModIntermode.{self.value}"
 
 
-_attach_constructors()
+_ACRONYM_MAP: dict[GameModIntermode, str] = {
+    GameModIntermode.AccuracyChallenge: "AC",
+    GameModIntermode.AdaptiveSpeed: "AS",
+    GameModIntermode.Alternate: "AL",
+    GameModIntermode.ApproachDifferent: "AD",
+    GameModIntermode.Autopilot: "AP",
+    GameModIntermode.Autoplay: "AT",
+    GameModIntermode.BarrelRoll: "BR",
+    GameModIntermode.Blinds: "BL",
+    GameModIntermode.Bloom: "BM",
+    GameModIntermode.Bubbles: "BU",
+    GameModIntermode.Cinema: "CN",
+    GameModIntermode.Classic: "CL",
+    GameModIntermode.ConstantSpeed: "CS",
+    GameModIntermode.Cover: "CO",
+    GameModIntermode.Daycore: "DC",
+    GameModIntermode.Deflate: "DF",
+    GameModIntermode.Depth: "DP",
+    GameModIntermode.DifficultyAdjust: "DA",
+    GameModIntermode.DoubleTime: "DT",
+    GameModIntermode.DualStages: "DS",
+    GameModIntermode.Easy: "EZ",
+    GameModIntermode.EightKeys: "8K",
+    GameModIntermode.FadeIn: "FI",
+    GameModIntermode.FiveKeys: "5K",
+    GameModIntermode.Flashlight: "FL",
+    GameModIntermode.FloatingFruits: "FF",
+    GameModIntermode.FourKeys: "4K",
+    GameModIntermode.FreezeFrame: "FR",
+    GameModIntermode.Grow: "GR",
+    GameModIntermode.HalfTime: "HT",
+    GameModIntermode.HardRock: "HR",
+    GameModIntermode.Hidden: "HD",
+    GameModIntermode.HoldOff: "HO",
+    GameModIntermode.Invert: "IN",
+    GameModIntermode.Magnetised: "MG",
+    GameModIntermode.Mirror: "MR",
+    GameModIntermode.MovingFast: "MF",
+    GameModIntermode.Muted: "MU",
+    GameModIntermode.Nightcore: "NC",
+    GameModIntermode.NineKeys: "9K",
+    GameModIntermode.NoFail: "NF",
+    GameModIntermode.NoRelease: "NR",
+    GameModIntermode.NoScope: "NS",
+    GameModIntermode.OneKey: "1K",
+    GameModIntermode.Perfect: "PF",
+    GameModIntermode.Random: "RD",
+    GameModIntermode.Relax: "RX",
+    GameModIntermode.Repel: "RP",
+    GameModIntermode.ScoreV2: "SV2",
+    GameModIntermode.SevenKeys: "7K",
+    GameModIntermode.SimplifiedRhythm: "SR",
+    GameModIntermode.SingleTap: "SG",
+    GameModIntermode.SixKeys: "6K",
+    GameModIntermode.SpinIn: "SI",
+    GameModIntermode.SpunOut: "SO",
+    GameModIntermode.StrictTracking: "ST",
+    GameModIntermode.SuddenDeath: "SD",
+    GameModIntermode.Swap: "SW",
+    GameModIntermode.Synesthesia: "SY",
+    GameModIntermode.TargetPractice: "TP",
+    GameModIntermode.TenKeys: "10K",
+    GameModIntermode.ThreeKeys: "3K",
+    GameModIntermode.TouchDevice: "TD",
+    GameModIntermode.Traceable: "TC",
+    GameModIntermode.Transform: "TR",
+    GameModIntermode.TwoKeys: "2K",
+    GameModIntermode.Wiggle: "WG",
+    GameModIntermode.WindDown: "WD",
+    GameModIntermode.WindUp: "WU",
+    GameModIntermode.Unknown: "??",
+}
+
+_FROM_ACRONYM: dict[str, GameModIntermode] = {
+    v: k for k, v in _ACRONYM_MAP.items() if v != "??"
+}
+
+_BITS_MAP: dict[GameModIntermode, int] = {
+    GameModIntermode.Autopilot: 8192,
+    GameModIntermode.Autoplay: 2048,
+    GameModIntermode.Cinema: 4194304,
+    GameModIntermode.DoubleTime: 64,
+    GameModIntermode.DualStages: 33554432,
+    GameModIntermode.Easy: 2,
+    GameModIntermode.EightKeys: 524288,
+    GameModIntermode.FadeIn: 1048576,
+    GameModIntermode.FiveKeys: 65536,
+    GameModIntermode.Flashlight: 1024,
+    GameModIntermode.FourKeys: 32768,
+    GameModIntermode.HalfTime: 256,
+    GameModIntermode.HardRock: 16,
+    GameModIntermode.Hidden: 8,
+    GameModIntermode.Mirror: 1073741824,
+    GameModIntermode.Nightcore: 576,
+    GameModIntermode.NineKeys: 16777216,
+    GameModIntermode.NoFail: 1,
+    GameModIntermode.OneKey: 67108864,
+    GameModIntermode.Perfect: 16416,
+    GameModIntermode.Random: 2097152,
+    GameModIntermode.Relax: 128,
+    GameModIntermode.ScoreV2: 536870912,
+    GameModIntermode.SevenKeys: 262144,
+    GameModIntermode.SixKeys: 131072,
+    GameModIntermode.SpunOut: 4096,
+    GameModIntermode.SuddenDeath: 32,
+    GameModIntermode.TargetPractice: 8388608,
+    GameModIntermode.ThreeKeys: 134217728,
+    GameModIntermode.TouchDevice: 4,
+    GameModIntermode.TwoKeys: 268435456,
+}
+
+_FROM_BITS: dict[int, GameModIntermode] = {v: k for k, v in _BITS_MAP.items()}
+
+_KIND_MAP: dict[GameModIntermode, GameModKind] = {
+    GameModIntermode.AccuracyChallenge: GameModKind.DifficultyIncrease,
+    GameModIntermode.AdaptiveSpeed: GameModKind.Fun,
+    GameModIntermode.Alternate: GameModKind.Conversion,
+    GameModIntermode.ApproachDifferent: GameModKind.Fun,
+    GameModIntermode.Autopilot: GameModKind.Automation,
+    GameModIntermode.Autoplay: GameModKind.Automation,
+    GameModIntermode.BarrelRoll: GameModKind.Fun,
+    GameModIntermode.Blinds: GameModKind.DifficultyIncrease,
+    GameModIntermode.Bloom: GameModKind.Fun,
+    GameModIntermode.Bubbles: GameModKind.Fun,
+    GameModIntermode.Cinema: GameModKind.Automation,
+    GameModIntermode.Classic: GameModKind.Conversion,
+    GameModIntermode.ConstantSpeed: GameModKind.Conversion,
+    GameModIntermode.Cover: GameModKind.DifficultyIncrease,
+    GameModIntermode.Daycore: GameModKind.DifficultyReduction,
+    GameModIntermode.Deflate: GameModKind.Fun,
+    GameModIntermode.Depth: GameModKind.Fun,
+    GameModIntermode.DifficultyAdjust: GameModKind.Conversion,
+    GameModIntermode.DoubleTime: GameModKind.DifficultyIncrease,
+    GameModIntermode.DualStages: GameModKind.Conversion,
+    GameModIntermode.Easy: GameModKind.DifficultyReduction,
+    GameModIntermode.EightKeys: GameModKind.Conversion,
+    GameModIntermode.FadeIn: GameModKind.DifficultyIncrease,
+    GameModIntermode.FiveKeys: GameModKind.Conversion,
+    GameModIntermode.Flashlight: GameModKind.DifficultyIncrease,
+    GameModIntermode.FloatingFruits: GameModKind.Fun,
+    GameModIntermode.FourKeys: GameModKind.Conversion,
+    GameModIntermode.FreezeFrame: GameModKind.Fun,
+    GameModIntermode.Grow: GameModKind.Fun,
+    GameModIntermode.HalfTime: GameModKind.DifficultyReduction,
+    GameModIntermode.HardRock: GameModKind.DifficultyIncrease,
+    GameModIntermode.Hidden: GameModKind.DifficultyIncrease,
+    GameModIntermode.HoldOff: GameModKind.Conversion,
+    GameModIntermode.Invert: GameModKind.Conversion,
+    GameModIntermode.Magnetised: GameModKind.Fun,
+    GameModIntermode.Mirror: GameModKind.Conversion,
+    GameModIntermode.MovingFast: GameModKind.Fun,
+    GameModIntermode.Muted: GameModKind.Fun,
+    GameModIntermode.Nightcore: GameModKind.DifficultyIncrease,
+    GameModIntermode.NineKeys: GameModKind.Conversion,
+    GameModIntermode.NoFail: GameModKind.DifficultyReduction,
+    GameModIntermode.NoRelease: GameModKind.DifficultyReduction,
+    GameModIntermode.NoScope: GameModKind.Fun,
+    GameModIntermode.OneKey: GameModKind.Conversion,
+    GameModIntermode.Perfect: GameModKind.DifficultyIncrease,
+    GameModIntermode.Random: GameModKind.Conversion,
+    GameModIntermode.Relax: GameModKind.Automation,
+    GameModIntermode.Repel: GameModKind.Fun,
+    GameModIntermode.ScoreV2: GameModKind.System,
+    GameModIntermode.SevenKeys: GameModKind.Conversion,
+    GameModIntermode.SimplifiedRhythm: GameModKind.DifficultyReduction,
+    GameModIntermode.SingleTap: GameModKind.Conversion,
+    GameModIntermode.SixKeys: GameModKind.Conversion,
+    GameModIntermode.SpinIn: GameModKind.Fun,
+    GameModIntermode.SpunOut: GameModKind.Automation,
+    GameModIntermode.StrictTracking: GameModKind.DifficultyIncrease,
+    GameModIntermode.SuddenDeath: GameModKind.DifficultyIncrease,
+    GameModIntermode.Swap: GameModKind.Conversion,
+    GameModIntermode.Synesthesia: GameModKind.Fun,
+    GameModIntermode.TargetPractice: GameModKind.Conversion,
+    GameModIntermode.TenKeys: GameModKind.Conversion,
+    GameModIntermode.ThreeKeys: GameModKind.Conversion,
+    GameModIntermode.TouchDevice: GameModKind.System,
+    GameModIntermode.Traceable: GameModKind.DifficultyIncrease,
+    GameModIntermode.Transform: GameModKind.Fun,
+    GameModIntermode.TwoKeys: GameModKind.Conversion,
+    GameModIntermode.Wiggle: GameModKind.Fun,
+    GameModIntermode.WindDown: GameModKind.Fun,
+    GameModIntermode.WindUp: GameModKind.Fun,
+    GameModIntermode.Unknown: GameModKind.System,
+}
+
+
+_DESCRIPTION_MAP: dict[GameModIntermode, str] = {}
+
+
+def _build_description_map():
+    """Build the acronym-to-description lookup from the generated mods."""
+    desc = {
+        "AC": "Fail if your accuracy drops too low!",
+        "AD": "Never trust the approach circles...",
+        "AL": "Don't use the same key twice in a row!",
+        "AP": "Automatic cursor movement - just follow the rhythm.",
+        "AS": "Let track speed adapt to you.",
+        "AT": "Watch a perfect automated play through the song.",
+        "BL": "Play with blinds on your screen.",
+        "BM": "The cursor blooms into.. a larger cursor!",
+        "BR": "The whole playfield is on a wheel!",
+        "BU": "Don't let their popping distract you!",
+        "CL": "Feeling nostalgic?",
+        "CN": "Watch the video without visual distractions.",
+        "CO": "Decrease the playfield's viewing area.",
+        "CS": "No more tricky speed changes!",
+        "DA": "Override a beatmap's difficulty settings.",
+        "DC": "Whoaaaaa...",
+        "DF": "Hit them at the right size!",
+        "DP": "3D. Almost.",
+        "DS": "Double the stages, double the fun!",
+        "DT": "Zoooooooooom...",
+        "EZ": "Larger circles, more forgiving HP drain, less accuracy required, and extra lives!",
+        "FF": "The fruits are... floating?",
+        "FI": "Keys appear out of nowhere!",
+        "FL": "Restricted view area.",
+        "FR": "Burn the notes into your memory.",
+        "GR": "Hit them at the right size!",
+        "HD": "Play with no approach circles and fading circles/sliders.",
+        "HO": "Replaces all hold notes with normal notes.",
+        "HR": "Everything just got a bit harder...",
+        "HT": "Less zoom...",
+        "IN": "Hold the keys. To the beat.",
+        "MF": "Dashing by default, slow down!",
+        "MG": "No need to chase the circles – your cursor is a magnet!",
+        "MR": "Flip objects on the chosen axes.",
+        "MU": "Can you still feel the rhythm without music?",
+        "NC": "Uguuuuuuuu...",
+        "NF": "You can't fail, no matter what.",
+        "NR": "No more timing the end of hold notes.",
+        "NS": "Where's the cursor?",
+        "PF": "SS or quit.",
+        "RD": "It never gets boring!",
+        "RP": "Hit objects run away!",
+        "RX": "You don't need to click. Give your clicking/tapping fingers a break from the heat of things.",
+        "SD": "Miss and fail.",
+        "SG": "You must only use one key!",
+        "SI": "Circles spin in. No approach circles.",
+        "SO": "Spinners will be automatically completed.",
+        "SR": "Simplify tricky rhythms!",
+        "ST": "Once you start a slider, follow precisely or get a miss.",
+        "SV2": "Score set on earlier osu! versions with the V2 scoring algorithm active.",
+        "SW": "Dons become kats, kats become dons",
+        "SY": "Colours hit objects based on the rhythm.",
+        "TC": "Put your faith in the approach circles...",
+        "TD": "Automatically applied to plays on devices with a touchscreen.",
+        "TP": "Practice keeping up with the beat of the song.",
+        "TR": "Everything rotates. EVERYTHING.",
+        "WD": "Sloooow doooown...",
+        "WG": "They just won't stay still...",
+        "WU": "Can you keep up?",
+        "1K": "Play with one key.",
+        "2K": "Play with two keys.",
+        "3K": "Play with three keys.",
+        "4K": "Play with four keys.",
+        "5K": "Play with five keys.",
+        "6K": "Play with six keys.",
+        "7K": "Play with seven keys.",
+        "8K": "Play with eight keys.",
+        "9K": "Play with nine keys.",
+        "10K": "Play with ten keys.",
+    }
+    for intermode, acronym in _ACRONYM_MAP.items():
+        if acronym in desc:
+            _DESCRIPTION_MAP[intermode] = desc[acronym]
+
+
+_build_description_map()
+
+
+def _intermode_description(self) -> str:
+    """Return the mod's human-readable description."""
+    return _DESCRIPTION_MAP.get(self, "")
+
+
+def _intermode_as_simple(self):
+    """Return the settings-free :class:`GameModSimple` form of the mod."""
+    from .acronym import Acronym
+    from .game_mod_simple import GameModSimple
+
+    return GameModSimple(acronym=Acronym(str(self)), settings={})
+
+
+GameModIntermode.description = _intermode_description
+GameModIntermode.as_simple = _intermode_as_simple

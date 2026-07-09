@@ -1,4 +1,5 @@
-"""
+"""Generation of taiko hit-result counts from partial score information.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -29,14 +30,17 @@ from dataclasses import dataclass
 
 @dataclass(slots=True)
 class TaikoHitResults:
+    """A complete set of taiko hit-result counts."""
     n300: int = 0
     n100: int = 0
     misses: int = 0
 
     def total_hits(self) -> int:
+        """Return the total number of hit objects."""
         return self.n300 + self.n100 + self.misses
 
     def accuracy(self) -> float:
+        """Return the accuracy in the ``0``-``1`` range."""
         total = self.total_hits()
         if total == 0:
             return 0.0
@@ -51,6 +55,7 @@ def generate_hitresults(
         explicit_n300: int | None,
         explicit_n100: int | None,
 ) -> TaikoHitResults:
+    """Generate a complete taiko hit-result state from the requested inputs."""
     total_hits = max_combo
     misses = target_misses if target_misses is not None else 0
     misses = min(misses, total_hits)

@@ -1,4 +1,5 @@
-"""
+"""A single mod bound to a ruleset, wrapping a concrete generated mod class.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -475,14 +476,33 @@ _UNKNOWN_FOR_MODE: dict[GameMode, type] = {
 
 
 class GameMod:
+    """A single mod with its settings, tied to one ruleset.
+
+    Wraps a concrete generated mod (see ``generated_mods``) and forwards its
+    acronym, kind, legacy bit and incompatibilities.
+    """
     __slots__ = ("_variant", "_inner")
 
     def __init__(self, inner) -> None:
+        """Wrap a concrete mod instance.
+
+        Args:
+            inner: The generated mod object this wraps.
+        """
         self._inner = inner
         self._variant = type(inner).__name__
 
     @classmethod
     def new(cls, acronym: str | Acronym, mode: GameMode) -> GameMod:
+        """Create a mod from an acronym and ruleset.
+
+        Args:
+            acronym: The mod acronym (e.g. ``HD``).
+            mode: The ruleset the mod belongs to.
+
+        Returns:
+            The constructed mod (an unknown mod if the acronym is unrecognised).
+        """
         s = str(acronym).upper()
         inner_cls = _ACR_MODE_MAP.get((s, mode))
         if inner_cls is not None:
@@ -492,42 +512,58 @@ class GameMod:
 
     @property
     def inner(self):
+        """Return the wrapped concrete mod instance."""
         return self._inner
 
     @property
     def variant(self) -> str:
+        """Return the concrete class name of the wrapped mod."""
         return self._variant
 
     def acronym(self) -> Acronym:
+        """Return the mod's acronym."""
         return self._inner.acronym()
 
     def description(self) -> str:
+        """Return the mod's human-readable description."""
         return type(self._inner).description()
 
     def kind(self) -> GameModKind:
+        """Return the mod's kind."""
         return type(self._inner).kind()
 
     def bits(self) -> int | None:
+        """Return the mod's legacy bit value, or ``None`` if it has none."""
         return type(self._inner).bits()
 
     def incompatible_mods(self) -> list:
+        """Return the acronyms of mods incompatible with this one."""
         return type(self._inner).incompatible_mods()
 
     def mode(self) -> GameMode | None:
+        """Return the ruleset this mod belongs to, or ``None`` if generic."""
         return _VARIANT_MAP.get(self._variant, (None, None))[1]
 
     def intermode(self):
+        """Return the ruleset-agnostic (intermode) form of this mod."""
         from .game_mod_intermode import GameModIntermode
 
         return GameModIntermode.from_acronym(str(self.acronym()))
 
     def into_simple(self):
+        """Return the settings-only :class:`GameModSimple` form of this mod."""
         return self._inner.to_simple()
 
     def is_unknown(self) -> bool:
+        """Return whether this is an unrecognised mod."""
         return isinstance(self._inner, UnknownMod)
 
     def to_dict(self) -> dict:
+        """Serialise the mod to a plain dict.
+
+        Returns:
+            A dict with the acronym and any non-default settings.
+        """
         from dataclasses import fields as dc_fields
 
         settings = {}
@@ -550,12 +586,23 @@ class GameMod:
         mode: GameMode | None = None,
         deny_unknown_fields: bool = False,
     ) -> GameMod:
+        """Deserialise a mod from a dict.
+
+        Args:
+            data: The serialised mapping.
+            mode: The ruleset to resolve the acronym in.
+            deny_unknown_fields: If ``True``, reject unrecognised setting keys.
+
+        Returns:
+            The reconstructed mod.
+        """
         from dataclasses import fields as dc_fields
 
         acronym = data.get("acronym", "")
         settings = data.get("settings", {})
 
         def _apply(gm: GameMod) -> GameMod:
+            """Apply the deserialised settings onto the mod and return it."""
             inner = gm._inner
             if not settings:
                 return gm
@@ -585,6 +632,7 @@ class GameMod:
         return _apply(cls.new(acronym, GameMode.Osu))
 
     def to_json(self) -> str:
+        """Return the mod serialised as a JSON string."""
         import json
 
         return json.dumps(self.to_dict())
@@ -596,6 +644,16 @@ class GameMod:
         mode: GameMode | None = None,
         deny_unknown_fields: bool = False,
     ) -> GameMod:
+        """Deserialise a mod from a JSON string.
+
+        Args:
+            s: The JSON text.
+            mode: The ruleset to resolve the acronym in.
+            deny_unknown_fields: If ``True``, reject unrecognised setting keys.
+
+        Returns:
+            The reconstructed mod.
+        """
         import json
 
         return cls.from_dict(
@@ -603,20 +661,25 @@ class GameMod:
         )
 
     def __eq__(self, other: object) -> bool:
+        """Return whether two mods are equal (acronym, ruleset and settings)."""
         if isinstance(other, GameMod):
             return self._variant == other._variant and self._inner == other._inner
         return NotImplemented
 
     def __hash__(self) -> int:
+        """Return a hash consistent with equality."""
         return hash((self._variant, str(self.acronym())))
 
     def __repr__(self) -> str:
+        """Return an unambiguous representation."""
         return f"GameMod({self._inner!r})"
 
     def __str__(self) -> str:
+        """Return the mod's acronym."""
         return str(self.acronym())
 
     def __lt__(self, other: GameMod) -> bool:
+        """Order mods by kind and acronym for stable display."""
         m_self = self.mode()
         m_other = other.mode()
         mv = lambda m: m.value if m is not None else -1
@@ -624,11 +687,21 @@ class GameMod:
 
 
 def _attach_constructors():
+    """Attach the per-mod convenience constructors to :class:`GameMod`."""
     for name, (inner_cls, _) in _VARIANT_MAP.items():
 
         def make_factory(ic):
+            """Build a classmethod constructor for one specific mod acronym.
+
+            Args:
+                acronym_str: The acronym the generated constructor should create.
+
+            Returns:
+                A classmethod that constructs the mod for a given ruleset.
+            """
             @staticmethod
             def factory(**kwargs):
+                """Construct this mod for the given ruleset."""
                 return GameMod(ic(**kwargs))
 
             return factory

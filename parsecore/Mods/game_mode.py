@@ -1,4 +1,5 @@
-"""
+"""The :class:`GameMode` enum for the four osu! rulesets, used by the mod system.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -26,12 +27,14 @@ from enum import IntEnum
 
 
 class GameMode(IntEnum):
+    """One of the four osu! rulesets (osu!, taiko, catch, mania)."""
     Osu = 0
     Taiko = 1
     Catch = 2
     Mania = 3
 
     def as_str(self) -> str:
+        """Return the ruleset's short name (``osu``, ``taiko``, ``fruits``, ``mania``)."""
         return {
             GameMode.Osu: "osu",
             GameMode.Taiko: "taiko",
@@ -40,10 +43,22 @@ class GameMode(IntEnum):
         }[self]
 
     def __str__(self) -> str:
+        """Return the ruleset's short name."""
         return self.as_str()
 
     @classmethod
     def from_str(cls, s: str) -> "GameMode":
+        """Return the ``GameMode`` for a short ruleset name.
+
+        Args:
+            s: The ruleset name (e.g. ``osu`` or ``fruits``).
+
+        Returns:
+            The matching ruleset.
+
+        Raises:
+            ValueError: If the name is not recognised.
+        """
         mapping = {
             "0": cls.Osu,
             "osu": cls.Osu,

@@ -169,13 +169,24 @@ def calculate(self, beatmap: Beatmap) -> OsuDifficultyAttributes: ...
 
 ### Comments & Docstrings
 
-The ParseCore codebase is intentionally kept **free of inline comments and docstrings** each file carries only its license header. Explanations belong in:
+Every module, class, function and method carries a **Google-style docstring**
+(summary line plus `Args:`/`Returns:`/`Raises:` where they add information). New
+or changed public APIs must be documented this way, and internal helpers get at
+least a concise summary. Module docstrings begin with a one-line summary above
+the license header.
 
+Inline `#` comments, on the other hand, are **discouraged**: the parity-sensitive
+math is meant to read like the reference it mirrors, so put the "why" where it
+belongs instead:
+
+- **docstrings** for what a function does and how to call it,
 - the **README** for user-facing behavior,
 - the **PR description** for implementation reasoning (including which reference code a formula mirrors),
 - **commit messages** for the "why" of a change.
 
-Please follow this convention: submit clean, self-explanatory code and put the prose where it belongs.
+When you need to explain a non-obvious parity detail (an f32 cast, an IEEE
+division, a legacy sort), a short note in the docstring is preferred over an
+inline comment.
 
 ---
 

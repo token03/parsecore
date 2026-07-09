@@ -1,4 +1,5 @@
-"""
+"""osu!catch performance (pp) calculation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -36,6 +37,7 @@ from .hitresult_generator import CatchHitResults, generate_hitresults
 
 @dataclass(slots=True)
 class CatchPerformanceAttributes:
+    """Catch performance result (pp plus the difficulty attributes used)."""
     pp: float = 0.0
     stars: float = 0.0
     max_combo: int = 0
@@ -63,6 +65,17 @@ def calculate_performance(
         explicit_n_katu: int | None = None,
         **_: Any,
 ) -> CatchPerformanceAttributes:
+    """Compute the catch pp for a beatmap, mods and score state.
+
+    Args:
+        pm: The performance beatmap.
+        attrs: Pre-computed difficulty attributes, or ``None`` to compute them.
+        mods: The mods and clock rate.
+        state: The score state (or partial input to generate one from).
+
+    Returns:
+        The catch performance attributes.
+    """
     misses = (
         min(target_misses, attrs.n_fruits + attrs.n_droplets)
         if target_misses is not None
@@ -116,6 +129,7 @@ def _calculate_pp(
         hitresults: CatchHitResults,
         score_max_combo: int,
 ) -> float:
+    """Combine the star rating, combo and accuracy into the final catch pp."""
     stars = attrs.stars
     max_combo = attrs.max_combo
 

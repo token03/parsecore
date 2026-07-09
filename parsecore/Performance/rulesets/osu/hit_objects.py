@@ -1,4 +1,5 @@
-"""
+"""osu! object model and per-object difficulty preprocessing (distances, angles, ...).
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -59,44 +60,54 @@ PREEMPT_MIN: float = 450.0
 _BASE_SCORING_DIST: float = 100.0
 
 class NestedSliderObjectKind(Enum):
+    """The kind of a nested slider object (tick, repeat or tail)."""
     TICK = "tick"
     REPEAT = "repeat"
     TAIL = "tail"
 
 @dataclass(slots=True)
 class NestedSliderObject:
+    """A scoring point on a slider (tick, repeat or tail) at a time and position."""
     pos: Pos
     start_time: float
     kind: NestedSliderObjectKind
 
     def is_tick(self) -> bool:
+        """Return whether this is a slider tick."""
         return self.kind == NestedSliderObjectKind.TICK
 
     def is_repeat(self) -> bool:
+        """Return whether this is a slider repeat."""
         return self.kind == NestedSliderObjectKind.REPEAT
 
     def is_tail(self) -> bool:
+        """Return whether this is the slider tail."""
         return self.kind == NestedSliderObjectKind.TAIL
 
 @dataclass(slots=True)
 class OsuSlider:
+    """A slider with its sampled path and nested scoring objects."""
     end_time: float
     span_count: float
     path: object
     nested_objects: list[NestedSliderObject] = field(default_factory=list)
 
     def repeat_count(self) -> int:
+        """Return the number of repeats."""
         return sum(1 for n in self.nested_objects if n.is_repeat())
 
     def tick_count(self) -> int:
+        """Return the number of slider ticks."""
         return sum(1 for n in self.nested_objects if n.is_tick())
 
     def large_tick_count(self) -> int:
+        """Return the number of large ticks (lazer scoring)."""
         return sum(
             1 for n in self.nested_objects if n.is_tick() or n.is_repeat()
         )
 
     def tail(self) -> Optional[NestedSliderObject]:
+        """Return the slider's tail object."""
         for n in reversed(self.nested_objects):
             if n.is_tail():
                 return n
@@ -104,6 +115,7 @@ class OsuSlider:
 
 @dataclass(slots=True)
 class OsuObject:
+    """An osu! hit object (circle, slider or spinner) with stacking state."""
     pos: Pos
     start_time: float
     kind: Optional[object] = None
@@ -117,6 +129,7 @@ class OsuObject:
             beatmap: "PerformanceBeatmap",
             reflection: Reflection,
     ) -> "OsuObject":
+        """Build an osu! object from a parsed hit object."""
         kind: Optional[object]
 
         if isinstance(h.kind, Slider):
@@ -131,15 +144,19 @@ class OsuObject:
         return cls(pos=Pos(h.pos.x, h.pos.y), start_time=h.start_time, kind=kind)
 
     def is_circle(self) -> bool:
+        """Return whether this object is a circle."""
         return self.kind is None
 
     def is_slider(self) -> bool:
+        """Return whether this object is a slider."""
         return isinstance(self.kind, OsuSlider)
 
     def is_spinner(self) -> bool:
+        """Return whether this object is a spinner."""
         return isinstance(self.kind, Spinner)
 
     def end_time(self) -> float:
+        """Return the object's end time."""
         if isinstance(self.kind, OsuSlider):
             return self.kind.end_time
         if isinstance(self.kind, Spinner):
@@ -147,27 +164,33 @@ class OsuObject:
         return self.start_time
 
     def stacked_pos(self) -> Pos:
+        """Return the start position after applying the stack offset."""
         return Pos(self.pos.x + self.stack_offset.x, self.pos.y + self.stack_offset.y)
 
     def end_pos(self) -> Pos:
+        """Return the object's end position."""
         if isinstance(self.kind, OsuSlider):
             t = self.kind.tail()
             return t.pos if t is not None else Pos(0.0, 0.0)
         return self.pos
 
     def stacked_end_pos(self) -> Pos:
+        """Return the end position after applying the stack offset."""
         ep = self.end_pos()
         return Pos(ep.x + self.stack_offset.x, ep.y + self.stack_offset.y)
 
     def reflect_vertically(self) -> None:
+        """Reflect the object across the horizontal axis (Hard Rock)."""
         self.pos = Pos(self.pos.x, PLAYFIELD_BASE_SIZE_Y - self.pos.y)
         self.finalize_nested()
 
     def reflect_horizontally(self) -> None:
+        """Reflect the object across the vertical axis."""
         self.pos = Pos(PLAYFIELD_BASE_SIZE_X - self.pos.x, self.pos.y)
         self.finalize_nested()
 
     def reflect_both_axes(self) -> None:
+        """Reflect the object across both axes."""
         self.pos = Pos(
             PLAYFIELD_BASE_SIZE_X - self.pos.x,
             PLAYFIELD_BASE_SIZE_Y - self.pos.y,
@@ -175,6 +198,7 @@ class OsuObject:
         self.finalize_nested()
 
     def finalize_nested(self) -> None:
+        """Resolve nested slider objects onto absolute positions after stacking."""
         if isinstance(self.kind, OsuSlider):
             for nested in self.kind.nested_objects:
                 nested.pos = Pos(self.pos.x + nested.pos.x, self.pos.y + nested.pos.y)
@@ -185,6 +209,7 @@ def _build_osu_slider(
         beatmap: "PerformanceBeatmap",
         reflection: Reflection,
 ) -> OsuSlider:
+    """Sample a slider's path into its nested tick/repeat/tail objects."""
     start_time = h.start_time
     slider_multiplier = beatmap.slider_multiplier
     slider_tick_rate = beatmap.slider_tick_rate
@@ -246,9 +271,11 @@ def _build_osu_slider(
     ))
 
     def _span_at(progress: float) -> int:
+        """Return the slider span index at a path progress."""
         return int(progress * span_count)
 
     def _obj_progress_at(progress: float) -> float:
+        """Return the path progress of a nested object."""
         p = (progress * span_count) % 1.0
         return 1.0 - p if _span_at(progress) % 2 == 1 else p
 
@@ -291,9 +318,11 @@ def _build_osu_slider(
     )
 
 def _reflect_curve(curve, reflection: Reflection, slider: Slider):
+    """Return a slider curve reflected for a mod."""
     import copy as _copy
 
     def transform(p: Pos) -> Pos:
+        """Reflect a single point of the curve."""
         if reflection == Reflection.VERTICAL:
             return Pos(p.x, -p.y)
         if reflection == Reflection.HORIZONTAL:
@@ -317,12 +346,14 @@ _BROKEN_GAMEFIELD_ROUNDING_ALLOWANCE: float = 1.00041
 
 @dataclass(slots=True)
 class ScalingFactor:
+    """Converts osu! pixels to the normalised space used by the skills."""
     factor: float
     radius: float
     scale: float
 
     @classmethod
     def new(cls, cs: float) -> "ScalingFactor":
+        """Build the scaling factor for a circle size."""
         cs = f32(cs)
         diff_range_value = (cs - 5.0) / 5.0
         inner = 1.0 - f32(0.7) * diff_range_value
@@ -332,6 +363,7 @@ class ScalingFactor:
         return cls(factor=factor, radius=radius, scale=scale)
 
     def stack_offset(self, stack_height: int) -> Pos:
+        """Return the position offset for one stack level."""
         offset = f32(f32(float(stack_height) * self.scale) * f32(-6.4))
         return Pos(offset, offset)
 
@@ -345,6 +377,7 @@ _HD_FADE_OUT_DURATION_MULTIPLIER: float = 0.3
 
 @dataclass(slots=True)
 class OsuDifficultyObject:
+    """One osu! object enriched with jump/angle/timing preprocessing for the skills."""
     idx: int = 0
     base: OsuObject = field(default_factory=lambda: OsuObject(Pos(0.0, 0.0), 0.0))
     start_time: float = 0.0
@@ -376,6 +409,7 @@ class OsuDifficultyObject:
             idx: int,
             scaling_factor: ScalingFactor,
     ) -> "OsuDifficultyObject":
+        """Build a difficulty object from an object and its predecessors."""
         delta_time = (hit_object.start_time - last_object.start_time) / clock_rate
         start_time = hit_object.start_time / clock_rate
         strain_time = max(delta_time, _OSU_DIFF_MIN_DELTA_TIME)
@@ -412,6 +446,7 @@ class OsuDifficultyObject:
             clock_rate: float,
             scaling_factor: ScalingFactor,
     ) -> None:
+        """Compute the jump, travel and lazy distances and their times."""
         if isinstance(self.base.kind, OsuSlider):
             slider = self.base.kind
             self.travel_dist = self.lazy_travel_dist * max(
@@ -492,6 +527,7 @@ class OsuDifficultyObject:
 
     @staticmethod
     def _calculate_angle(current: Pos, last: Pos, last_last: Pos) -> float:
+        """Compute the angle between this object and its neighbours."""
         v1 = last_last - last
         v2 = current - last
         dot = v1.dot(v2)
@@ -504,6 +540,7 @@ class OsuDifficultyObject:
         last_last_cursor_pos: Pos,
         cur: Pos,
     ) -> float:
+        """Compute the angle contribution of a preceding slider."""
         last_cursor_pos = self._get_end_cursor_pos(last_diff_obj)
         if (
             isinstance(last_diff_obj.base.kind, OsuSlider)
@@ -521,6 +558,7 @@ class OsuDifficultyObject:
         return self._calculate_angle(cur, last_cursor_pos, last_last_cursor_pos)
 
     def _compute_slider_cursor_pos(self, radius: float) -> None:
+        """Compute the assumed cursor path along a slider."""
         TAIL_LENIENCY = -36.0
 
         if not isinstance(self.base.kind, OsuSlider):
@@ -608,6 +646,7 @@ class OsuDifficultyObject:
 
     @staticmethod
     def _get_end_cursor_pos(hit_object: "OsuDifficultyObject") -> Pos:
+        """Return the assumed cursor position at a slider's end."""
         if hit_object.lazy_end_pos is not None:
             return hit_object.lazy_end_pos
         return hit_object.base.stacked_pos()
@@ -619,6 +658,7 @@ class OsuDifficultyObject:
             time_preempt: float,
             time_fade_in: float,
     ) -> float:
+        """Return the object's opacity at a time (for the reading/Hidden bonus)."""
         if time > self.base.start_time:
             return 0.0
         fade_in_start_time = self.base.start_time - time_preempt
@@ -652,6 +692,7 @@ class OsuDifficultyObject:
             next_obj: Optional["OsuDifficultyObject"],
             hit_window: float,
     ) -> float:
+        """Return how likely this and the next object are double-tapped."""
         if next_obj is None:
             return 0.0
         if self.base.is_spinner():
@@ -671,6 +712,7 @@ class OsuDifficultyObject:
             next_obj: Optional["OsuDifficultyObject"],
             hit_window_great: float,
     ) -> float:
+        """Return the feasibility of double-tapping into the next object."""
         if next_obj is None:
             return 0.0
         curr_delta_time = max(self.delta_time, 1.0)
@@ -686,17 +728,21 @@ class OsuDifficultyObject:
 @dataclass(slots=True)
 class OsuDifficultyObjects:
 
+    """The ordered collection of osu! difficulty objects with look-back helpers."""
     objects: list[OsuDifficultyObject] = field(default_factory=list)
 
     def __len__(self) -> int:
+        """Return the number of difficulty objects."""
         return len(self.objects)
 
     def __getitem__(self, idx: int) -> OsuDifficultyObject:
+        """Return the difficulty object at an index."""
         return self.objects[idx]
 
     def previous(
             self, curr: OsuDifficultyObject, backwards_idx: int
     ) -> Optional[OsuDifficultyObject]:
+        """Return the object ``n`` steps before an index, or ``None``."""
         target = curr.idx - backwards_idx - 1
         if 0 <= target < len(self.objects):
             return self.objects[target]
@@ -705,6 +751,7 @@ class OsuDifficultyObjects:
     def next(
             self, curr: OsuDifficultyObject, forwards_idx: int
     ) -> Optional[OsuDifficultyObject]:
+        """Return the object ``n`` steps after an index, or ``None``."""
         target = curr.idx + forwards_idx + 1
         if 0 <= target < len(self.objects):
             return self.objects[target]

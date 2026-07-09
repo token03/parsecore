@@ -1,4 +1,5 @@
-"""
+"""Byte-order-mark detection and BOM-aware line decoding for ``.osu`` files.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -29,12 +30,24 @@ from enum import Enum
 
 
 class Encoding(Enum):
+    """Text encoding of a ``.osu`` file, detected from its byte-order mark."""
+
     Utf8 = "utf-8"
     Utf16BE = "utf-16-be"
     Utf16LE = "utf-16-le"
 
     @classmethod
     def from_bom(cls, bom: bytes) -> tuple["Encoding", int]:
+        """Detect the encoding from a leading byte-order mark.
+
+        Args:
+            bom: The first few bytes of the file.
+
+        Returns:
+            A tuple of the detected encoding and the number of BOM bytes that
+            should be skipped (``0`` when no BOM is present, defaulting to
+            UTF-8).
+        """
         if bom.startswith(b"\xef\xbb\xbf"):
             return cls.Utf8, 3
         elif bom.startswith(b"\xff\xfe"):
@@ -46,7 +59,14 @@ class Encoding(Enum):
 
 
 class Decoder:
+    """Reads a ``.osu`` byte stream line by line with BOM-aware decoding."""
+
     def __init__(self, stream: typing.BinaryIO | io.BytesIO):
+        """Detect the stream's encoding from its BOM and seek past it.
+
+        Args:
+            stream: A binary stream positioned at the start of the file.
+        """
         self.stream = stream
 
         start_pos = self.stream.tell()
@@ -57,6 +77,12 @@ class Decoder:
         self.stream.seek(start_pos + consumed)
 
     def read_line(self) -> str | None:
+        """Read and decode the next line, or ``None`` at end of stream.
+
+        Returns:
+            The decoded line with trailing whitespace stripped, or ``None``
+            when the stream is exhausted.
+        """
         raw_line = self.stream.readline()
 
         if not raw_line:

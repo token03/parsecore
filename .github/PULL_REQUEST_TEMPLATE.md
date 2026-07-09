@@ -58,7 +58,7 @@ N/A
 
 ### Checklist
 
-- [ ] Code follows project style (PEP 8, type hints, **no inline comments/docstrings** see CONTRIBUTING.md)
+- [ ] Code follows project style (PEP 8, type hints, **Google-style docstrings**; inline `#` comments discouraged — see CONTRIBUTING.md)
 - [ ] Bit-exactness preserved for any `parsecore/Performance/` change (parity suite: 0 differences)
 - [ ] Pre-commit hooks pass locally (`pre-commit run --all-files`)
 - [ ] Tests added / updated where relevant
