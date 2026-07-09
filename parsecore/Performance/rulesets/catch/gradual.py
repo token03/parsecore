@@ -34,7 +34,6 @@ from parsecore.Beatmap.utils import f32
 from ...data.attributes import AdjustedBeatmapAttributes, as_override
 from ...data.mode import GameMode
 from ...data.mods import PerformanceMods
-
 from .convert import calculate_catch_width, convert_objects
 from .difficulty import (
     DIFFICULTY_MULTIPLIER,
@@ -43,8 +42,9 @@ from .difficulty import (
 )
 from .hit_objects import GradualObjectCountBuilder
 from .hitresult_generator import CatchHitResults
-from .performance import calculate_performance, CatchPerformanceAttributes
+from .performance import CatchPerformanceAttributes, calculate_performance
 from .skills import Movement
+
 
 @dataclass(slots=True)
 class CatchScoreState:
@@ -120,7 +120,7 @@ class CatchGradualDifficulty:
             clock_rate=clock_rate,
         )
 
-    def __iter__(self) -> "CatchGradualDifficulty":
+    def __iter__(self) -> CatchGradualDifficulty:
         """Return the iterator (``self``)."""
         return self
 

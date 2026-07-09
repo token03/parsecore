@@ -35,6 +35,7 @@ from ...data.mods import PerformanceMods
 from .convert import convert_to_taiko_objects
 from .skills import create_taiko_difficulty_objects, eval_skills, run_skills
 
+
 @dataclass(slots=True)
 class TaikoDifficultyAttributes:
     """Difficulty attributes of a taiko beatmap (stars, per-skill values, hit windows)."""

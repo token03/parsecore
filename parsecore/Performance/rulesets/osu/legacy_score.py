@@ -123,7 +123,7 @@ class OsuLegacyScoreSimulator:
     def __init__(
             self,
             osu_objects: list[OsuObject],
-            beatmap: "PerformanceBeatmap",
+            beatmap: PerformanceBeatmap,
             passed_objects: int,
     ) -> None:
         """Initialise the simulator and compute the ScoreV1 difficulty multiplier."""
@@ -140,7 +140,7 @@ class OsuLegacyScoreSimulator:
 
     @staticmethod
     def score_multiplier(
-            beatmap: "PerformanceBeatmap",
+            beatmap: PerformanceBeatmap,
             passed_objects: int,
             *,
             hp: float,

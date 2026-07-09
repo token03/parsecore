@@ -28,17 +28,19 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-from parsecore.Beatmap.utils import Pos, f32
 from parsecore.Beatmap.section.enums import GameMode as BeatmapGameMode
 from parsecore.Beatmap.section.hit_objects.slider import (
-    Curve, SliderEventType, generate_slider_events,
+    Curve,
+    SliderEventType,
+    generate_slider_events,
 )
+from parsecore.Beatmap.utils import Pos, f32
 
 from ...data.beatmap import (
-    DifficultyPoint, TimingPoint,
-    difficulty_point_at, timing_point_at,
+    difficulty_point_at,
+    timing_point_at,
 )
 from ...data.hit_objects import HitObject, HoldNote, Slider, Spinner
 from ...data.mods import Reflection
@@ -106,7 +108,7 @@ class OsuSlider:
             1 for n in self.nested_objects if n.is_tick() or n.is_repeat()
         )
 
-    def tail(self) -> Optional[NestedSliderObject]:
+    def tail(self) -> NestedSliderObject | None:
         """Return the slider's tail object."""
         for n in reversed(self.nested_objects):
             if n.is_tail():
@@ -118,7 +120,7 @@ class OsuObject:
     """An osu! hit object (circle, slider or spinner) with stacking state."""
     pos: Pos
     start_time: float
-    kind: Optional[object] = None
+    kind: object | None = None
     stack_height: int = 0
     stack_offset: Pos = field(default_factory=lambda: Pos(0.0, 0.0))
 
@@ -126,11 +128,11 @@ class OsuObject:
     def new(
             cls,
             h: HitObject,
-            beatmap: "PerformanceBeatmap",
+            beatmap: PerformanceBeatmap,
             reflection: Reflection,
-    ) -> "OsuObject":
+    ) -> OsuObject:
         """Build an osu! object from a parsed hit object."""
-        kind: Optional[object]
+        kind: object | None
 
         if isinstance(h.kind, Slider):
             kind = _build_osu_slider(h, h.kind, beatmap, reflection)
@@ -206,7 +208,7 @@ class OsuObject:
 def _build_osu_slider(
         h: HitObject,
         slider: Slider,
-        beatmap: "PerformanceBeatmap",
+        beatmap: PerformanceBeatmap,
         reflection: Reflection,
 ) -> OsuSlider:
     """Sample a slider's path into its nested tick/repeat/tail objects."""
@@ -352,7 +354,7 @@ class ScalingFactor:
     scale: float
 
     @classmethod
-    def new(cls, cs: float) -> "ScalingFactor":
+    def new(cls, cs: float) -> ScalingFactor:
         """Build the scaling factor for a circle size."""
         cs = f32(cs)
         diff_range_value = (cs - 5.0) / 5.0
@@ -391,11 +393,11 @@ class OsuDifficultyObject:
     min_jump_time: float = 0.0
     travel_dist: float = 0.0
     travel_time: float = 0.0
-    lazy_end_pos: Optional[Pos] = None
+    lazy_end_pos: Pos | None = None
     lazy_travel_dist: float = 0.0
     lazy_travel_time: float = 0.0
-    angle: Optional[float] = None
-    normalised_vector_angle: Optional[float] = None
+    angle: float | None = None
+    normalised_vector_angle: float | None = None
     small_circle_bonus: float = 1.0
 
     @classmethod
@@ -403,12 +405,12 @@ class OsuDifficultyObject:
             cls,
             hit_object: OsuObject,
             last_object: OsuObject,
-            last_diff_obj: Optional["OsuDifficultyObject"],
-            last_last_diff_obj: Optional["OsuDifficultyObject"],
+            last_diff_obj: OsuDifficultyObject | None,
+            last_last_diff_obj: OsuDifficultyObject | None,
             clock_rate: float,
             idx: int,
             scaling_factor: ScalingFactor,
-    ) -> "OsuDifficultyObject":
+    ) -> OsuDifficultyObject:
         """Build a difficulty object from an object and its predecessors."""
         delta_time = (hit_object.start_time - last_object.start_time) / clock_rate
         start_time = hit_object.start_time / clock_rate
@@ -441,8 +443,8 @@ class OsuDifficultyObject:
     def _set_distances(
             self,
             last_object: OsuObject,
-            last_diff_obj: Optional["OsuDifficultyObject"],
-            last_last_diff_obj: Optional["OsuDifficultyObject"],
+            last_diff_obj: OsuDifficultyObject | None,
+            last_last_diff_obj: OsuDifficultyObject | None,
             clock_rate: float,
             scaling_factor: ScalingFactor,
     ) -> None:
@@ -536,7 +538,7 @@ class OsuDifficultyObject:
 
     def _calculate_slider_angle(
         self,
-        last_diff_obj: "OsuDifficultyObject",
+        last_diff_obj: OsuDifficultyObject,
         last_last_cursor_pos: Pos,
         cur: Pos,
     ) -> float:
@@ -645,7 +647,7 @@ class OsuDifficultyObject:
         self.lazy_end_pos = lazy_end_pos
 
     @staticmethod
-    def _get_end_cursor_pos(hit_object: "OsuDifficultyObject") -> Pos:
+    def _get_end_cursor_pos(hit_object: OsuDifficultyObject) -> Pos:
         """Return the assumed cursor position at a slider's end."""
         if hit_object.lazy_end_pos is not None:
             return hit_object.lazy_end_pos
@@ -689,7 +691,7 @@ class OsuDifficultyObject:
 
     def get_doubletapness(
             self,
-            next_obj: Optional["OsuDifficultyObject"],
+            next_obj: OsuDifficultyObject | None,
             hit_window: float,
     ) -> float:
         """Return how likely this and the next object are double-tapped."""
@@ -709,7 +711,7 @@ class OsuDifficultyObject:
 
     def calculate_double_tap_feasibility(
             self,
-            next_obj: Optional["OsuDifficultyObject"],
+            next_obj: OsuDifficultyObject | None,
             hit_window_great: float,
     ) -> float:
         """Return the feasibility of double-tapping into the next object."""
@@ -741,7 +743,7 @@ class OsuDifficultyObjects:
 
     def previous(
             self, curr: OsuDifficultyObject, backwards_idx: int
-    ) -> Optional[OsuDifficultyObject]:
+    ) -> OsuDifficultyObject | None:
         """Return the object ``n`` steps before an index, or ``None``."""
         target = curr.idx - backwards_idx - 1
         if 0 <= target < len(self.objects):
@@ -750,7 +752,7 @@ class OsuDifficultyObjects:
 
     def next(
             self, curr: OsuDifficultyObject, forwards_idx: int
-    ) -> Optional[OsuDifficultyObject]:
+    ) -> OsuDifficultyObject | None:
         """Return the object ``n`` steps after an index, or ``None``."""
         target = curr.idx + forwards_idx + 1
         if 0 <= target < len(self.objects):

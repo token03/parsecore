@@ -28,6 +28,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+
 @dataclass(slots=True)
 class TaikoHitResults:
     """A complete set of taiko hit-result counts."""

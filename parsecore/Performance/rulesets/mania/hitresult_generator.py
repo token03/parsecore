@@ -25,8 +25,8 @@ SOFTWARE.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
+
 
 @dataclass(slots=True)
 class ManiaHitResults:

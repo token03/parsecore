@@ -25,14 +25,12 @@ SOFTWARE.
 
 from __future__ import annotations
 
-import math
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-from parsecore.Beatmap.section.enums import GameMode as BeatmapGameMode
 from parsecore.Beatmap.utils import f32
+
 from ...data.mods import Reflection
 from .hit_objects import (
-    OBJECT_RADIUS,
     OsuObject,
     OsuSlider,
     ScalingFactor,
@@ -46,8 +44,8 @@ if TYPE_CHECKING:
 _STACK_DISTANCE: float = 3.0
 
 def prepare_beatmap(
-        difficulty: "Difficulty", beatmap: "PerformanceBeatmap"
-) -> "PerformanceBeatmap":
+        difficulty: Difficulty, beatmap: PerformanceBeatmap
+) -> PerformanceBeatmap:
     """Convert and stack a beatmap's objects ready for the osu! calculators.
 
     Args:
@@ -60,12 +58,12 @@ def prepare_beatmap(
     return beatmap
 
 def convert_objects(
-        beatmap: "PerformanceBeatmap",
+        beatmap: PerformanceBeatmap,
         scaling_factor: ScalingFactor,
         reflection: Reflection,
         time_preempt: float,
         take: int,
-        attrs: "OsuDifficultyAttributes",
+        attrs: OsuDifficultyAttributes,
 ) -> list[OsuObject]:
     """Build osu! objects from the beatmap and apply mod reflections."""
     osu_objects = [OsuObject.new(h, beatmap, reflection) for h in beatmap.hit_objects]

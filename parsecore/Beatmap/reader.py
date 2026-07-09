@@ -25,7 +25,6 @@ SOFTWARE.
 
 import io
 import typing
-
 from enum import Enum
 
 

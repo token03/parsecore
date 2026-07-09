@@ -32,6 +32,7 @@ from .data.mode import GameMode
 from .data.mods import PerformanceMods
 from .data.score_state import ScoreState
 
+
 class RulesetNotImplementedError(NotImplementedError):
     """Raised when a ruleset does not implement the requested calculation stage."""
     def __init__(self, mode: GameMode, stage: str) -> None:
@@ -64,7 +65,7 @@ class Beatmap:
         self._pm = pm
 
     @classmethod
-    def from_path(cls, path: str) -> "Beatmap":
+    def from_path(cls, path: str) -> Beatmap:
         """Load and prepare a beatmap from a ``.osu`` file.
 
         Args:
@@ -81,7 +82,7 @@ class Beatmap:
             cls,
             user_beatmap: Any,
             override_mode: GameMode | None = None,
-    ) -> "Beatmap":
+    ) -> Beatmap:
         """Prepare a beatmap from an already-parsed map, optionally converting it.
 
         Args:
@@ -180,7 +181,7 @@ class Difficulty:
         self._od: tuple[float, bool] | None = None
         self._passed_objects: int | None = None
 
-    def mods(self, mods: Any) -> "Difficulty":
+    def mods(self, mods: Any) -> Difficulty:
         """Set the mods.
 
         Args:
@@ -194,7 +195,7 @@ class Difficulty:
         )
         return self
 
-    def clock_rate(self, cr: float) -> "Difficulty":
+    def clock_rate(self, cr: float) -> Difficulty:
         """Override the clock rate directly.
 
         Args:
@@ -206,7 +207,7 @@ class Difficulty:
         self._clock_rate = float(cr)
         return self
 
-    def lazer(self, lazer: bool) -> "Difficulty":
+    def lazer(self, lazer: bool) -> Difficulty:
         """Choose lazer or stable scoring semantics.
 
         Args:
@@ -218,7 +219,7 @@ class Difficulty:
         self._lazer = bool(lazer)
         return self
 
-    def ar(self, ar: float, fixed: bool = False) -> "Difficulty":
+    def ar(self, ar: float, fixed: bool = False) -> Difficulty:
         """Override the approach rate.
 
         Args:
@@ -231,7 +232,7 @@ class Difficulty:
         self._ar = (float(ar), bool(fixed))
         return self
 
-    def cs(self, cs: float, fixed: bool = False) -> "Difficulty":
+    def cs(self, cs: float, fixed: bool = False) -> Difficulty:
         """Override the circle size (see :meth:`ar` for ``fixed``).
 
         Args:
@@ -244,7 +245,7 @@ class Difficulty:
         self._cs = (float(cs), bool(fixed))
         return self
 
-    def hp(self, hp: float, fixed: bool = False) -> "Difficulty":
+    def hp(self, hp: float, fixed: bool = False) -> Difficulty:
         """Override the HP drain rate (see :meth:`ar` for ``fixed``).
 
         Args:
@@ -257,7 +258,7 @@ class Difficulty:
         self._hp = (float(hp), bool(fixed))
         return self
 
-    def od(self, od: float, fixed: bool = False) -> "Difficulty":
+    def od(self, od: float, fixed: bool = False) -> Difficulty:
         """Override the overall difficulty (see :meth:`ar` for ``fixed``).
 
         Args:
@@ -270,7 +271,7 @@ class Difficulty:
         self._od = (float(od), bool(fixed))
         return self
 
-    def passed_objects(self, n: int) -> "Difficulty":
+    def passed_objects(self, n: int) -> Difficulty:
         """Only consider the first ``n`` hit objects (partial map).
 
         Args:
@@ -282,7 +283,7 @@ class Difficulty:
         self._passed_objects = int(n)
         return self
 
-    def calculate(self, beatmap: "Beatmap | PerformanceBeatmap | Any") -> Any:
+    def calculate(self, beatmap: Beatmap | PerformanceBeatmap | Any) -> Any:
         """Run the difficulty calculation.
 
         Args:
@@ -319,7 +320,7 @@ class Performance:
         "_ar", "_cs", "_hp", "_od",
     )
 
-    def __init__(self, beatmap: "Beatmap | PerformanceBeatmap | Any") -> None:
+    def __init__(self, beatmap: Beatmap | PerformanceBeatmap | Any) -> None:
         """Create a performance builder for a beatmap.
 
         Args:
@@ -347,104 +348,104 @@ class Performance:
         self._hp: tuple[float, bool] | None = None
         self._od: tuple[float, bool] | None = None
 
-    def mods(self, mods: Any) -> "Performance":
+    def mods(self, mods: Any) -> Performance:
         """Set the mods from a bitflag, acronym string or mods object; returns ``self``."""
         self._mods = (
             mods if isinstance(mods, PerformanceMods) else PerformanceMods.from_mods(mods)
         )
         return self
 
-    def clock_rate(self, cr: float) -> "Performance":
+    def clock_rate(self, cr: float) -> Performance:
         """Override the clock-rate multiplier; returns ``self``."""
         self._clock_rate = float(cr)
         return self
 
-    def lazer(self, lazer: bool) -> "Performance":
+    def lazer(self, lazer: bool) -> Performance:
         """Select lazer or stable scoring semantics; returns ``self``."""
         self._lazer = bool(lazer)
         return self
 
-    def accuracy(self, acc: float) -> "Performance":
+    def accuracy(self, acc: float) -> Performance:
         """Set the target accuracy in percent (generates a matching state); returns ``self``."""
         self._accuracy = float(acc) / 100.0 if acc > 1.0 else float(acc)
         return self
 
-    def combo(self, c: int) -> "Performance":
+    def combo(self, c: int) -> Performance:
         """Set the achieved max combo; returns ``self``."""
         self._combo = int(c)
         return self
 
-    def misses(self, m: int) -> "Performance":
+    def misses(self, m: int) -> Performance:
         """Set the miss count; returns ``self``."""
         self._misses = int(m)
         return self
 
-    def n300(self, n: int) -> "Performance":
+    def n300(self, n: int) -> Performance:
         """Set the number of 300s (great hits); returns ``self``."""
         self._n300 = int(n)
         return self
 
-    def n100(self, n: int) -> "Performance":
+    def n100(self, n: int) -> Performance:
         """Set the number of 100s (ok hits); returns ``self``."""
         self._n100 = int(n)
         return self
 
-    def n50(self, n: int) -> "Performance":
+    def n50(self, n: int) -> Performance:
         """Set the number of 50s (meh hits); returns ``self``."""
         self._n50 = int(n)
         return self
 
-    def n_geki(self, n: int) -> "Performance":
+    def n_geki(self, n: int) -> Performance:
         """Set the number of gekis (mania perfects / max hits); returns ``self``."""
         self._n_geki = int(n)
         return self
 
-    def n_katu(self, n: int) -> "Performance":
+    def n_katu(self, n: int) -> Performance:
         """Set the number of katus (mania good / catch tiny-droplet misses); returns ``self``."""
         self._n_katu = int(n)
         return self
 
-    def large_tick_hits(self, n: int) -> "Performance":
+    def large_tick_hits(self, n: int) -> Performance:
         """Set the number of large tick hits (lazer sliders); returns ``self``."""
         self._large_tick_hits = int(n)
         return self
 
-    def small_tick_hits(self, n: int) -> "Performance":
+    def small_tick_hits(self, n: int) -> Performance:
         """Set the number of small tick hits (lazer); returns ``self``."""
         self._small_tick_hits = int(n)
         return self
 
-    def slider_end_hits(self, n: int) -> "Performance":
+    def slider_end_hits(self, n: int) -> Performance:
         """Set the number of slider ends hit (lazer sliders); returns ``self``."""
         self._slider_end_hits = int(n)
         return self
 
-    def passed_objects(self, n: int) -> "Performance":
+    def passed_objects(self, n: int) -> Performance:
         """Only consider the first ``n`` objects (fails/partial plays); returns ``self``."""
         self._passed_objects = int(n)
         return self
 
-    def legacy_total_score(self, score: int) -> "Performance":
+    def legacy_total_score(self, score: int) -> Performance:
         """Set the stable total score for score-based miss estimation; returns ``self``."""
         self._legacy_total_score = int(score)
         return self
 
-    def ar(self, ar: float, fixed: bool = False) -> "Performance":
+    def ar(self, ar: float, fixed: bool = False) -> Performance:
         """Override AR (see :meth:`Difficulty.ar` for ``fixed``); returns ``self``."""
         self._ar = (float(ar), bool(fixed))
         return self
 
-    def cs(self, cs: float, fixed: bool = False) -> "Performance":
+    def cs(self, cs: float, fixed: bool = False) -> Performance:
         """Override CS (see :meth:`Difficulty.ar` for ``fixed``); returns ``self``."""
         self._cs = (float(cs), bool(fixed))
         return self
 
-    def hp(self, hp: float, fixed: bool = False) -> "Performance":
+    def hp(self, hp: float, fixed: bool = False) -> Performance:
         """Override HP (see :meth:`Difficulty.ar` for ``fixed``); returns ``self``."""
         self._hp = (float(hp), bool(fixed))
         return self
 
-    def od(self, od: float, fixed: bool = False) -> "Performance":
+    def od(self, od: float, fixed: bool = False) -> Performance:
         """Override OD (see :meth:`Difficulty.ar` for ``fixed``); returns ``self``."""
         self._od = (float(od), bool(fixed))
         return self

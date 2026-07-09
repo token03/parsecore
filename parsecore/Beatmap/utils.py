@@ -25,7 +25,6 @@ SOFTWARE.
 
 import math
 import struct
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Generic, TypeVar
@@ -119,7 +118,7 @@ class ParseNumberError(Exception):
         super().__init__(message)
 
 
-def parse_with_limits(s: str, limit: int | float, target_type: type[T_Num]) -> T_Num:
+def parse_with_limits(s: str, limit: float, target_type: type[T_Num]) -> T_Num:
     """Parse a number and clamp it to osu!'s allowed coordinate range.
 
     Args:

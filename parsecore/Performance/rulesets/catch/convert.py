@@ -31,7 +31,6 @@ from ...data.beatmap import PerformanceBeatmap
 from ...data.hit_objects import HoldNote, Slider, Spinner
 from ...data.mods import Reflection
 from ...utils import OsuRandom, clamp, cmp_key
-
 from .hit_objects import (
     NestedKind,
     ObjectCountBuilder,

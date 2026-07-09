@@ -26,9 +26,7 @@ SOFTWARE.
 from __future__ import annotations
 
 import math
-from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional
 
 from ...data.beatmap import (
     PerformanceBeatmap,
@@ -37,7 +35,6 @@ from ...data.beatmap import (
 )
 from ...utils import ieee_pow
 from .hit_objects import TaikoHitType, TaikoObject
-
 
 DIFFICULTY_MULTIPLIER = 0.084375
 RHYTHM_SKILL_MULTIPLIER = 0.770 * DIFFICULTY_MULTIPLIER
@@ -73,7 +70,7 @@ def _logistic(x: float, midpoint_offset: float, multiplier: float, max_value: fl
 
 _logistic_via_rust = _logistic
 
-def _logistic_exp(neg_x: float, multiplier: Optional[float] = None) -> float:
+def _logistic_exp(neg_x: float, multiplier: float | None = None) -> float:
     """Return a logistic curve evaluated on an exponent argument."""
     m = multiplier if multiplier is not None else 1.0
     return m / (1.0 + math.exp(neg_x))
@@ -89,7 +86,7 @@ def _smootherstep(x: float, start: float, end: float) -> float:
     t = _reverse_lerp(x, start, end)
     return t * t * t * (t * (6.0 * t - 15.0) + 10.0)
 
-def _bell_curve(x: float, mean: float, width: float, multiplier: Optional[float] = None) -> float:
+def _bell_curve(x: float, mean: float, width: float, multiplier: float | None = None) -> float:
     """Return a bell-curve weight peaking at a given centre."""
     m = multiplier if multiplier is not None else 1.0
     return m * math.exp(math.e * -(((x - mean) * (x - mean)) / (width * width)))
@@ -114,25 +111,25 @@ class MonoIndex:
 @dataclass
 class MonoStreak:
     """A run of consecutive same-colour (all don or all kat) hits."""
-    hit_objects: list["TaikoDifficultyObject"] = field(default_factory=list)
-    parent: Optional["AlternatingMonoPattern"] = None
+    hit_objects: list[TaikoDifficultyObject] = field(default_factory=list)
+    parent: AlternatingMonoPattern | None = None
     idx: int = 0
 
     def run_len(self) -> int:
         """Return the number of hits in the streak."""
         return len(self.hit_objects)
 
-    def hit_type(self) -> Optional[TaikoHitType]:
+    def hit_type(self) -> TaikoHitType | None:
         """Return the streak's shared hit type (don or kat)."""
         if not self.hit_objects:
             return None
         return self.hit_objects[0].base_hit_type
 
-    def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+    def first_hit_object(self) -> TaikoDifficultyObject | None:
         """Return the streak's first difficulty object."""
         return self.hit_objects[0] if self.hit_objects else None
 
-    def last_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+    def last_hit_object(self) -> TaikoDifficultyObject | None:
         """Return the streak's last difficulty object."""
         return self.hit_objects[-1] if self.hit_objects else None
 
@@ -140,20 +137,20 @@ class MonoStreak:
 class AlternatingMonoPattern:
     """A pattern of alternating mono streaks (e.g. ddkk ddkk)."""
     mono_streaks: list[MonoStreak] = field(default_factory=list)
-    parent: Optional["RepeatingHitPatterns"] = None
+    parent: RepeatingHitPatterns | None = None
     idx: int = 0
 
-    def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+    def first_hit_object(self) -> TaikoDifficultyObject | None:
         """Return the pattern's first difficulty object."""
         if not self.mono_streaks:
             return None
         return self.mono_streaks[0].first_hit_object()
 
-    def has_identical_mono_len(self, other: "AlternatingMonoPattern") -> bool:
+    def has_identical_mono_len(self, other: AlternatingMonoPattern) -> bool:
         """Return whether all its mono streaks share the same length."""
         return self.mono_streaks[0].run_len() == other.mono_streaks[0].run_len()
 
-    def is_repetition_of(self, other: "AlternatingMonoPattern") -> bool:
+    def is_repetition_of(self, other: AlternatingMonoPattern) -> bool:
         """Return whether this pattern repeats another."""
         if not (self.has_identical_mono_len(other)
                 and len(self.mono_streaks) == len(other.mono_streaks)):
@@ -164,20 +161,20 @@ class AlternatingMonoPattern:
 class RepeatingHitPatterns:
     """A sequence of alternating patterns that repeats, used for colour repetition."""
     alternating_mono_patterns: list[AlternatingMonoPattern] = field(default_factory=list)
-    prev: Optional["RepeatingHitPatterns"] = None
+    prev: RepeatingHitPatterns | None = None
     repetition_interval: int = 0
 
-    def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+    def first_hit_object(self) -> TaikoDifficultyObject | None:
         """Return the sequence's first difficulty object."""
         if not self.alternating_mono_patterns:
             return None
         return self.alternating_mono_patterns[0].first_hit_object()
 
-    def is_repetition_of(self, other: "RepeatingHitPatterns") -> bool:
+    def is_repetition_of(self, other: RepeatingHitPatterns) -> bool:
         """Return whether this sequence repeats another."""
         if len(self.alternating_mono_patterns) != len(other.alternating_mono_patterns):
             return False
-        for a, b in zip(self.alternating_mono_patterns[:2], other.alternating_mono_patterns[:2]):
+        for a, b in zip(self.alternating_mono_patterns[:2], other.alternating_mono_patterns[:2], strict=False):
             if not a.has_identical_mono_len(b):
                 return False
         return True
@@ -202,21 +199,21 @@ class RepeatingHitPatterns:
 @dataclass
 class SameRhythmHitObjectGrouping:
     """A group of consecutive objects sharing the same time interval."""
-    hit_objects: list["TaikoDifficultyObject"] = field(default_factory=list)
-    previous: Optional["SameRhythmHitObjectGrouping"] = None
-    hit_object_interval: Optional[float] = None
+    hit_objects: list[TaikoDifficultyObject] = field(default_factory=list)
+    previous: SameRhythmHitObjectGrouping | None = None
+    hit_object_interval: float | None = None
     hit_object_interval_ratio: float = 1.0
     interval: float = math.inf
 
-    def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+    def first_hit_object(self) -> TaikoDifficultyObject | None:
         """Return the group's first object."""
         return self.hit_objects[0] if self.hit_objects else None
 
-    def start_time(self) -> Optional[float]:
+    def start_time(self) -> float | None:
         """Return the group's start time."""
         return self.hit_objects[0].start_time if self.hit_objects else None
 
-    def duration(self) -> Optional[float]:
+    def duration(self) -> float | None:
         """Return the group's total duration."""
         if not self.hit_objects:
             return None
@@ -226,15 +223,15 @@ class SameRhythmHitObjectGrouping:
 class SamePatternsGroupedHitObjects:
     """A group of same-rhythm groupings sharing a repeating interval pattern."""
     groups: list[SameRhythmHitObjectGrouping] = field(default_factory=list)
-    previous: Optional["SamePatternsGroupedHitObjects"] = None
+    previous: SamePatternsGroupedHitObjects | None = None
 
-    def first_hit_object(self) -> Optional["TaikoDifficultyObject"]:
+    def first_hit_object(self) -> TaikoDifficultyObject | None:
         """Return the group's first object."""
         if not self.groups:
             return None
         return self.groups[0].first_hit_object()
 
-    def group_interval(self) -> Optional[float]:
+    def group_interval(self) -> float | None:
         """Return the interval between the grouped rhythms."""
         if not self.groups:
             return None
@@ -252,19 +249,19 @@ class SamePatternsGroupedHitObjects:
 @dataclass(slots=True)
 class ColorData:
     """Per-object colour-skill state (its place in the mono/pattern hierarchy)."""
-    mono_streak: Optional[MonoStreak] = None
-    alternating_mono_pattern: Optional[AlternatingMonoPattern] = None
-    repeating_hit_patterns: Optional[RepeatingHitPatterns] = None
+    mono_streak: MonoStreak | None = None
+    alternating_mono_pattern: AlternatingMonoPattern | None = None
+    repeating_hit_patterns: RepeatingHitPatterns | None = None
 
 @dataclass(slots=True)
 class RhythmData:
     """Per-object rhythm-skill state (interval, ratio and grouping links)."""
-    same_rhythm_grouped_hit_objects: Optional[SameRhythmHitObjectGrouping] = None
-    same_patterns_grouped_hit_objects: Optional[SamePatternsGroupedHitObjects] = None
+    same_rhythm_grouped_hit_objects: SameRhythmHitObjectGrouping | None = None
+    same_patterns_grouped_hit_objects: SamePatternsGroupedHitObjects | None = None
     ratio: float = 1.0
 
     @classmethod
-    def create(cls, delta_time: float, prev_delta_time: Optional[float]) -> "RhythmData":
+    def create(cls, delta_time: float, prev_delta_time: float | None) -> RhythmData:
         """Build the rhythm data for one object from its neighbours.
 
         Returns:
@@ -304,14 +301,14 @@ class TaikoDifficultyObjects:
         """Append a difficulty object."""
         self.objects.append(obj)
 
-    def previous(self, curr: TaikoDifficultyObject, backwards_idx: int) -> Optional[TaikoDifficultyObject]:
+    def previous(self, curr: TaikoDifficultyObject, backwards_idx: int) -> TaikoDifficultyObject | None:
         """Return the object ``n`` steps before the given index, or ``None``."""
         target = curr.idx - backwards_idx - 1
         if 0 <= target < len(self.objects):
             return self.objects[target]
         return None
 
-    def previous_mono(self, curr: TaikoDifficultyObject, backwards_idx: int) -> Optional[TaikoDifficultyObject]:
+    def previous_mono(self, curr: TaikoDifficultyObject, backwards_idx: int) -> TaikoDifficultyObject | None:
         """Return the previous object of the same colour, or ``None``."""
         backwards_idx += 1
         if curr.mono_idx.kind == 0:
@@ -324,14 +321,14 @@ class TaikoDifficultyObjects:
                 return self.rim_hit_objects[target]
         return None
 
-    def previous_note(self, curr: TaikoDifficultyObject, backwards_idx: int) -> Optional[TaikoDifficultyObject]:
+    def previous_note(self, curr: TaikoDifficultyObject, backwards_idx: int) -> TaikoDifficultyObject | None:
         """Return the previous hit note, skipping non-hits, or ``None``."""
         target = curr.note_idx - backwards_idx - 1
         if 0 <= target < len(self.note_objects):
             return self.note_objects[target]
         return None
 
-    def next_note(self, curr: TaikoDifficultyObject, forwards_idx: int) -> Optional[TaikoDifficultyObject]:
+    def next_note(self, curr: TaikoDifficultyObject, forwards_idx: int) -> TaikoDifficultyObject | None:
         """Return the next hit note, skipping non-hits, or ``None``."""
         target = curr.note_idx + forwards_idx + 1
         if 0 <= target < len(self.note_objects):
@@ -358,7 +355,7 @@ def create_taiko_difficulty_objects(
         return out
 
     last = taiko_objects[1]
-    prev_delta_time: Optional[float] = None
+    prev_delta_time: float | None = None
     for i, curr in enumerate(taiko_objects[2:]):
         delta_time = (curr.start_time - last.start_time) / clock_rate
 
@@ -483,8 +480,8 @@ class ColorDifficultyPreprocessor:
         """Group alternating patterns into repeating sequences."""
         hit_patterns: list[RepeatingHitPatterns] = []
         data: list[AlternatingMonoPattern] = list(patterns)
-        curr_hit_pattern: Optional[RepeatingHitPatterns] = None
-        prev_for_link: Optional[RepeatingHitPatterns] = None
+        curr_hit_pattern: RepeatingHitPatterns | None = None
+        prev_for_link: RepeatingHitPatterns | None = None
 
         while data:
             curr_hit_pattern = RepeatingHitPatterns(prev=prev_for_link)
@@ -616,7 +613,7 @@ class RhythmDifficultyPreprocessor:
     ) -> list[SameRhythmHitObjectGrouping]:
         """Group consecutive objects that share a time interval."""
         groups: list[SameRhythmHitObjectGrouping] = []
-        prev: Optional[SameRhythmHitObjectGrouping] = None
+        prev: SameRhythmHitObjectGrouping | None = None
         for grouped in _group_by_interval(notes):
             g = RhythmDifficultyPreprocessor._make_rhythm_grouping(prev, grouped)
             groups.append(g)
@@ -625,7 +622,7 @@ class RhythmDifficultyPreprocessor:
 
     @staticmethod
     def _make_rhythm_grouping(
-            previous: Optional[SameRhythmHitObjectGrouping],
+            previous: SameRhythmHitObjectGrouping | None,
             hit_objects: list[TaikoDifficultyObject],
     ) -> SameRhythmHitObjectGrouping:
         """Build one same-rhythm grouping from a run of objects."""
@@ -681,7 +678,7 @@ class RhythmDifficultyPreprocessor:
     ) -> list[SamePatternsGroupedHitObjects]:
         """Group same-rhythm groupings that share a repeating interval pattern."""
         out: list[SamePatternsGroupedHitObjects] = []
-        prev: Optional[SamePatternsGroupedHitObjects] = None
+        prev: SamePatternsGroupedHitObjects | None = None
         for grouped in _group_by_interval(rhythm_groups):
             curr = SamePatternsGroupedHitObjects(groups=grouped, previous=prev)
             out.append(curr)
@@ -860,7 +857,7 @@ class RhythmEvaluator:
         return difficulty
 
     @staticmethod
-    def _long_gap_penalty(previous: Optional["SameRhythmHitObjectGrouping"]) -> float:
+    def _long_gap_penalty(previous: SameRhythmHitObjectGrouping | None) -> float:
         """Penalise groupings preceded by a long gap."""
         if previous is None:
             return 1.0
@@ -909,7 +906,7 @@ class RhythmEvaluator:
         def same_interval(start: SameRhythmHitObjectGrouping, interval_count: int) -> float:
             """Return whether two groupings share an interval."""
             intervals: list[float] = []
-            curr: Optional[SameRhythmHitObjectGrouping] = start
+            curr: SameRhythmHitObjectGrouping | None = start
             for _ in range(interval_count):
                 if curr is None:
                     break
@@ -1218,7 +1215,7 @@ def run_skills(
         diff_objects: TaikoDifficultyObjects,
         great_hit_window: float,
         is_convert: bool,
-        skill_limit: Optional[int] = None,
+        skill_limit: int | None = None,
 ) -> TaikoSkills:
     """Run every taiko skill over the difficulty objects.
 

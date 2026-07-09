@@ -30,15 +30,14 @@ import io
 import math
 
 from .section import (
+    ControlPoints,
+    DifficultyPoint,
     GameMode,
     HitSoundType,
     SampleBank,
-    ControlPoints,
-    DifficultyPoint,
     SamplePoint,
-    TimingPoint
+    TimingPoint,
 )
-
 from .section.hit_objects import (
     HitObjectCircle,
     HitObjectHold,
@@ -376,7 +375,6 @@ def _collect_samples(beatmap, cp: ControlPoints, *, lazer_compatible: bool = Fal
 
         if isinstance(kind, HitObjectSlider):
             if mode == GameMode.Osu:
-                tick_dist_factor = velocity * 60_000.0
                 tp = _saturating_timing_at(beatmap.control_points, h.start_time)
                 beat_len = tp.beat_len if tp is not None else 1000.0
                 dp = _saturating_difficulty_at(beatmap.control_points, h.start_time)

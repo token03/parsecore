@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from enum import IntEnum, IntFlag
 from typing import Any
 
+
 class Reflection(IntEnum):
     """Helper flags describing how mods reflect playfield coordinates."""
     NONE = 0
@@ -230,13 +231,22 @@ class PerformanceMods:
         Returns:
             The forced key count (``1``-``9``), or ``None`` if no key mod is set.
         """
-        if bits & ModBits.KEY1: return 1.0
-        if bits & ModBits.KEY2: return 2.0
-        if bits & ModBits.KEY3: return 3.0
-        if bits & ModBits.KEY4: return 4.0
-        if bits & ModBits.KEY5: return 5.0
-        if bits & ModBits.KEY6: return 6.0
-        if bits & ModBits.KEY7: return 7.0
-        if bits & ModBits.KEY8: return 8.0
-        if bits & ModBits.KEY9: return 9.0
+        if bits & ModBits.KEY1:
+            return 1.0
+        if bits & ModBits.KEY2:
+            return 2.0
+        if bits & ModBits.KEY3:
+            return 3.0
+        if bits & ModBits.KEY4:
+            return 4.0
+        if bits & ModBits.KEY5:
+            return 5.0
+        if bits & ModBits.KEY6:
+            return 6.0
+        if bits & ModBits.KEY7:
+            return 7.0
+        if bits & ModBits.KEY8:
+            return 8.0
+        if bits & ModBits.KEY9:
+            return 9.0
         return None

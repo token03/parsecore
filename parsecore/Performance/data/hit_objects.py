@@ -26,6 +26,7 @@ SOFTWARE.
 from dataclasses import dataclass, field
 from typing import Any
 
+
 @dataclass(slots=True)
 class Pos:
     """A 2D position used by the calculators."""

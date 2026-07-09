@@ -26,13 +26,22 @@ SOFTWARE.
 from __future__ import annotations
 
 import io
-
 from dataclasses import dataclass
+
 from .encode import encode_beatmap
 from .reader import Decoder
 from .section import (
-    Colors, Difficulty, DifficultyState, Editor, GameMode, SampleBank, Section, Events, General, Metadata,
-    ControlPoints, TimingPointsState
+    Colors,
+    ControlPoints,
+    Difficulty,
+    DifficultyState,
+    Editor,
+    Events,
+    GameMode,
+    General,
+    Metadata,
+    Section,
+    TimingPointsState,
 )
 from .section.hit_objects import HitObjectsState
 

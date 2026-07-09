@@ -26,34 +26,27 @@ SOFTWARE.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 from ...data.attributes import AdjustedBeatmapAttributes, as_override
 from ...data.mode import GameMode
 from ...data.mods import PerformanceMods
-from ...utils import lerp, reverse_lerp
-
-from parsecore.Beatmap.utils import f32
-
-from .convert import convert_objects, prepare_beatmap
-from .legacy_score import OsuLegacyScoreSimulator, calculate_nested_score_per_object
+from ...utils import lerp, norm, reverse_lerp
+from .convert import convert_objects
 from .hit_objects import (
     OsuDifficultyObject,
     OsuDifficultyObjects,
-    OsuObject,
-    PREEMPT_MIN,
     ScalingFactor,
 )
+from .legacy_score import OsuLegacyScoreSimulator, calculate_nested_score_per_object
 from .skills import (
     Aim,
     Flashlight,
     Reading,
     Speed,
-    count_top_weighted_sliders,
     difficulty_to_performance,
 )
-from ...utils import norm
 
 if TYPE_CHECKING:
     from ...data.beatmap import PerformanceBeatmap
@@ -333,7 +326,7 @@ def _sum_cognition_difficulty(reading: float, flashlight: float) -> float:
 
 
 def calculate_difficulty(
-        pm: "PerformanceBeatmap",
+        pm: PerformanceBeatmap,
         mods: PerformanceMods,
         *,
         lazer: bool = True,
@@ -554,7 +547,7 @@ def calculate_difficulty(
     return attrs
 
 def difficulty(
-        pm: "PerformanceBeatmap", mods: PerformanceMods, **kwargs: Any
+        pm: PerformanceBeatmap, mods: PerformanceMods, **kwargs: Any
 ) -> OsuDifficultyAttributes:
     """Public entry point returning the osu! difficulty attributes."""
     return calculate_difficulty(pm, mods, **kwargs)

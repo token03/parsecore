@@ -326,8 +326,8 @@ class CatchDifficultyObject:
     ABSOLUTE_PLAYER_POSITIONING_ERROR = 16.0
 
     def previous(
-            self, backwards_idx: int, diff_objects: list["CatchDifficultyObject"],
-    ) -> "CatchDifficultyObject | None":
+            self, backwards_idx: int, diff_objects: list[CatchDifficultyObject],
+    ) -> CatchDifficultyObject | None:
         """Return the difficulty object ``backwards_idx`` steps before this one.
 
         Args:
@@ -351,7 +351,7 @@ class CatchDifficultyObject:
             scaling_factor: float,
             last_player_pos: float | None,
             idx: int,
-    ) -> "CatchDifficultyObject":
+    ) -> CatchDifficultyObject:
         """Build a difficulty object from a catch object and its predecessor.
 
         Args:

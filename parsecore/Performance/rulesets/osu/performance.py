@@ -27,24 +27,32 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ...data.mods import PerformanceMods
 from ...data.score_state import HitResultPriority, ScoreState
 from ...utils import (
-    erf, erf_inv, ieee_div, ieee_ln, ieee_pow, lerp, logistic,
-    reverse_lerp, rust_max, rust_min, smoothstep,
+    erf,
+    erf_inv,
+    ieee_div,
+    ieee_ln,
+    ieee_pow,
+    lerp,
+    logistic,
+    reverse_lerp,
+    rust_max,
+    rust_min,
+    smoothstep,
 )
-
-from .difficulty import OsuDifficultyAttributes, OsuRatingCalculator
+from ...utils import norm as _norm
+from .difficulty import OsuDifficultyAttributes
 from .hitresult_generator import (
     OsuHitResults,
     OsuScoreOrigin,
     OsuScoreState,
     generate_hitresults,
 )
-from .skills import Aim, Flashlight, Speed, difficulty_to_performance
-from ...utils import norm as _norm
+from .skills import Flashlight
 
 if TYPE_CHECKING:
     from ...data.beatmap import PerformanceBeatmap
@@ -261,9 +269,9 @@ class OsuPerformanceAttributes:
     pp_reading: float = 0.0
     pp_flashlight: float = 0.0
     effective_miss_count: float = 0.0
-    speed_deviation: Optional[float] = None
+    speed_deviation: float | None = None
     combo_based_estimated_miss_count: float = 0.0
-    score_based_estimated_miss_count: Optional[float] = None
+    score_based_estimated_miss_count: float | None = None
     aim_estimated_slider_breaks: float = 0.0
     speed_estimated_slider_breaks: float = 0.0
     stars: float = 0.0
@@ -304,7 +312,7 @@ class OsuPerformanceCalculator:
 
         combo_based_estimated_miss_count = self._calculate_combo_based_estimated_miss_count()
 
-        score_based_estimated_miss_count: Optional[float] = None
+        score_based_estimated_miss_count: float | None = None
         if (
                 self.using_classic_slider_acc
                 and self.state.legacy_total_score is not None
@@ -463,7 +471,7 @@ class OsuPerformanceCalculator:
 
     def _compute_speed_value(
             self,
-            speed_deviation: Optional[float],
+            speed_deviation: float | None,
             effective_miss_count: float,
             speed_est_breaks: list[float],
     ) -> float:
@@ -639,7 +647,7 @@ class OsuPerformanceCalculator:
                 * logistic(missed_combo_percent, 0.33, 15.0, None)
         )
 
-    def _calculate_speed_deviation(self) -> Optional[float]:
+    def _calculate_speed_deviation(self) -> float | None:
         """Estimate the player's speed-note hit deviation."""
         if self._total_successful_hits() == 0:
             return None
@@ -673,7 +681,7 @@ class OsuPerformanceCalculator:
             relevant_count_great: float,
             relevant_count_ok: float,
             relevant_count_meh: float,
-    ) -> Optional[float]:
+    ) -> float | None:
         """Estimate the hit deviation from great/ok/meh counts and the hit window."""
         if (
                 relevant_count_great + relevant_count_ok + relevant_count_meh
@@ -794,10 +802,10 @@ class OsuPerformanceCalculator:
         return self.attrs.n_large_ticks - self.state.hit_results.large_tick_hits
 
 def calculate_performance(
-        pm: "PerformanceBeatmap",
+        pm: PerformanceBeatmap,
         attrs: OsuDifficultyAttributes,
         mods: PerformanceMods,
-        state: "ScoreState",
+        state: ScoreState,
         *,
         lazer: bool = True,
         target_accuracy: float | None = None,
@@ -957,7 +965,7 @@ def calculate_performance(
     return calc.calculate()
 
 def performance(
-        pm: "PerformanceBeatmap",
+        pm: PerformanceBeatmap,
         attrs: OsuDifficultyAttributes,
         mods: PerformanceMods,
         **kwargs: Any,

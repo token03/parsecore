@@ -33,7 +33,12 @@ from ...data.beatmap import PerformanceBeatmap
 from ...data.mode import GameMode
 from ...data.mods import PerformanceMods
 from .convert import convert_to_mania_objects
-from .skills import create_mania_difficulty_objects, run_strain, _osu_legacy_sort_in_place
+from .skills import (
+    _osu_legacy_sort_in_place,
+    create_mania_difficulty_objects,
+    run_strain,
+)
+
 
 def _cmp_mania_round_start(a: Any, b: Any) -> int:
     """Compare two mania objects by their round-half-even start time (legacy sort key)."""

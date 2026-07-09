@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .hit_objects import ManiaObject
 
@@ -62,7 +61,7 @@ class ManiaDifficultyHitObject:
     delta_time: float
     column: int
     column_strain_time: float
-    previous_hit_objects: list[Optional["ManiaDifficultyHitObject"]] = field(default_factory=list)
+    previous_hit_objects: list[ManiaDifficultyHitObject | None] = field(default_factory=list)
 
 def _osu_legacy_sort_in_place(keys: list, comparer) -> None:
     """Sort objects in place using osu!'s legacy (unstable) sort algorithm."""
@@ -187,7 +186,7 @@ def create_mania_difficulty_objects(
         else:
             column_strain_time = 0.0
 
-        prev_arr: list[Optional[ManiaDifficultyHitObject]]
+        prev_arr: list[ManiaDifficultyHitObject | None]
         if out:
             prev_note = out[-1]
             prev_arr = list(prev_note.previous_hit_objects)

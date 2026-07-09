@@ -682,7 +682,9 @@ class GameMod:
         """Order mods by kind and acronym for stable display."""
         m_self = self.mode()
         m_other = other.mode()
-        mv = lambda m: m.value if m is not None else -1
+        def mv(m):
+            """Return the mode's sort value, or ``-1`` for a mode-agnostic mod."""
+            return m.value if m is not None else -1
         return (mv(m_self), str(self.acronym())) < (mv(m_other), str(other.acronym()))
 
 

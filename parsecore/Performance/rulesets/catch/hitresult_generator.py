@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+
 def _round_ties_even(x: float) -> int:
     """Round half-to-even (banker's rounding), matching osu!/C#."""
     return int(round(x))

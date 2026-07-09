@@ -374,7 +374,7 @@ class PerformanceBeatmap:
                 pos_x = float(getattr(pos_obj, "x", 0.0))
                 pos_y = float(getattr(pos_obj, "y", 0.0))
             elif hasattr(inner, "pos_x"):
-                pos_x = float(getattr(inner, "pos_x"))
+                pos_x = float(inner.pos_x)
                 pos_y = float(getattr(inner, "pos_y", 0.0))
             else:
                 pos_x, pos_y = 0.0, 0.0

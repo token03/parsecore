@@ -28,6 +28,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+
 class TaikoHitType(Enum):
     """The type of a taiko object (don/centre, kat/rim, or non-hit)."""
     CENTER = 0
@@ -52,7 +53,7 @@ class TaikoObject:
     hit_type: TaikoHitType
 
     @classmethod
-    def from_hit(cls, start_time: float, is_circle: bool, hit_sound: int) -> "TaikoObject":
+    def from_hit(cls, start_time: float, is_circle: bool, hit_sound: int) -> TaikoObject:
         """Build a taiko object from a converted hit.
 
         Args:

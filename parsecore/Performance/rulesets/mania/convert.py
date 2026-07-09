@@ -31,7 +31,8 @@ from __future__ import annotations
 
 import math
 from collections import deque
-from typing import TYPE_CHECKING, Callable, Optional
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from ....Beatmap.utils import f32
 from ...data.beatmap import (
@@ -135,7 +136,7 @@ class _Pattern:
         """Return the number of occupied columns."""
         return bin(self.contained).count("1")
 
-    def append_from(self, other: "_Pattern") -> None:
+    def append_from(self, other: _Pattern) -> None:
         """Move all objects from another pattern into this one."""
         self.objs.extend(other.objs)
         other.objs.clear()
@@ -200,7 +201,7 @@ class _PatternGenerator:
         return self.conv_diff
 
     def get_random_column(
-            self, lower: Optional[int] = None, upper: Optional[int] = None
+            self, lower: int | None = None, upper: int | None = None
     ) -> int:
         """Draw a random column within a range from the legacy RNG."""
         lo = self.random_start() if lower is None else lower
@@ -572,8 +573,8 @@ class _HitObjectPatternGenerator:
     def _find_available_column(
             self,
             initial_column: int,
-            upper: Optional[int],
-            next_column: Optional[Callable[[int], int]],
+            upper: int | None,
+            next_column: Callable[[int], int] | None,
             patterns: list[_Pattern],
     ) -> int:
         """Find a free column, retrying via the RNG or a stepping function."""
@@ -983,7 +984,7 @@ class _PathObjectPatternGenerator:
     def _find_available_column(
             self,
             initial_column: int,
-            validation: Optional[Callable[[int], bool]],
+            validation: Callable[[int], bool] | None,
             patterns: list[_Pattern],
     ) -> int:
         """Find a free column, optionally constrained by a validator."""
@@ -1087,7 +1088,7 @@ class _EndTimeObjectPatternGenerator:
                 return initial_column
 
 
-def _target_columns(pm: PerformanceBeatmap, mods: "PerformanceMods | None") -> float:
+def _target_columns(pm: PerformanceBeatmap, mods: PerformanceMods | None) -> float:
     """Return the mania key count for a converted map (key mods override it)."""
     keys = getattr(mods, "mania_keys", None) if mods is not None else None
     if keys is not None:
@@ -1117,7 +1118,7 @@ def _target_columns(pm: PerformanceBeatmap, mods: "PerformanceMods | None") -> f
 
 def _convert_osu_to_mania(
         pm: PerformanceBeatmap,
-        mods: "PerformanceMods | None",
+        mods: PerformanceMods | None,
 ) -> tuple[list[_CObj], int]:
     """Run the full legacy pattern generator over a beatmap's objects."""
     hp_cs = float(f32(pm.base_hp + pm.base_cs))
@@ -1215,7 +1216,7 @@ def _convert_osu_to_mania(
 def convert_to_mania_objects(
         pm: PerformanceBeatmap,
         *,
-        mods: "PerformanceMods | None" = None,
+        mods: PerformanceMods | None = None,
         total_columns: int | None = None,
 ) -> tuple[list[ManiaObject], int, int, int]:
     """Build the mania objects for a beatmap.

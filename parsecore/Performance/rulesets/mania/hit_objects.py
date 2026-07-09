@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+
 @dataclass(slots=True)
 class ManiaObject:
     """A mania note or hold note in a column, with start and end times."""

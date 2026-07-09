@@ -35,7 +35,6 @@ from ...data.attributes import AdjustedBeatmapAttributes, as_override
 from ...data.beatmap import PerformanceBeatmap
 from ...data.mode import GameMode
 from ...data.mods import PerformanceMods
-
 from .convert import calculate_catch_width, convert_objects
 from .hit_objects import CatchDifficultyObject, ObjectCountBuilder
 from .skills import Movement

@@ -24,13 +24,11 @@ SOFTWARE.
 """
 
 import math
-import bisect
 from collections import deque
 from typing import Generic, TypeVar
 
 from parsecore.Beatmap.section.hit_objects import Curve
 from parsecore.Beatmap.utils import Pos, f32
-from .data.beatmap import PerformanceBeatmap
 
 
 def lerp(value1: float, value2: float, amount: float) -> float:
@@ -602,7 +600,7 @@ def total_cmp(a: float, b: float) -> int:
 
     return 0
 
-def signum(x: float | int) -> float | int:
+def signum(x: float) -> float | int:
     """Return the sign of a value (-1, 0 or 1), with NaN handling."""
     if math.isnan(x):
         return ("nan")

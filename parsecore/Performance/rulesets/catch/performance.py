@@ -35,6 +35,7 @@ from ...data.score_state import ScoreState
 from .difficulty import CatchDifficultyAttributes
 from .hitresult_generator import CatchHitResults, generate_hitresults
 
+
 @dataclass(slots=True)
 class CatchPerformanceAttributes:
     """Catch performance result (pp plus the difficulty attributes used)."""

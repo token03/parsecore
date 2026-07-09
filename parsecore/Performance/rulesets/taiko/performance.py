@@ -34,7 +34,8 @@ from ...data.mods import PerformanceMods
 from ...data.score_state import ScoreState
 from ...utils import erf, erf_inv
 from .difficulty import TaikoDifficultyAttributes
-from .hitresult_generator import TaikoHitResults, generate_hitresults
+from .hitresult_generator import generate_hitresults
+
 
 @dataclass(slots=True)
 class TaikoPerformanceAttributes:
@@ -117,12 +118,6 @@ def calculate_performance(
     )
 
     total_hits = hitresults.total_hits()
-
-    max_possible_combo = max(0, attrs.max_combo - hitresults.misses)
-    if target_combo is not None:
-        actual_combo = min(target_combo, max_possible_combo)
-    else:
-        actual_combo = max_possible_combo
 
     if hitresults.n300 == 0 or attrs.great_hit_window <= 0.0 or total_hits == 0:
         eur: float | None = None

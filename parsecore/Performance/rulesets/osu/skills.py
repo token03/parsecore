@@ -26,8 +26,6 @@ SOFTWARE.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Optional
 
 from parsecore.Beatmap.utils import f32
 
@@ -439,7 +437,7 @@ class _Island:
             self.delta = max(delta, _RHYTHM_MIN_DELTA_TIME)
         self.delta_count += 1
 
-    def is_similar_polarity(self, other: "_Island", epsilon: float) -> bool:
+    def is_similar_polarity(self, other: _Island, epsilon: float) -> bool:
         """Return whether another island alternates the same way."""
         if self.delta_count <= 1 or other.delta_count <= 1:
             return False
@@ -448,7 +446,7 @@ class _Island:
             and self.delta_count % 2 == other.delta_count % 2
         )
 
-    def almost_equals(self, other: "_Island", epsilon: float) -> bool:
+    def almost_equals(self, other: _Island, epsilon: float) -> bool:
         """Return whether two islands are effectively equal."""
         return (
             abs(self.delta - other.delta) < epsilon
@@ -877,8 +875,8 @@ def _reading_constant_angle_nerf_factor(
     current_time_gap = 0.0
 
     loop_prev0: OsuDifficultyObject = curr
-    loop_prev1: Optional[OsuDifficultyObject] = None
-    loop_prev2: Optional[OsuDifficultyObject] = None
+    loop_prev1: OsuDifficultyObject | None = None
+    loop_prev2: OsuDifficultyObject | None = None
 
     while current_time_gap < minimum_angle_relevancy_time:
         loop = objects.previous(curr, index)
@@ -945,7 +943,7 @@ def _reading_constant_angle_nerf_factor(
 
 
 def _reading_density_difficulty(
-        next_obj: Optional[OsuDifficultyObject],
+        next_obj: OsuDifficultyObject | None,
         velocity: float,
         constant_angle_nerf: float,
         past_influence: float,

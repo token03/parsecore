@@ -22,20 +22,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from .timing_points import (
-    ParseTimingPointsError, EffectFlags, TimingPoint, DifficultyPoint, SamplePoint, EffectPoint, ControlPoints,
-    TimingPointsState
-)
-from .metadata import ParseMetadataError, MetadataKey, Metadata, MetadataState
-from .general import ParseGeneralError, GeneralKey, General, GeneralState
-from .events import ParseEventsError, EventType, BreakPeriod, Events, EventsState
+from .colors import Color, Colors, ColorsState, CustomColor, ParseColorsError, parse_u8
+from .difficulty import Difficulty, DifficultyKey, DifficultyState, ParseDifficultyError
+from .editor import Editor, EditorKey, EditorState, ParseEditorError
 from .enums import (
-    ParseGameModeError, GameMode, ParseCountdownTypeError, CountdownType, SampleBank, HitSoundType, SplineType,
-    Section
+    CountdownType,
+    GameMode,
+    HitSoundType,
+    ParseCountdownTypeError,
+    ParseGameModeError,
+    SampleBank,
+    Section,
+    SplineType,
 )
-from .editor import ParseEditorError, EditorKey, Editor, EditorState
-from .difficulty import ParseDifficultyError, DifficultyKey, Difficulty, DifficultyState
-from .colors import ParseColorsError, parse_u8, Color, CustomColor, Colors, ColorsState
+from .events import BreakPeriod, Events, EventsState, EventType, ParseEventsError
+from .general import General, GeneralKey, GeneralState, ParseGeneralError
+from .metadata import Metadata, MetadataKey, MetadataState, ParseMetadataError
+from .timing_points import (
+    ControlPoints,
+    DifficultyPoint,
+    EffectFlags,
+    EffectPoint,
+    ParseTimingPointsError,
+    SamplePoint,
+    TimingPoint,
+    TimingPointsState,
+)
 
 __all__ = [
     "ParseTimingPointsError",

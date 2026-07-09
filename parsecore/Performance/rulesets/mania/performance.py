@@ -34,6 +34,7 @@ from ...data.score_state import ScoreState
 from .difficulty import ManiaDifficultyAttributes
 from .hitresult_generator import ManiaHitResults, generate_hitresults
 
+
 @dataclass(slots=True)
 class ManiaPerformanceAttributes:
     """Mania performance result (pp plus the difficulty attributes used)."""

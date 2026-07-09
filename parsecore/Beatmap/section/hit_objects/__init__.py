@@ -23,13 +23,33 @@ SOFTWARE.
 """
 
 from .hit_objects import (
-    ParseHitObjectsError, MAX_COORDINATE_VALUE, HitObjectType, HitSampleDefaultName, SampleBankInfo, HitObjectCircle,
-    HitObjectSlider, HitObjectSpinner, HitObjectHold, HitObject, is_linear, convert_points, convert_path_str,
-    HitObjectsState, HitSampleInfo
+    MAX_COORDINATE_VALUE,
+    HitObject,
+    HitObjectCircle,
+    HitObjectHold,
+    HitObjectSlider,
+    HitObjectSpinner,
+    HitObjectsState,
+    HitObjectType,
+    HitSampleDefaultName,
+    HitSampleInfo,
+    ParseHitObjectsError,
+    SampleBankInfo,
+    convert_path_str,
+    convert_points,
+    is_linear,
 )
 from .slider import (
-    BEZIER_TOLERANCE, CATMULL_DETAIL, CIRCULAR_ARC_TOLERANCE, PathType, PathControlPoint, Curve, SliderPath,
-    SliderEventType, SliderEvent, generate_slider_events
+    BEZIER_TOLERANCE,
+    CATMULL_DETAIL,
+    CIRCULAR_ARC_TOLERANCE,
+    Curve,
+    PathControlPoint,
+    PathType,
+    SliderEvent,
+    SliderEventType,
+    SliderPath,
+    generate_slider_events,
 )
 
 __all__ = [

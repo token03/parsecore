@@ -32,6 +32,7 @@ from parsecore.Beatmap.utils import F32_EPSILON, f32
 from ...utils import eq, signum
 from .hit_objects import CatchDifficultyObject
 
+
 def _eq_f32(a: float, b: float) -> bool:
     """Return whether two values are equal when compared as 32-bit floats."""
     return abs(f32(a - b)) <= F32_EPSILON

@@ -25,6 +25,7 @@ SOFTWARE.
 
 from enum import IntEnum
 
+
 class GameMode(IntEnum):
     """One of the four osu! rulesets (osu!=0, taiko=1, catch=2, mania=3)."""
     OSU = 0

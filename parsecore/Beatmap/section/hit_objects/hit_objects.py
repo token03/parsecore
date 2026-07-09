@@ -28,9 +28,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from ...utils import ParseNumberError, Pos, parse_float, parse_int, trim_comment
 from ..enums import GameMode, HitSoundType, SampleBank, SplineType
 from .slider import PathControlPoint, PathType, SliderPath
-from ...utils import ParseNumberError, Pos, parse_float, parse_int, trim_comment
 
 
 class ParseHitObjectsError(Exception):

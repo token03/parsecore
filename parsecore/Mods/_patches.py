@@ -138,7 +138,7 @@ def _patch_gamemods():
             intermode = GameModsIntermode.parse(raw)
             if mode is not None:
                 return intermode.with_mode(mode)
-            for m_try in (None,):
+            for _m_try in (None,):
                 for item in intermode:
                     result.insert(
                         GameMod.new(str(item), mode)

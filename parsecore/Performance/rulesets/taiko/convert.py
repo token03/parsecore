@@ -36,8 +36,8 @@ from ...data.beatmap import (
     effect_point_at,
     timing_point_at,
 )
-from ...utils import get_precision_adjusted_beat_length, ieee_div, rust_min
 from ...data.hit_objects import HitObject, Slider
+from ...utils import get_precision_adjusted_beat_length, ieee_div, rust_min
 from .hit_objects import TaikoObject
 
 if TYPE_CHECKING:
@@ -78,7 +78,7 @@ def _insert_effect_point(points: list[EffectPoint], ep: EffectPoint) -> None:
 
 def convert_to_taiko_objects(
         pm: PerformanceBeatmap,
-        mods: "PerformanceMods",
+        mods: PerformanceMods,
 ) -> list[TaikoObject]:
     """Convert a beatmap's objects into taiko hit objects.
 

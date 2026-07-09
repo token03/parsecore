@@ -30,8 +30,8 @@ from collections.abc import Generator
 from dataclasses import dataclass, field
 from enum import Enum
 
-from ..enums import GameMode, SplineType
 from ...utils import F32_EPSILON, Pos, f32
+from ..enums import GameMode, SplineType
 
 BEZIER_TOLERANCE = 0.25
 CATMULL_DETAIL = 50

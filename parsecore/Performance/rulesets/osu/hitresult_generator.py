@@ -25,12 +25,11 @@ SOFTWARE.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 from ...data.score_state import HitResultPriority
+
 
 class OsuScoreOrigin(Enum):
     """Whether scoring follows osu!lazer, osu!(stable) or classic slider rules."""
@@ -84,7 +83,7 @@ class OsuScoreState:
     """An osu! score state (great/ok/meh/miss plus slider tick and end hits)."""
     max_combo: int = 0
     hit_results: OsuHitResults = field(default_factory=OsuHitResults)
-    legacy_total_score: Optional[int] = None
+    legacy_total_score: int | None = None
 
 def _tick_scores(
         origin: OsuScoreOrigin,
@@ -118,11 +117,11 @@ def generate_hitresults(
         n_large_ticks: int = 0,
         target_acc: float = 1.0,
         misses: int = 0,
-        n300: Optional[int] = None,
-        n100: Optional[int] = None,
-        n50: Optional[int] = None,
-        combo: Optional[int] = None,
-        max_combo: Optional[int] = None,
+        n300: int | None = None,
+        n100: int | None = None,
+        n50: int | None = None,
+        combo: int | None = None,
+        max_combo: int | None = None,
         priority: HitResultPriority = HitResultPriority.BEST_CASE,
         origin: OsuScoreOrigin = OsuScoreOrigin.WITH_SLIDER_ACC,
 ) -> OsuHitResults:
