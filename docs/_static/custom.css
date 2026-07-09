@@ -254,3 +254,25 @@ body[data-theme="dark"] .rst-current-version {
   background: #111827 !important;
   color: #c9d1d9 !important;
 }
+
+.content {
+  padding-top: 2.5rem !important;
+}
+
+.article-container {
+  padding-top: 1.5rem !important;
+}
+
+.pc-hero {
+  margin-top: 1.5rem !important;
+  background: linear-gradient(135deg, #161b22, #0d1117) !important;
+  border: 1px solid #30363d !important;
+}
+
+.pc-hero h1 {
+  color: #f0f6fc !important;
+  background: none !important;
+  background-image: none !important;
+  -webkit-text-fill-color: unset !important;
+
+}
