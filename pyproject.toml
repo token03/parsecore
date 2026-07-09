@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "parsecore"
-version = "1.0.0"
+version = "1.0.1"
 description = "Python library for osu! beatmap parsing, mod handling, and performance point calculation."
 authors = [
     "Error44 <error44@olib.dev>",
