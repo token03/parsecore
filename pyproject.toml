@@ -49,23 +49,16 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "C4", "PYI"]
 ignore = [
-    "E501",   # line length is handled by the formatter, not enforced here
-    "PYI034", # `Self` return hints require typing.Self, unavailable on Python 3.10
-    "B904",   # wrapped parse errors already embed the original cause in their message
+    "E501",
+    "PYI034",
+    "B904",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# The package adds its own directory to sys.path before importing submodules.
 "parsecore/Beatmap/__init__.py" = ["E402"]
-# `_patches` is imported for its import-time side effects (it binds cross-type
-# helper methods onto the mod classes), so it is deliberately "unused".
 "parsecore/Mods/__init__.py" = ["F401"]
-# These modules bind extra methods onto their own classes via a deferred
-# self-import at the end of the file, which trips the import/redefinition rules.
 "parsecore/Mods/game_mods.py" = ["E402", "F811"]
 "parsecore/Mods/_patches.py" = ["E402"]
-# The reworked Aim skill intentionally supersedes the legacy definition kept
-# earlier in the file for reference.
 "parsecore/Performance/rulesets/osu/skills.py" = ["F811"]
 
 [tool.mypy]
