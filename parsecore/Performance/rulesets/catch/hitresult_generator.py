@@ -1,4 +1,5 @@
-"""
+"""Generation of catch hit-result counts from partial score information.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -26,11 +27,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+
 def _round_ties_even(x: float) -> int:
+    """Round half-to-even (banker's rounding), matching osu!/C#."""
     return int(round(x))
 
 @dataclass(slots=True)
 class CatchHitResults:
+    """A complete set of catch hit-result counts."""
     fruits: int = 0
     droplets: int = 0
     tiny_droplets: int = 0
@@ -38,27 +42,32 @@ class CatchHitResults:
     misses: int = 0
 
     def total_hits(self) -> int:
+        """Return the total number of catchable objects."""
         return (
                 self.fruits + self.droplets + self.tiny_droplets
                 + self.tiny_droplet_misses + self.misses
         )
 
     def total_successful_hits(self) -> int:
+        """Return the number of successfully caught objects."""
         return self.fruits + self.droplets + self.tiny_droplets
 
     def accuracy(self) -> float:
+        """Return the accuracy in the ``0``-``1`` range."""
         total_hits = self.total_hits()
         if total_hits == 0:
             return 0.0
         return self.total_successful_hits() / total_hits
 
 def _sat_sub(a: int, b: int) -> int:
+    """Return ``a - b`` clamped to a minimum of zero (saturating subtraction)."""
     return a - b if a > b else 0
 
 def _enforce_fruit_droplet_pool(
         fruits: int, droplets: int, misses: int,
         n_fruits: int, n_droplets: int,
 ) -> tuple[int, int]:
+    """Clamp fruit/droplet/miss counts to the map's available pool."""
     pool_total = n_fruits + n_droplets
     current_sum = fruits + droplets + misses
 
@@ -81,6 +90,7 @@ def _enforce_fruit_droplet_pool(
 def _enforce_tiny_droplet_pool(
         tiny_droplets: int, tiny_droplet_misses: int, n_tiny_droplets: int,
 ) -> tuple[int, int]:
+    """Clamp tiny-droplet counts to the map's available pool."""
     tiny_current_sum = tiny_droplets + tiny_droplet_misses
 
     if tiny_current_sum < n_tiny_droplets:
@@ -112,6 +122,7 @@ def generate_hitresults(
         tiny_droplet_misses: int | None,
         misses: int | None,
 ) -> CatchHitResults:
+    """Generate a complete catch hit-result state from the requested inputs."""
     clamped_misses = min(misses, n_fruits + n_droplets) if misses is not None else 0
 
     if acc is None:
@@ -137,6 +148,7 @@ def _generate_ignore_acc(
         in_tiny_droplet_misses: int | None,
         misses: int,
 ) -> CatchHitResults:
+    """Generate counts from explicit hit numbers, ignoring target accuracy."""
     fruit_droplet_remain = _sat_sub(n_fruits + n_droplets, misses)
     tiny_droplet_remain = n_tiny_droplets
 
@@ -199,6 +211,7 @@ def _generate_fast(
         in_tiny_droplet_misses: int | None,
         misses: int,
 ) -> CatchHitResults:
+    """Generate counts approximating a target accuracy."""
     total_objects = n_fruits + n_droplets + n_tiny_droplets
 
     if total_objects == 0:

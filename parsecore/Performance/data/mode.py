@@ -1,4 +1,5 @@
-"""
+"""The :class:`GameMode` enum used throughout the performance calculators.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -24,7 +25,9 @@ SOFTWARE.
 
 from enum import IntEnum
 
+
 class GameMode(IntEnum):
+    """One of the four osu! rulesets (osu!=0, taiko=1, catch=2, mania=3)."""
     OSU = 0
     TAIKO = 1
     CATCH = 2

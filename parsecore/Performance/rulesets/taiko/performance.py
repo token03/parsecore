@@ -1,4 +1,5 @@
-"""
+"""osu!taiko performance (pp) calculation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -33,10 +34,12 @@ from ...data.mods import PerformanceMods
 from ...data.score_state import ScoreState
 from ...utils import erf, erf_inv
 from .difficulty import TaikoDifficultyAttributes
-from .hitresult_generator import TaikoHitResults, generate_hitresults
+from .hitresult_generator import generate_hitresults
+
 
 @dataclass(slots=True)
 class TaikoPerformanceAttributes:
+    """Taiko performance result (pp plus the difficulty attributes used)."""
     pp: float = 0.0
     pp_acc: float = 0.0
     pp_difficulty: float = 0.0
@@ -48,6 +51,7 @@ Z_CONST = 2.32634787404
 _SQRT2 = 1.4142135623730950
 
 def _pow_int(x: float, n: int) -> float:
+    """Return ``x`` to an integer power via explicit multiplication (C# ``DiffUtils.Pow``)."""
     if n == 0:
         return 1.0
     if n == 1:
@@ -64,9 +68,11 @@ def _pow_int(x: float, n: int) -> float:
 
 
 def _logistic(x: float, midpoint: float, multiplier: float, max_value: float = 1.0) -> float:
+    """Return the value of a logistic (sigmoid) curve."""
     return max_value / (1.0 + math.exp(multiplier * (midpoint - x)))
 
 def _reverse_lerp(value: float, start: float, end: float) -> float:
+    """Return the ``0``-``1`` position of a value between two bounds (clamped)."""
     if end == start:
         return 0.0
     return max(0.0, min(1.0, (value - start) / (end - start)))
@@ -90,6 +96,17 @@ def calculate_performance(
         explicit_slider_end_hits: int | None = None,
         **_: Any,
 ) -> TaikoPerformanceAttributes:
+    """Compute the taiko pp for a beatmap, mods and score state.
+
+    Args:
+        pm: The performance beatmap.
+        attrs: Pre-computed difficulty attributes, or ``None`` to compute them.
+        mods: The mods and clock rate.
+        state: The score state (or partial input to generate one from).
+
+    Returns:
+        The taiko performance attributes.
+    """
     is_classic = mods.no_slider_head_acc(True)
 
     hitresults = generate_hitresults(
@@ -101,12 +118,6 @@ def calculate_performance(
     )
 
     total_hits = hitresults.total_hits()
-
-    max_possible_combo = max(0, attrs.max_combo - hitresults.misses)
-    if target_combo is not None:
-        actual_combo = min(target_combo, max_possible_combo)
-    else:
-        actual_combo = max_possible_combo
 
     if hitresults.n300 == 0 or attrs.great_hit_window <= 0.0 or total_hits == 0:
         eur: float | None = None
@@ -146,6 +157,7 @@ def calculate_performance(
 def _compute_deviation_upper_bound(
         *, attrs: TaikoDifficultyAttributes, accuracy: float, n_total: int,
 ) -> float:
+    """Estimate the player's hit deviation from the accuracy (worst-case bound)."""
     n = float(n_total)
     p = accuracy
 
@@ -163,6 +175,7 @@ def _compute_difficulty_value(
         is_classic: bool, total_difficult_hits: float,
         estimated_unstable_rate: float | None, n_total: int, n_misses: int,
 ) -> float:
+    """Combine the star rating and mods into the difficulty pp component."""
     if estimated_unstable_rate is None:
         return 0.0
     if math.isclose(total_difficult_hits, 0.0, abs_tol=1e-12):
@@ -235,6 +248,7 @@ def _compute_accuracy_value(
         total_difficult_hits: float, estimated_unstable_rate: float | None,
         n_total: int,
 ) -> float:
+    """Compute the accuracy pp component from the deviation and object count."""
     if estimated_unstable_rate is None:
         return 0.0
     if attrs.great_hit_window <= 0.0:

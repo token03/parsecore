@@ -1,4 +1,5 @@
-"""
+"""Slider path geometry: control points, curve types and length calculation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -29,8 +30,8 @@ from collections.abc import Generator
 from dataclasses import dataclass, field
 from enum import Enum
 
-from ..enums import GameMode, SplineType
 from ...utils import F32_EPSILON, Pos, f32
+from ..enums import GameMode, SplineType
 
 BEZIER_TOLERANCE = 0.25
 CATMULL_DETAIL = 50
@@ -40,11 +41,20 @@ EPSILON = 2.220446049250313e-16
 
 @dataclass(slots=True, eq=True)
 class PathType:
+    """The interpolation type of a slider segment (linear, bezier, catmull, perfect circle)."""
     kind: SplineType
     degree: int | None = None
 
     @classmethod
     def new_from_str(cls, s: str) -> PathType:
+        """Return the ``PathType`` for a path-type character.
+
+        Args:
+            s: The single-letter type code (``L``, ``B``, ``C`` or ``P``).
+
+        Returns:
+            The matching path type (bezier as the fallback).
+        """
         if not s:
             return cls(SplineType.Catmull)
 
@@ -69,14 +79,29 @@ class PathType:
 
 @dataclass(slots=True, eq=True)
 class PathControlPoint:
+    """A slider anchor point, optionally starting a new segment of a given type."""
     pos: Pos
     path_type: PathType | None = None
 
 
 class Curve:
+    """A sampled slider path built from its control points.
+
+    The path is approximated exactly like osu!-stable (piecewise bezier, catmull
+    and circular-arc segments) and then clamped/extended to the expected length so
+    distances match the game.
+    """
     def __init__(
         self, mode: GameMode, points: list[PathControlPoint], expected_len: float | None
     ):
+        """Build and sample the curve for the given control points.
+
+        Args:
+            mode: The beatmap game mode (affects legacy behaviour).
+            points: The slider's control points.
+            expected_len: The slider length from the file, or ``None`` to use the
+                geometric length.
+        """
         self.path: list[Pos] = []
         self.lengths: list[float] = []
 
@@ -85,14 +110,28 @@ class Curve:
         self._calculate_length(expected_len, optimized_len[0])
 
     def dist(self) -> float:
+        """Return the total sampled path length.
+
+        Returns:
+            The curve length in osu! pixels.
+        """
         return self.lengths[-1] if self.lengths else 0.0
 
     def progress_to_dist(self, progress: float) -> float:
+        """Convert a ``0``-``1`` progress fraction to a distance along the path.
+
+        Args:
+            progress: The fractional progress along the slider.
+
+        Returns:
+            The corresponding distance in osu! pixels.
+        """
         return max(0.0, min(1.0, progress)) * self.dist()
 
     def _calculate_path(
         self, mode: GameMode, points: list[PathControlPoint], optimized_len: list[float]
     ):
+        """Sample the full path, dispatching each segment to its curve type."""
         vertices = [p.pos for p in points]
         start = 0
 
@@ -118,6 +157,7 @@ class Curve:
             start = i
 
     def _calculate_length(self, expected_len: float | None, optimized_len: float):
+        """Trim or extend the sampled path to the expected slider length."""
         calculated_len = optimized_len
         self.lengths.append(0.0)
 
@@ -171,6 +211,7 @@ class Curve:
         path_type: SplineType,
         optimized_len: list[float],
     ):
+        """Sample one segment according to its path type."""
         if path_type == SplineType.Linear:
             self.path.extend(sub_points)
 
@@ -216,6 +257,7 @@ class Curve:
                     len_removed_since_start = 0.0
 
     def _approximate_bezier(self, points: list[Pos]):
+        """Approximate a bezier segment by recursive subdivision (osu!-stable)."""
         to_flatten = [list(points)]
 
         while to_flatten:
@@ -244,6 +286,14 @@ class Curve:
         self.path.append(points[-1])
 
     def _bezier_subdivide(self, points: list[Pos]) -> tuple[list[Pos], list[Pos]]:
+        """Split a bezier segment into its left and right halves.
+
+        Args:
+            points: The segment's control points.
+
+        Returns:
+            The control points of the left and right sub-segments.
+        """
         count = len(points)
         midpoints = list(points)
         left = [Pos()] * count
@@ -260,6 +310,7 @@ class Curve:
         return left, right
 
     def _approximate_catmull(self, points: list[Pos]):
+        """Approximate a legacy catmull-rom segment."""
         if len(points) == 1:
             return
         for i in range(len(points) - 1):
@@ -271,6 +322,7 @@ class Curve:
             self._catmull_subpath(v1, v2, v3, v4)
 
     def _catmull_subpath(self, v1: Pos, v2: Pos, v3: Pos, v4: Pos) -> None:
+        """Emit the sampled points of one catmull span between two anchors."""
         x1 = f32(2.0 * v2.x)
         x2 = f32(-v1.x + v3.x)
         x3 = f32(f32(f32(f32(2.0 * v1.x) - f32(5.0 * v2.x)) + f32(4.0 * v3.x)) - v4.x)
@@ -284,6 +336,14 @@ class Curve:
         detail = float(CATMULL_DETAIL)
 
         def point_at(t1: float) -> Pos:
+            """Evaluate the catmull span at parameter ``t1``.
+
+            Args:
+                t1: The interpolation parameter in ``[0, 1]``.
+
+            Returns:
+                The sampled position.
+            """
             t2 = f32(t1 * t1)
             t3 = f32(t2 * t1)
             return Pos(
@@ -298,6 +358,17 @@ class Curve:
             self.path.append(point_at(t_b))
 
     def _approximate_circular_arc(self, a: Pos, b: Pos, c: Pos) -> bool:
+        """Approximate a perfect-circle segment through three points.
+
+        Args:
+            a: First anchor.
+            b: Second anchor.
+            c: Third anchor.
+
+        Returns:
+            ``True`` if a valid arc was produced, ``False`` if the points are collinear
+            and the caller should fall back to a bezier.
+        """
         cross = f32(
             f32(f32(b.y - a.y) * f32(c.x - a.x)) - f32(f32(b.x - a.x) * f32(c.y - a.y))
         )
@@ -357,18 +428,25 @@ class Curve:
 
 @dataclass(slots=True, eq=True)
 class SliderPath:
+    """A slider's control points plus its expected length, lazily sampled into a ``Curve``."""
     mode: GameMode
     control_points: list[PathControlPoint]
     expected_dist: float | None
     _curve: Curve | None = field(default=None, init=False)
 
     def curve(self) -> Curve:
+        """Return the sampled curve, building it on first access.
+
+        Returns:
+            The cached :class:`Curve` for this path.
+        """
         if self._curve is None:
             self._curve = Curve(self.mode, self.control_points, self.expected_dist)
         return self._curve
 
 
 class SliderEventType(Enum):
+    """The kind of event emitted while traversing a slider (head, tick, repeat, tail)."""
     Head = 0
     Tick = 1
     Repeat = 2
@@ -378,6 +456,7 @@ class SliderEventType(Enum):
 
 @dataclass(slots=True, eq=True)
 class SliderEvent:
+    """A scoring event on a slider at a given time (head, tick, repeat or tail)."""
     kind: SliderEventType
     span_idx: int
     span_start_time: float
@@ -393,6 +472,21 @@ def generate_slider_events(
     total_dist: float,
     span_count: int,
 ) -> Generator[SliderEvent, None, None]:
+    """Yield the scoring events of a slider in time order.
+
+    Reproduces osu!-stable's tick/repeat/tail placement.
+
+    Args:
+        start_time: The slider's start time in milliseconds.
+        span_duration: Duration of a single span (one traversal).
+        velocity: Slider velocity in pixels per millisecond.
+        tick_dist: Distance between ticks in pixels.
+        total_dist: Total path length in pixels.
+        span_count: Number of spans (repeats + 1).
+
+    Yields:
+        Each :class:`SliderEvent` in chronological order.
+    """
     MAX_LEN = 100000.0
     TAIL_LENIENCY = -36.0
 

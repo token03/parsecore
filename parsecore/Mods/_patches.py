@@ -1,4 +1,5 @@
-"""
+"""Runtime patches wiring cross-type mod helpers onto the mod classes.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -33,6 +34,15 @@ if TYPE_CHECKING:
 
 
 def _with_mode_impl(intermode: GameModsIntermode, mode: GameMode) -> GameMods:
+    """Resolve intermode mods to a ruleset-bound :class:`GameMods`.
+
+    Args:
+        intermode: The ruleset-agnostic mods.
+        mode: The target ruleset.
+
+    Returns:
+        The resolved collection.
+    """
     from .game_mod import GameMod
     from .game_mods import GameMods
 
@@ -45,6 +55,7 @@ def _with_mode_impl(intermode: GameModsIntermode, mode: GameMode) -> GameMods:
 def _try_with_mode_impl(
     intermode: GameModsIntermode, mode: GameMode
 ) -> GameMods | None:
+    """Like :func:`_with_mode_impl` but return ``None`` instead of raising."""
     from .game_mod import GameMod
     from .game_mods import GameMods
 
@@ -58,21 +69,26 @@ def _try_with_mode_impl(
 
 
 def _patch_gamemods_intermode():
+    """Attach ``with_mode``/``to_json`` helpers onto ``GameModsIntermode``."""
     from .game_mods_intermode import GameModsIntermode
 
     def with_mode(self, mode):
+        """Resolve these intermode mods to the given ruleset."""
         return _with_mode_impl(self, mode)
 
     def try_with_mode(self, mode):
+        """Resolve to a ruleset, or ``None`` on failure."""
         return _try_with_mode_impl(self, mode)
 
     def to_json(self) -> str:
+        """Return the intermode mods as a JSON string."""
         import json
 
         return json.dumps(str(self))
 
     @classmethod
     def from_json(cls, s: str) -> GameModsIntermode:
+        """Parse intermode mods from a JSON string."""
         import json
 
         raw = json.loads(s)
@@ -97,10 +113,12 @@ def _patch_gamemods_intermode():
 
 
 def _patch_gamemods():
+    """Attach ``to_json``/``from_json`` helpers onto ``GameMods``."""
     from .game_mod import GameMod
     from .game_mods import GameMods
 
     def to_json(self) -> str:
+        """Return the mods as a JSON string."""
         import json
 
         return json.dumps([m.to_dict() for m in self])
@@ -109,6 +127,7 @@ def _patch_gamemods():
     def from_json(
         cls, s: str, mode=None, deny_unknown_fields: bool = False
     ) -> GameMods:
+        """Parse ruleset-bound mods from a JSON string."""
         import json
 
         raw = json.loads(s)
@@ -119,13 +138,12 @@ def _patch_gamemods():
             intermode = GameModsIntermode.parse(raw)
             if mode is not None:
                 return intermode.with_mode(mode)
-            for m_try in (None,):
-                for item in intermode:
-                    result.insert(
-                        GameMod.new(str(item), mode)
-                        if mode
-                        else _guess_mode_for_acronym(str(item))
-                    )
+            for item in intermode:
+                result.insert(
+                    GameMod.new(str(item), mode)
+                    if mode
+                    else _guess_mode_for_acronym(str(item))
+                )
             return result
         if isinstance(raw, int):
             from .game_mods_intermode import GameModsIntermode
@@ -176,6 +194,7 @@ def _patch_gamemods():
 
 
 def _guess_mode_for_acronym(acronym: str):
+    """Return a plausible ruleset for an acronym, or ``None`` if ambiguous."""
     from .game_mod import GameMod
     from .game_mode import GameMode
 
@@ -187,6 +206,7 @@ def _guess_mode_for_acronym(acronym: str):
 
 
 def _allow_multiple_modes(intermode):
+    """Return whether the acronyms may legitimately span several rulesets."""
     from .game_mods import GameMods
 
     result = GameMods()
@@ -200,14 +220,17 @@ _patch_gamemods()
 
 
 def _patch_gamemods_intermode_extra():
+    """Attach the remaining set-algebra helpers onto ``GameModsIntermode``."""
     from .game_mod_intermode import GameModIntermode
     from .game_mods_intermode import GameModsIntermode
     from .game_mods_legacy import GameModsLegacy
 
     def intersects(self, other) -> bool:
+        """Return whether the two collections share any mod."""
         return bool(set(self._inner) & set(other._inner))
 
     def legacy_clock_rate(self) -> float:
+        """Return the clock rate from the legacy bit representation."""
         for m in self._inner:
             if m in (GameModIntermode.DoubleTime, GameModIntermode.Nightcore):
                 return 1.5
@@ -216,17 +239,21 @@ def _patch_gamemods_intermode_extra():
         return 1.0
 
     def as_legacy(self) -> GameModsLegacy:
+        """Return the mods as a legacy bitfield."""
         return GameModsLegacy.from_bits(self.bits())
 
     def try_as_legacy(self):
+        """Return the legacy bitfield, or ``None`` if not representable."""
         b = self.checked_bits()
         return GameModsLegacy.from_bits(b) if b is not None else None
 
     def remove_all(self, mods) -> None:
+        """Remove every given mod."""
         for m in mods:
             self.remove(m)
 
     def contains_any(self, mods) -> bool:
+        """Return whether any of the given mods is present."""
         return any(m in self._inner for m in mods)
 
     GameModsIntermode.intersects = intersects
@@ -238,29 +265,37 @@ def _patch_gamemods_intermode_extra():
 
 
 def _patch_legacy_extra():
+    """Attach set-algebra and conversion helpers onto ``GameModsLegacy``."""
     from .game_mods_legacy import GameModsLegacy
 
     def to_intermode(self):
+        """Return the intermode form of the legacy bitfield."""
         from .game_mods_intermode import GameModsIntermode
 
         return GameModsIntermode.from_bits(self._bits)
 
     def remove(self, other: GameModsLegacy) -> None:
+        """Clear the given bits in place."""
         self._bits &= ~other._bits
 
     def intersection(self, other: GameModsLegacy) -> GameModsLegacy:
+        """Return the bitwise intersection."""
         return GameModsLegacy(self._bits & other._bits)
 
     def union(self, other: GameModsLegacy) -> GameModsLegacy:
+        """Return the bitwise union."""
         return GameModsLegacy(self._bits | other._bits)
 
     def difference(self, other: GameModsLegacy) -> GameModsLegacy:
+        """Return this bitfield with the other's bits cleared."""
         return GameModsLegacy(self._bits & ~other._bits)
 
     def symmetric_difference(self, other: GameModsLegacy) -> GameModsLegacy:
+        """Return the bitwise symmetric difference."""
         return GameModsLegacy(self._bits ^ other._bits)
 
     def try_from_bits_strict(bits: int):
+        """Parse bits, returning ``None`` if any bit is unknown."""
         known = 0x7FFFFFFF
         if bits & ~known:
             return None
@@ -280,15 +315,18 @@ _patch_legacy_extra()
 
 
 def _patch_intermode_acronym_methods():
+    """Attach the acronym constructors onto ``GameModsIntermode``."""
     from .game_mod_intermode import GameModIntermode
     from .game_mods_intermode import GameModsIntermode
 
     @classmethod
     def from_acronyms_str(cls, s: str) -> GameModsIntermode:
+        """Parse intermode mods from a concatenated acronym string."""
         return cls.parse(s)
 
     @classmethod
     def from_acronyms_iter(cls, acronyms) -> GameModsIntermode:
+        """Parse intermode mods from an iterable of acronyms."""
         result = cls()
         for a in acronyms:
             result.insert(GameModIntermode.from_acronym(str(a)))
@@ -296,6 +334,7 @@ def _patch_intermode_acronym_methods():
 
     @classmethod
     def try_from_acronyms(cls, s: str):
+        """Parse acronyms leniently, returning ``None`` on failure."""
         result = cls()
         s = s.upper()
         i = 0

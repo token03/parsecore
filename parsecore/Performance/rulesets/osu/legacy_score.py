@@ -1,4 +1,5 @@
-"""
+"""osu!(stable) ScoreV1 simulation used for classic score-based miss estimation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -46,6 +47,7 @@ _I32_MAX = 2 ** 31 - 1
 
 
 def _as_i32(value: float) -> int:
+    """Cast a float to a 32-bit int, truncating toward zero and saturating."""
     if value != value:
         return 0
     if value <= _I32_MIN:
@@ -57,6 +59,7 @@ def _as_i32(value: float) -> int:
 
 @dataclass(slots=True)
 class LegacyScoreAttributes:
+    """Accumulated ScoreV1 values (accuracy score, combo, bonus, ...)."""
     accuracy_score: int = 0
     combo_score: int = 0
     bonus_score_ratio: float = 0.0
@@ -65,9 +68,11 @@ class LegacyScoreAttributes:
 
 
 class _LegacyScoreSimulatorInner:
+    """Running ScoreV1 accumulator state during simulation."""
     __slots__ = ("legacy_bonus_score", "standardised_bonus_score", "combo")
 
     def __init__(self) -> None:
+        """Initialise the accumulator at zero."""
         self.legacy_bonus_score = 0
         self.standardised_bonus_score = 0
         self.combo = 0
@@ -81,6 +86,7 @@ class _LegacyScoreSimulatorInner:
             score_increase: int,
             bonus_base_score: int,
     ) -> float | None:
+        """Apply one judgement's score and combo contribution."""
         factor: float | None = None
 
         if add_score_combo_multiplier:
@@ -98,6 +104,7 @@ class _LegacyScoreSimulatorInner:
         return factor
 
     def finalize(self, attrs: LegacyScoreAttributes) -> None:
+        """Finalise the bonus ratio and max combo onto the attributes."""
         if self.legacy_bonus_score == 0:
             attrs.bonus_score_ratio = 0.0
         else:
@@ -110,14 +117,16 @@ class _LegacyScoreSimulatorInner:
 
 
 class OsuLegacyScoreSimulator:
+    """Simulates the maximum osu!-stable ScoreV1 for a beatmap."""
     __slots__ = ("osu_objects", "passed_objects", "inner", "score_multiplier_value")
 
     def __init__(
             self,
             osu_objects: list[OsuObject],
-            beatmap: "PerformanceBeatmap",
+            beatmap: PerformanceBeatmap,
             passed_objects: int,
     ) -> None:
+        """Initialise the simulator and compute the ScoreV1 difficulty multiplier."""
         hp = f32(beatmap.base_hp)
         od = f32(max(0.0, min(10.0, beatmap.base_od)))
         cs = f32(beatmap.base_cs)
@@ -131,13 +140,14 @@ class OsuLegacyScoreSimulator:
 
     @staticmethod
     def score_multiplier(
-            beatmap: "PerformanceBeatmap",
+            beatmap: PerformanceBeatmap,
             passed_objects: int,
             *,
             hp: float,
             od: float,
             cs: float,
     ) -> int:
+        """Return the ScoreV1 difficulty multiplier from the peppy-stars formula."""
         hit_objects = beatmap.hit_objects
 
         object_count = min(len(hit_objects), max(passed_objects, 0))
@@ -164,6 +174,7 @@ class OsuLegacyScoreSimulator:
         return calculate_difficulty_peppy_stars(object_count, drain_len, hp=hp, od=od, cs=cs)
 
     def simulate(self) -> LegacyScoreAttributes:
+        """Simulate the full map and return the ScoreV1 attributes."""
         attrs = LegacyScoreAttributes()
 
         for obj in self.osu_objects[: max(self.passed_objects, 0)]:
@@ -174,6 +185,7 @@ class OsuLegacyScoreSimulator:
         return attrs
 
     def _simulate_hit(self, hit_object: OsuObject, attrs: LegacyScoreAttributes) -> None:
+        """Apply the score of one hit object (circle, slider or spinner)."""
         if isinstance(hit_object.kind, OsuSlider):
             slider = hit_object.kind
 
@@ -220,6 +232,7 @@ class OsuLegacyScoreSimulator:
             score_increase: int,
             bonus_base_score: int,
     ) -> None:
+        """Apply one judgement's score and combo contribution."""
         factor = self.inner.unrolled_recursion(
             attrs,
             add_score_combo_multiplier,
@@ -234,6 +247,7 @@ class OsuLegacyScoreSimulator:
 
 
 def _calculate_spinner_score(spinner: Spinner) -> float:
+    """Return the ScoreV1 score of a spinner from its duration."""
     SPIN_SCORE = 100
     BONUS_SPIN_SCORE = 1000
 
@@ -263,9 +277,11 @@ def _calculate_spinner_score(spinner: Spinner) -> float:
 
 
 class _InnerNestedScorePerObject:
+    """Accumulator for the average lazer nested score per object."""
     __slots__ = ("n_sliders", "n_repeats", "amount_of_small_ticks", "spinner_score", "object_count")
 
     def __init__(self) -> None:
+        """Initialise the accumulator."""
         self.n_sliders = 0
         self.n_repeats = 0
         self.amount_of_small_ticks = 0
@@ -273,6 +289,7 @@ class _InnerNestedScorePerObject:
         self.object_count = 0
 
     def process_next(self, h: OsuObject) -> None:
+        """Add one object's nested score contribution."""
         self.object_count += 1
 
         if isinstance(h.kind, OsuSlider):
@@ -284,6 +301,7 @@ class _InnerNestedScorePerObject:
             self.spinner_score += _calculate_spinner_score(h.kind)
 
     def calculate(self) -> float:
+        """Return the average nested score per object."""
         BIG_TICK_SCORE = 30.0
         SMALL_TICK_SCORE = 10.0
 
@@ -303,6 +321,14 @@ class _InnerNestedScorePerObject:
 
 
 def calculate_nested_score_per_object(objects: list[OsuObject], passed_objects: int) -> float:
+    """Return the average lazer nested score per object for a beatmap.
+
+    Args:
+        objects: The osu! objects.
+
+    Returns:
+        The mean nested score used by the classic miss estimator.
+    """
     inner = _InnerNestedScorePerObject()
 
     for h in objects[: max(passed_objects, 0)]:

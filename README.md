@@ -8,9 +8,10 @@
 [![Python](https://img.shields.io/pypi/pyversions/parsecore?style=for-the-badge&color=blue)](https://pypi.org/project/parsecore/)
 [![License](https://img.shields.io/github/license/O-Lib/parsecore?style=for-the-badge&color=green)](LICENSE)
 [![Typing](https://img.shields.io/badge/typing-checked-blue?style=for-the-badge)](https://mypy-lang.org/)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=for-the-badge&logo=pre-commit)](https://pre-commit.com/)
 [![Code Style](https://img.shields.io/badge/code%20style-ruff-orange?style=for-the-badge)](https://docs.astral.sh/ruff/)
 [![Discord](https://img.shields.io/discord/1499516844711608350?style=for-the-badge&logo=discord&label=discord&color=5865F2)](https://discord.gg/9p7whE7QxQ)
+[![Docs](https://img.shields.io/readthedocs/parsecore?style=for-the-badge&logo=readthedocs&logoColor=white&label=docs)](https://parsecore.readthedocs.io)
+[![Translated with Crowdin](https://img.shields.io/badge/translated%20by-Crowdin-2E3340?style=for-the-badge&logo=crowdin&logoColor=white)](https://crowdin.com/project/parsecore)
 
 </div>
 
@@ -254,6 +255,22 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 ### Security
 
 To report a security vulnerability, see [SECURITY.md](SECURITY.md).
+
+### Translations
+
+parsecore's documentation is translated by the community on [Crowdin](https://crowdin.com/project/parsecore). Want to see it in your language? Join the project and help translate no coding required.
+
+[![Crowdin translation progress](https://badges.crowdin.net/parsecore/localized.svg)](https://crowdin.com/project/parsecore)
+
+**Currently supported languages**
+
+| Language | Status |
+| --- | --- |
+| 🇺🇸 English (US) | Source |
+
+_More languages appear here as they reach completion on Crowdin; the live translated site is on [Read the Docs](https://parsecore.readthedocs.io)._
+
+---
 
 <p align="center">
 	<img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/footers/gray0_ctp_on_line.svg?sanitize=true" />

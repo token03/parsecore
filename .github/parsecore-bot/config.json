@@ -33,7 +33,7 @@
       "enabled": true,
       "blocking": true,
       "pass": "No inline comments added to parsecore code",
-      "fail": "This PR adds `#` comments inside `parsecore/`. The codebase is intentionally comment-free (license header only) — please move explanations into the PR description instead. Add `[skip-comment-check]` to the PR description if this is a false positive.",
+      "fail": "This PR adds `#` comments inside `parsecore/`. Inline comments are discouraged — put explanations in the function's docstring (Google style) instead. Add `[skip-comment-check]` to the PR description if this is a false positive.",
       "skip_marker": "[skip-comment-check]"
     },
     "size": {

@@ -1,4 +1,5 @@
-"""
+"""osu!mania strain skill (individual and overall column strain).
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -26,7 +27,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .hit_objects import ManiaObject
 
@@ -41,30 +41,36 @@ SECTION_LENGTH_MS = 400.0
 DECAY_WEIGHT = 0.9
 
 def _apply_decay(value: float, delta_time: float, decay_base: float) -> float:
+    """Return a strain value decayed over a time span."""
     return value * (decay_base ** (delta_time / 1000.0))
 
 def _logistic(x: float, multiplier: float, midpoint_offset: float, max_value: float = 1.0) -> float:
+    """Return the value of a logistic (sigmoid) curve."""
     return max_value / (1.0 + math.exp(-multiplier * (x - midpoint_offset)))
 
 def _definitely_bigger(a: float, b: float, tol: float = 1.0) -> bool:
+    """Return whether one value exceeds another beyond a small epsilon."""
     return (a - b) > tol
 
 @dataclass(slots=True)
 class ManiaDifficultyHitObject:
+    """One mania object enriched with per-column and cross-column timing state."""
     idx: int
     start_time: float
     end_time: float
     delta_time: float
     column: int
     column_strain_time: float
-    previous_hit_objects: list[Optional["ManiaDifficultyHitObject"]] = field(default_factory=list)
+    previous_hit_objects: list[ManiaDifficultyHitObject | None] = field(default_factory=list)
 
 def _osu_legacy_sort_in_place(keys: list, comparer) -> None:
+    """Sort objects in place using osu!'s legacy (unstable) sort algorithm."""
     if len(keys) < 2:
         return
     _legacy_quicksort(keys, 0, len(keys) - 1, comparer, 32)
 
 def _legacy_quicksort(keys: list, left: int, right: int, comparer, depth_limit: int) -> None:
+    """The recursive quicksort half of osu!'s legacy introsort."""
     while True:
         if depth_limit == 0:
             _legacy_heap_sort(keys, left, right, comparer)
@@ -119,6 +125,7 @@ def _legacy_quicksort(keys: list, left: int, right: int, comparer, depth_limit: 
             break
 
 def _legacy_heap_sort(keys: list, lo: int, hi: int, comparer) -> None:
+    """The heap-sort fallback of osu!'s legacy introsort."""
     n = hi - lo + 1
 
     for i in range(n // 2, 0, -1):
@@ -130,6 +137,7 @@ def _legacy_heap_sort(keys: list, lo: int, hi: int, comparer) -> None:
         _legacy_down_heap(keys, 1, i - 1, lo, comparer)
 
 def _legacy_down_heap(keys: list, i: int, n: int, lo: int, comparer) -> None:
+    """Sift an element down the heap (legacy heap sort helper)."""
     while i <= n // 2:
         child = 2 * i
         if child < n and comparer(keys[lo + child - 1], keys[lo + child]) < 0:
@@ -144,6 +152,16 @@ def create_mania_difficulty_objects(
         clock_rate: float,
         total_columns: int,
 ) -> list[ManiaDifficultyHitObject]:
+    """Build the difficulty objects for the mania strain skill.
+
+    Args:
+        objects: The mania objects.
+        clock_rate: The active clock rate.
+        total_columns: The stage's column count.
+
+    Returns:
+        The preprocessed difficulty objects.
+    """
     if len(mania_objects) < 2:
         return []
 
@@ -168,7 +186,7 @@ def create_mania_difficulty_objects(
         else:
             column_strain_time = 0.0
 
-        prev_arr: list[Optional[ManiaDifficultyHitObject]]
+        prev_arr: list[ManiaDifficultyHitObject | None]
         if out:
             prev_note = out[-1]
             prev_arr = list(prev_note.previous_hit_objects)
@@ -194,8 +212,10 @@ def create_mania_difficulty_objects(
     return out
 
 class IndividualStrainEvaluator:
+    """Evaluates per-column strain (repeated notes in the same column)."""
     @staticmethod
     def evaluate_difficulty_of(curr: ManiaDifficultyHitObject) -> float:
+        """Return the individual (per-column) strain of one object."""
         start_time = curr.start_time
         end_time = curr.end_time
         hold_factor = 1.0
@@ -211,8 +231,10 @@ class IndividualStrainEvaluator:
         return 2.0 * hold_factor
 
 class OverallStrainEvaluator:
+    """Evaluates overall strain (notes across all columns)."""
     @staticmethod
     def evaluate_difficulty_of(curr: ManiaDifficultyHitObject) -> float:
+        """Return the overall (cross-column) strain of one object."""
         start_time = curr.start_time
         end_time = curr.end_time
         is_overlapping = False
@@ -246,12 +268,14 @@ class OverallStrainEvaluator:
         return (1.0 + hold_addition) * hold_factor
 
 class Strain:
+    """The mania strain skill combining individual and overall strain."""
     DECAY_WEIGHT = DECAY_WEIGHT
     SECTION_LENGTH = SECTION_LENGTH_MS
     STRAIN_DECAY_BASE = STRAIN_DECAY_BASE
     SKILL_MULTIPLIER = SKILL_MULTIPLIER
 
     def __init__(self, total_columns: int) -> None:
+        """Initialise the skill's strain and peak state."""
         self.total_columns = total_columns
         self.individual_strains: list[float] = [0.0] * total_columns
         self.highest_individual_strain: float = 0.0
@@ -263,6 +287,7 @@ class Strain:
         self._macro_strain: float = 0.0
 
     def process(self, curr: ManiaDifficultyHitObject) -> None:
+        """Process one object, updating the running strain and section peaks."""
         section = self.SECTION_LENGTH
         if curr.idx == 0:
             self._current_section_end = math.ceil(curr.start_time / section) * section
@@ -277,18 +302,22 @@ class Strain:
         self._object_strains.append(strain)
 
     def _save_current_peak(self) -> None:
+        """Record the current strain as a section peak."""
         self._strain_peaks.append(self._current_section_peak)
 
     def _start_new_section_from(self, time: float, curr: ManiaDifficultyHitObject) -> None:
+        """Begin a new strain section from a decayed baseline."""
         self._current_section_peak = self._calculate_initial_strain(time, curr)
 
     def _strain_value_at(self, curr: ManiaDifficultyHitObject) -> float:
+        """Advance and return the strain at the current object."""
         self._macro_strain *= self.STRAIN_DECAY_BASE
         val = self._strain_value_of(curr)
         self._macro_strain += val * self.SKILL_MULTIPLIER
         return self._macro_strain
 
     def _calculate_initial_strain(self, time: float, curr: ManiaDifficultyHitObject) -> float:
+        """Return the decayed strain carried into a new section."""
         prev_start = self._prev_processed_start_time
         offset = time - prev_start
         return (
@@ -299,6 +328,7 @@ class Strain:
     _prev_processed_start_time: float = 0.0
 
     def _strain_value_of(self, curr: ManiaDifficultyHitObject) -> float:
+        """Return the strain contribution of the current object."""
         col = curr.column
 
         if 0 <= col < len(self.individual_strains):
@@ -324,9 +354,11 @@ class Strain:
         return self.highest_individual_strain + self.overall_strain - self._macro_strain
 
     def get_current_strain_peaks(self) -> list[float]:
+        """Return the recorded strain peaks."""
         return [*self._strain_peaks, self._current_section_peak]
 
     def difficulty_value(self) -> float:
+        """Aggregate the strain peaks into the mania difficulty value."""
         peaks = [p for p in self.get_current_strain_peaks() if p > 0.0]
         peaks.sort(reverse=True)
         difficulty = 0.0
@@ -340,6 +372,15 @@ def run_strain(
         diff_objects: list[ManiaDifficultyHitObject],
         total_columns: int,
 ) -> Strain:
+    """Run the mania strain skill over the difficulty objects.
+
+    Args:
+        diff_objects: The preprocessed mania difficulty objects.
+        total_columns: The stage's column count.
+
+    Returns:
+        The processed strain skill.
+    """
     skill = Strain(total_columns)
     for obj in diff_objects:
         skill.process(obj)

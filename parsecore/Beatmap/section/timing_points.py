@@ -1,4 +1,5 @@
-"""
+"""Parser and data model for the ``[TimingPoints]`` section (control points).
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -28,7 +29,6 @@ import bisect
 import math
 from dataclasses import dataclass, field
 
-from .enums import GameMode, SampleBank
 from ..utils import (
     MAX_PARSE_VALUE,
     ParseNumberError,
@@ -36,10 +36,17 @@ from ..utils import (
     parse_int,
     trim_comment,
 )
+from .enums import GameMode, SampleBank
 
 
 class ParseTimingPointsError(Exception):
+    """Raised when a line in the ``[TimingPoints]`` section cannot be parsed."""
     def __init__(self, message: str):
+        """Initialise the error with a message.
+
+        Args:
+            message: Human-readable description of the parse failure.
+        """
         super().__init__(message)
 
 
@@ -47,6 +54,7 @@ EPSILON = 1e-7
 
 
 class EffectFlags:
+    """Bit flags of a timing point's effect column (kiai, omit first barline)."""
     NONE = 0
     KIAI = 1 << 0
     OMIT_FIRST_BAR_LINE = 1 << 3
@@ -54,6 +62,7 @@ class EffectFlags:
 
 @dataclass(slots=True, eq=True)
 class TimingPoint:
+    """An uninherited (red) timing point defining a beat length from a time onward."""
     time: float = 0.0
     beat_len: float = 60000.0 / 60.0
     omit_first_bar_line: bool = False
@@ -65,11 +74,22 @@ _DEFAULT_DIFFICULTY = None
 
 @dataclass(slots=True, eq=True)
 class DifficultyPoint:
+    """An inherited (green) point overriding slider velocity from a time onward."""
     time: float = 0.0
     slider_velocity: float = 1.0
     generate_ticks: bool = True
 
     def is_redundant(self, existing: DifficultyPoint) -> bool:
+        """Return whether this point has no effect over ``existing``.
+
+        Redundant points are dropped so lookups mirror osu!'s behaviour.
+
+        Args:
+            existing: The point currently in effect at this time.
+
+        Returns:
+            ``True`` if this point changes nothing.
+        """
         return (
             self.generate_ticks == existing.generate_ticks
             and abs(self.slider_velocity - existing.slider_velocity) < EPSILON
@@ -81,12 +101,21 @@ _DEFAULT_DIFFICULTY = DifficultyPoint()
 
 @dataclass(slots=True, eq=True)
 class SamplePoint:
+    """A point overriding the hit-sound sample bank and volume from a time onward."""
     time: float = 0.0
     sample_bank: SampleBank = SampleBank.Normal
     sample_volume: int = 100
     custom_sample_bank: int = 0
 
     def is_redundant(self, existing: SamplePoint) -> bool:
+        """Return whether this sample point matches ``existing``.
+
+        Args:
+            existing: The sample point currently in effect.
+
+        Returns:
+            ``True`` if this point changes nothing.
+        """
         return (
             self.sample_bank == existing.sample_bank
             and self.sample_volume == existing.sample_volume
@@ -96,11 +125,20 @@ class SamplePoint:
 
 @dataclass(slots=True, eq=True)
 class EffectPoint:
+    """A point carrying effect state (kiai time, scroll speed) from a time onward."""
     time: float = 0.0
     kiai: bool = False
     scroll_speed: float = 1.0
 
     def is_redundant(self, existing: EffectPoint) -> bool:
+        """Return whether this effect point matches ``existing``.
+
+        Args:
+            existing: The effect point currently in effect.
+
+        Returns:
+            ``True`` if this point changes nothing.
+        """
         return (
             self.kiai == existing.kiai
             and abs(self.scroll_speed - existing.scroll_speed) < EPSILON
@@ -109,12 +147,21 @@ class EffectPoint:
 
 @dataclass(slots=True, eq=True)
 class ControlPoints:
+    """All timing/difficulty/sample/effect points of a beatmap, kept time-sorted."""
     timing_points: list[TimingPoint] = field(default_factory=list)
     difficulty_points: list[DifficultyPoint] = field(default_factory=list)
     effect_points: list[EffectPoint] = field(default_factory=list)
     sample_points: list[SamplePoint] = field(default_factory=list)
 
     def difficulty_point_at(self, time: float) -> DifficultyPoint:
+        """Return the difficulty point in effect at ``time``.
+
+        Args:
+            time: The time in milliseconds.
+
+        Returns:
+            The active difficulty point (a default if none precedes ``time``).
+        """
         idx = bisect.bisect_right(self.difficulty_points, time, key=lambda x: x.time)
         return (
             self.difficulty_points[max(0, idx - 1)]
@@ -123,24 +170,53 @@ class ControlPoints:
         )
 
     def effect_point_at(self, time: float) -> EffectPoint:
+        """Return the effect point in effect at ``time``.
+
+        Args:
+            time: The time in milliseconds.
+
+        Returns:
+            The active effect point (a default if none precedes ``time``).
+        """
         idx = bisect.bisect_right(self.effect_points, time, key=lambda x: x.time)
         return (
             self.effect_points[max(0, idx - 1)] if self.effect_points else EffectPoint()
         )
 
     def sample_point_at(self, time: float) -> SamplePoint:
+        """Return the sample point in effect at ``time``.
+
+        Args:
+            time: The time in milliseconds.
+
+        Returns:
+            The active sample point (a default if none precedes ``time``).
+        """
         idx = bisect.bisect_right(self.sample_points, time, key=lambda x: x.time)
         return (
             self.sample_points[max(0, idx - 1)] if self.sample_points else SamplePoint()
         )
 
     def timing_point_at(self, time: float) -> TimingPoint:
+        """Return the timing point in effect at ``time``.
+
+        Args:
+            time: The time in milliseconds.
+
+        Returns:
+            The active timing point (the first one if ``time`` precedes all points).
+        """
         idx = bisect.bisect_right(self.timing_points, time, key=lambda x: x.time)
         return (
             self.timing_points[max(0, idx - 1)] if self.timing_points else TimingPoint()
         )
 
     def add_timing(self, point: TimingPoint) -> None:
+        """Insert a timing point, keeping the list time-sorted.
+
+        Args:
+            point: The timing point to add.
+        """
         idx = bisect.bisect_left(self.timing_points, point.time, key=lambda x: x.time)
         if (
             idx < len(self.timing_points)
@@ -151,6 +227,11 @@ class ControlPoints:
             self.timing_points.insert(idx, point)
 
     def add_difficulty(self, point: DifficultyPoint) -> None:
+        """Insert a difficulty point unless it is redundant.
+
+        Args:
+            point: The difficulty point to add.
+        """
         existing_at = self._exact_at(self.difficulty_points, point.time)
         if existing_at is not None:
             if point.is_redundant(existing_at):
@@ -179,6 +260,11 @@ class ControlPoints:
         self.difficulty_points.insert(idx, point)
 
     def add_effect(self, point: EffectPoint) -> None:
+        """Insert an effect point unless it is redundant.
+
+        Args:
+            point: The effect point to add.
+        """
         existing_at = self._exact_at(self.effect_points, point.time)
         if existing_at is not None:
             if point.is_redundant(existing_at):
@@ -207,6 +293,11 @@ class ControlPoints:
         self.effect_points.insert(idx, point)
 
     def add_sample(self, point: SamplePoint) -> None:
+        """Insert a sample point unless it is redundant.
+
+        Args:
+            point: The sample point to add.
+        """
         existing_at = self._exact_at(self.sample_points, point.time)
         if existing_at is not None:
             if point.is_redundant(existing_at):
@@ -234,6 +325,15 @@ class ControlPoints:
 
     @staticmethod
     def _exact_at(points: list, time: float):
+        """Return the point active at ``time`` via binary search.
+
+        Args:
+            points: A time-sorted list of control points.
+            time: The lookup time.
+
+        Returns:
+            The last point at or before ``time``, or ``None`` if the list is empty.
+        """
         if not points:
             return None
         idx = bisect.bisect_left(points, time, key=lambda x: x.time)
@@ -243,6 +343,7 @@ class ControlPoints:
 
 
 class TimingPointsState:
+    """Accumulates control points while decoding, resolving pending sample state."""
     __slots__ = (
         "general_mode",
         "general_default_sample_bank",
@@ -256,6 +357,13 @@ class TimingPointsState:
     )
 
     def __init__(self, mode: GameMode, default_bank: SampleBank, default_volume: int):
+        """Initialise with the map mode and default sample bank/volume.
+
+        Args:
+            mode: The beatmap's game mode.
+            default_bank: The section's default sample bank.
+            default_volume: The section's default sample volume.
+        """
         self.general_mode = mode
         self.general_default_sample_bank = default_bank
         self.general_default_sample_volume = default_volume
@@ -268,6 +376,7 @@ class TimingPointsState:
         self.control_points = ControlPoints()
 
     def flush_pending(self) -> None:
+        """Commit any buffered control point at the pending time."""
         if self.pending_timing is not None:
             self.control_points.add_timing(self.pending_timing)
         if self.pending_difficulty is not None:
@@ -283,6 +392,13 @@ class TimingPointsState:
         self.pending_sample = None
 
     def push_point(self, time: float, point, timing_change: bool) -> None:
+        """Buffer a parsed control point at a given time.
+
+        Args:
+            time: The point's time in milliseconds.
+            point: The control point value.
+            timing_change: Whether this line was an uninherited (red) point.
+        """
         if abs(time - self.pending_time) >= EPSILON:
             self.flush_pending()
 
@@ -302,6 +418,14 @@ class TimingPointsState:
         self.pending_time = time
 
     def parse_timing_points(self, line: str) -> None:
+        """Parse a single ``[TimingPoints]`` line into control points.
+
+        Args:
+            line: One raw comma-separated timing-point line.
+
+        Raises:
+            ParseTimingPointsError: If the line is malformed.
+        """
         clean_line = trim_comment(line)
         parts = [p.strip() for p in clean_line.split(",")]
         if len(parts) < 2:

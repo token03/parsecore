@@ -1,4 +1,5 @@
-"""
+"""osu! difficulty skills: aim (snap/flow), speed, reading and flashlight.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -25,8 +26,6 @@ SOFTWARE.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Optional
 
 from parsecore.Beatmap.utils import f32
 
@@ -55,9 +54,11 @@ REDUCED_SECTION_COUNT: int = 10
 REDUCED_STRAIN_BASELINE: float = 0.75
 
 def strain_decay(ms: float, decay_base: float) -> float:
+    """Return the strain decay multiplier over a time span in milliseconds."""
     return math.pow(decay_base, ms / 1000.0)
 
 def _lerp(a: float, b: float, t: float) -> float:
+    """Linear interpolation ``a + (b - a) * t`` (osu!.Framework form)."""
     return a + (b - a) * t
 
 def osu_difficulty_value(
@@ -66,6 +67,7 @@ def osu_difficulty_value(
         reduced_strain_baseline: float = REDUCED_STRAIN_BASELINE,
         decay_weight: float = DECAY_WEIGHT,
 ) -> float:
+    """Aggregate strain peaks into a difficulty value (weighted decaying sum)."""
     peaks = [p for p in current_strain_peaks if p > 0.0]
     strains = sorted(peaks, reverse=True)
 
@@ -86,9 +88,11 @@ def osu_difficulty_value(
     return difficulty
 
 def difficulty_to_performance(difficulty: float) -> float:
+    """Convert a difficulty rating to a performance value."""
     return math.pow(5.0 * max(1.0, difficulty / 0.0675) - 4.0, 3.0) / 100_000.0
 
 def count_top_weighted_strains(strains: list[float], difficulty_value: float) -> float:
+    """Return the effective count of high strains (difficulty consistency)."""
     if not strains:
         return 0.0
     consistent_top_strain = difficulty_value / 10.0
@@ -100,6 +104,7 @@ def count_top_weighted_strains(strains: list[float], difficulty_value: float) ->
     return total
 
 def count_top_weighted_sliders(slider_strains: list[float], difficulty_value: float) -> float:
+    """Return the effective count of difficult sliders."""
     if not slider_strains or difficulty_value <= 0.0:
         return 0.0
     consistent_top_strain = difficulty_value / 10.0
@@ -113,10 +118,12 @@ def count_top_weighted_sliders(slider_strains: list[float], difficulty_value: fl
 
 
 class _OsuStrainSkill:
+    """Base class for the fixed-section osu! strain skills."""
     SKILL_MULTIPLIER: float = 1.0
     STRAIN_DECAY_BASE: float = 0.15
 
     def __init__(self) -> None:
+        """Initialise the skill's strain and peak state."""
         self._current_section_peak: float = 0.0
         self._current_section_end: float = 0.0
         self._strain_peaks: list[float] = []
@@ -126,6 +133,7 @@ class _OsuStrainSkill:
     def _strain_value_at(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> float:
+        """Advance and return the strain at the current object."""
         raise NotImplementedError
 
     def _calculate_initial_strain(
@@ -134,6 +142,7 @@ class _OsuStrainSkill:
             curr: OsuDifficultyObject,
             objects: OsuDifficultyObjects,
     ) -> float:
+        """Return the decayed strain carried into a new section."""
         prev = objects.previous(curr, 0)
         prev_start_time = prev.start_time if prev is not None else 0.0
         return self._current_strain * strain_decay(
@@ -143,6 +152,7 @@ class _OsuStrainSkill:
     def process(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> None:
+        """Process one object, updating the running strain and section peaks."""
         section = SECTION_LENGTH_MS
 
         if curr.idx == 0:
@@ -160,10 +170,12 @@ class _OsuStrainSkill:
         self._object_strains.append(strain)
 
     def difficulty_value(self) -> float:
+        """Aggregate the strain peaks into the skill's difficulty value."""
         peaks = list(self._strain_peaks) + [self._current_section_peak]
         return osu_difficulty_value(peaks)
 
     def count_top_weighted_strains_for(self, diff_value: float) -> float:
+        """Return the effective count of high strains."""
         return count_top_weighted_strains(self._object_strains, diff_value)
 
 _AIM_WIDE_ANGLE_MULTIPLIER = 1.5
@@ -173,9 +185,11 @@ _AIM_VELOCITY_CHANGE_MULTIPLIER = 0.75
 _AIM_WIGGLE_MULTIPLIER = 1.02
 
 def _aim_calc_wide_angle_bonus(angle: float) -> float:
+    """Return the aim bonus for wide angles."""
     return smoothstep(angle, math.radians(40.0), math.radians(140.0))
 
 def _aim_calc_acute_angle_bonus(angle: float) -> float:
+    """Return the aim bonus for acute angles."""
     return smoothstep(angle, math.radians(140.0), math.radians(40.0))
 
 def aim_evaluate_diff_of(
@@ -183,6 +197,7 @@ def aim_evaluate_diff_of(
         objects: OsuDifficultyObjects,
         with_slider_travel_dist: bool,
 ) -> float:
+    """Return the (legacy) aim difficulty of one object."""
     last_obj = objects.previous(curr, 0)
     last_last_obj = objects.previous(curr, 1)
     if (
@@ -317,10 +332,12 @@ def aim_evaluate_diff_of(
     return aim_strain
 
 class Aim(_OsuStrainSkill):
+    """The osu! aim strain skill."""
     SKILL_MULTIPLIER = 26.0
     STRAIN_DECAY_BASE = 0.15
 
     def __init__(self, include_sliders: bool = True) -> None:
+        """Initialise the aim skill."""
         super().__init__()
         self.include_sliders = include_sliders
         self._slider_strains: list[float] = []
@@ -328,6 +345,7 @@ class Aim(_OsuStrainSkill):
     def _strain_value_at(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> float:
+        """Advance and return the aim strain at the current object."""
         self._current_strain *= strain_decay(curr.delta_time, self.STRAIN_DECAY_BASE)
         self._current_strain += (
                 aim_evaluate_diff_of(curr, objects, self.include_sliders)
@@ -338,6 +356,7 @@ class Aim(_OsuStrainSkill):
         return self._current_strain
 
     def get_difficult_sliders(self) -> float:
+        """Return the effective count of difficult sliders (slider-aim consistency)."""
         if not self._slider_strains:
             return 0.0
         max_strain = max(self._slider_strains)
@@ -350,6 +369,7 @@ class Aim(_OsuStrainSkill):
 
     @property
     def slider_strains(self) -> list[float]:
+        """Return the per-slider strain values."""
         return self._slider_strains
 
 _SPEED_SINGLE_SPACING_THRESHOLD = 100.0 * 1.25
@@ -358,6 +378,7 @@ _SPEED_BALANCING_FACTOR = 40.0
 _SPEED_DIST_MULTIPLIER = 0.8
 
 def _speed_high_bpm_bonus(ms: float) -> float:
+    """Return the speed bonus for very high BPM."""
     return 1.0 / (1.0 - math.pow(0.3, ms / 1000.0))
 
 
@@ -366,6 +387,7 @@ def speed_evaluate_diff_of(
         objects: OsuDifficultyObjects,
         hit_window_great: float,
 ) -> float:
+    """Return the speed difficulty of one object."""
     if curr.base.is_spinner():
         return 0.0
 
@@ -400,19 +422,23 @@ _I32_MAX = 2147483647
 
 
 class _Island:
+    """A run of similar rhythmic intervals used by the speed rhythm evaluator."""
     __slots__ = ("delta", "delta_count", "occurrences")
 
     def __init__(self, delta: int) -> None:
+        """Initialise an empty island."""
         self.delta = max(delta, _RHYTHM_MIN_DELTA_TIME)
         self.delta_count = 1
         self.occurrences = 1
 
     def add_delta(self, delta: int) -> None:
+        """Extend the island with another delta time."""
         if self.delta == _I32_MAX:
             self.delta = max(delta, _RHYTHM_MIN_DELTA_TIME)
         self.delta_count += 1
 
-    def is_similar_polarity(self, other: "_Island", epsilon: float) -> bool:
+    def is_similar_polarity(self, other: _Island, epsilon: float) -> bool:
+        """Return whether another island alternates the same way."""
         if self.delta_count <= 1 or other.delta_count <= 1:
             return False
         return (
@@ -420,7 +446,8 @@ class _Island:
             and self.delta_count % 2 == other.delta_count % 2
         )
 
-    def almost_equals(self, other: "_Island", epsilon: float) -> bool:
+    def almost_equals(self, other: _Island, epsilon: float) -> bool:
+        """Return whether two islands are effectively equal."""
         return (
             abs(self.delta - other.delta) < epsilon
             and self.delta_count == other.delta_count
@@ -428,6 +455,7 @@ class _Island:
 
 
 def _rhythm_get_effective_difficulty(delta_difference_ratio: float) -> float:
+    """Return the effective rhythmic difficulty of an island run."""
     rhythm_ratio_difficulty_multiplier = 26.0
     delta_difference_fraction = delta_difference_ratio - math.trunc(delta_difference_ratio)
     return 1.0 + rhythm_ratio_difficulty_multiplier * min(
@@ -440,6 +468,7 @@ def rhythm_evaluate_diff_of(
         objects: OsuDifficultyObjects,
         hit_window_great: float,
 ) -> float:
+    """Return the speed rhythm-complexity multiplier of one object."""
     if curr.base.is_spinner():
         return 0.0
 
@@ -613,6 +642,7 @@ def flashlight_evaluate_diff_of(
         raw_preempt: float,
         fade_in: float,
 ) -> float:
+    """Return the flashlight difficulty of one object."""
     if curr.base.is_spinner():
         return 0.0
 
@@ -682,6 +712,7 @@ def flashlight_evaluate_diff_of(
 
 
 class Flashlight(_OsuStrainSkill):
+    """The osu! flashlight strain skill."""
     SKILL_MULTIPLIER = 0.058
     STRAIN_DECAY_BASE = 0.15
 
@@ -698,6 +729,7 @@ class Flashlight(_OsuStrainSkill):
             has_relax: bool = False,
             has_autopilot: bool = False,
     ) -> None:
+        """Initialise the flashlight skill."""
         super().__init__()
         self._hidden_for_opacity = hidden_for_opacity
         self._has_any_hidden = has_any_hidden
@@ -713,6 +745,7 @@ class Flashlight(_OsuStrainSkill):
     def _strain_value_at(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> float:
+        """Advance and return the flashlight strain at the current object."""
         self._current_strain *= strain_decay(curr.delta_time, self.STRAIN_DECAY_BASE)
         self._current_strain += (
             self._calculate_adjusted_difficulty(curr, objects) * self.SKILL_MULTIPLIER
@@ -722,6 +755,7 @@ class Flashlight(_OsuStrainSkill):
     def _calculate_adjusted_difficulty(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> float:
+        """Apply the OD-based adjustment to the flashlight difficulty."""
         difficulty = flashlight_evaluate_diff_of(
             curr, objects, self._hidden_for_opacity, self._has_any_hidden,
             self.scaling_factor, self._raw_preempt, self._fade_in,
@@ -736,6 +770,7 @@ class Flashlight(_OsuStrainSkill):
         return difficulty
 
     def difficulty_value(self) -> float:
+        """Aggregate the flashlight strain peaks (with a length bonus)."""
         peaks = list(self._strain_peaks) + [self._current_section_peak]
         s = sum(peaks)
         total = self._total_objects
@@ -748,6 +783,7 @@ class Flashlight(_OsuStrainSkill):
 
     @staticmethod
     def difficulty_to_performance(difficulty: float) -> float:
+        """Convert the flashlight rating to a performance value."""
         return 25.0 * (difficulty * difficulty)
 
 
@@ -757,16 +793,19 @@ _READING_NORMALISED_RADIUS: float = 50.0
 
 
 def _reading_time_nerf_factor(delta_time: float) -> float:
+    """Return the reading nerf for objects visible for a long time."""
     return clamp(2.0 - delta_time / (_READING_WINDOW_SIZE / 2.0), 0.0, 1.0)
 
 
 def _reading_high_bpm_bonus(ms: float) -> float:
+    """Return the reading bonus for high BPM."""
     return 1.0 / (1.0 - math.pow(0.8, ms / 1000.0))
 
 
 def _reading_past_visible_objects(
         curr: OsuDifficultyObject, objects: OsuDifficultyObjects, preempt: float
 ) -> list[OsuDifficultyObject]:
+    """Return the objects still visible when the current one appears."""
     result: list[OsuDifficultyObject] = []
     for i in range(curr.idx):
         obj = objects.previous(curr, i)
@@ -787,6 +826,7 @@ def _reading_past_influence(
         raw_preempt: float,
         fade_in: float,
 ) -> float:
+    """Return how strongly earlier visible objects add reading difficulty."""
     influence = 0.0
     for loop in _reading_past_visible_objects(curr, objects, preempt):
         d = curr.opacity_at(loop.base.start_time, False, raw_preempt, fade_in)
@@ -805,6 +845,7 @@ def _reading_current_visible_density(
         raw_preempt: float,
         fade_in: float,
 ) -> float:
+    """Return the density of currently visible objects."""
     count = 0.0
     obj = objects.next(curr, 0)
     while obj is not None:
@@ -825,6 +866,7 @@ def _reading_current_visible_density(
 def _reading_constant_angle_nerf_factor(
         curr: OsuDifficultyObject, objects: OsuDifficultyObjects
 ) -> float:
+    """Nerf reading difficulty for long runs of a constant angle."""
     minimum_angle_relevancy_time = 2000.0
     maximum_angle_relevancy_time = 200.0
 
@@ -833,8 +875,8 @@ def _reading_constant_angle_nerf_factor(
     current_time_gap = 0.0
 
     loop_prev0: OsuDifficultyObject = curr
-    loop_prev1: Optional[OsuDifficultyObject] = None
-    loop_prev2: Optional[OsuDifficultyObject] = None
+    loop_prev1: OsuDifficultyObject | None = None
+    loop_prev2: OsuDifficultyObject | None = None
 
     while current_time_gap < minimum_angle_relevancy_time:
         loop = objects.previous(curr, index)
@@ -901,12 +943,13 @@ def _reading_constant_angle_nerf_factor(
 
 
 def _reading_density_difficulty(
-        next_obj: Optional[OsuDifficultyObject],
+        next_obj: OsuDifficultyObject | None,
         velocity: float,
         constant_angle_nerf: float,
         past_influence: float,
         current_visible_density: float,
 ) -> float:
+    """Return the reading difficulty from visible-object density."""
     density_multiplier = 2.4
     density_difficulty_base = 2.5
 
@@ -930,6 +973,7 @@ def _reading_density_difficulty(
 def _reading_preempt_difficulty(
         velocity: float, constant_angle_nerf: float, preempt: float
 ) -> float:
+    """Return the reading difficulty from a short preempt (high AR)."""
     preempt_balancing_factor = 140000.0
     preempt_starting_point = 500.0
     value = (
@@ -955,6 +999,7 @@ def _reading_hidden_difficulty(
         raw_preempt: float,
         fade_in: float,
 ) -> float:
+    """Return the extra reading difficulty from the Hidden mod."""
     hidden_multiplier = 0.28
 
     preempt_factor = math.pow(preempt, 2.2) * 0.01
@@ -983,6 +1028,7 @@ def reading_evaluate_diff_of(
         raw_preempt: float,
         fade_in: float,
 ) -> float:
+    """Return the reading difficulty of one object."""
     if curr.base.is_spinner() or curr.idx == 0:
         return 0.0
 
@@ -1025,27 +1071,33 @@ def reading_evaluate_diff_of(
 
 
 class _HarmonicSkill:
+    """Base class for the per-object harmonic skills (speed and reading)."""
     HARMONIC_SCALE: float = 1.0
     DECAY_EXPONENT: float = 0.9
 
     def __init__(self) -> None:
+        """Initialise the harmonic skill."""
         self._object_difficulties: list[float] = []
         self._object_weight_sum: float = 0.0
 
     def _object_difficulty_of(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> float:
+        """Return the raw difficulty of one object (overridden per skill)."""
         raise NotImplementedError
 
     def process(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> None:
+        """Process one object, recording its difficulty."""
         self._object_difficulties.append(self._object_difficulty_of(curr, objects))
 
     def _get_transformed_difficulties(self, difficulties: list[float]) -> list[float]:
+        """Return the difficulties transformed for harmonic aggregation."""
         return difficulties
 
     def difficulty_value(self) -> float:
+        """Aggregate the object difficulties via the harmonic weighting."""
         if not self._object_difficulties:
             return 0.0
 
@@ -1069,6 +1121,7 @@ class _HarmonicSkill:
         return difficulty
 
     def count_top_weighted_object_difficulties(self, difficulty_value: float) -> float:
+        """Return the effective count of difficult objects."""
         if not self._object_difficulties or self._object_weight_sum == 0.0:
             return 0.0
         consistent_top = difficulty_value / self._object_weight_sum
@@ -1081,10 +1134,12 @@ class _HarmonicSkill:
 
     @staticmethod
     def difficulty_to_performance(difficulty: float) -> float:
+        """Convert the harmonic rating to a performance value."""
         return 4.0 * (difficulty * difficulty * difficulty)
 
 
 class Reading(_HarmonicSkill):
+    """The osu! reading skill (harmonic aggregation of per-object reading difficulty)."""
     SKILL_MULTIPLIER: float = 2.5
 
     def __init__(
@@ -1096,6 +1151,7 @@ class Reading(_HarmonicSkill):
             overall_difficulty: float,
             mods,
     ) -> None:
+        """Initialise the reading skill."""
         super().__init__()
         self._has_hidden = has_hidden
         self._preempt = preempt
@@ -1108,11 +1164,13 @@ class Reading(_HarmonicSkill):
 
     @staticmethod
     def _strain_decay(ms: float) -> float:
+        """Return the reading strain decay over a time span."""
         return math.pow(0.8, ms / 1000.0)
 
     def _object_difficulty_of(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> float:
+        """Return the reading difficulty of one object."""
         self._object_list.append(curr)
         decay = self._strain_decay(curr.delta_time)
         self._current_strain *= decay
@@ -1126,6 +1184,7 @@ class Reading(_HarmonicSkill):
     def _calculate_adjusted_difficulty(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> float:
+        """Apply the OD-based adjustment to the reading difficulty."""
         difficulty = reading_evaluate_diff_of(
             curr, objects, self._has_hidden,
             self._preempt, self._raw_preempt, self._fade_in,
@@ -1145,6 +1204,7 @@ class Reading(_HarmonicSkill):
         return difficulty
 
     def _calculate_reduced_note_count(self) -> int:
+        """Return the reduced note count used for the difficult-note metric."""
         reduced_difficulty_duration = 60 * 1000
         if not self._object_list:
             return 0
@@ -1157,6 +1217,7 @@ class Reading(_HarmonicSkill):
         return count
 
     def _get_transformed_difficulties(self, difficulties: list[float]) -> list[float]:
+        """Return the reading difficulties transformed for aggregation."""
         difficulties = [v for v in difficulties if v > 0.0]
         reduced_difficulty_base_line = 0.0
         reduced_note_count = self._calculate_reduced_note_count()
@@ -1168,6 +1229,7 @@ class Reading(_HarmonicSkill):
         return difficulties
 
     def count_top_weighted_object_difficulties(self, difficulty_value: float) -> float:
+        """Return the effective count of hard-to-read notes."""
         if not self._object_difficulties or self._object_weight_sum == 0.0:
             return 0.0
         consistent_top = difficulty_value / self._object_weight_sum
@@ -1180,6 +1242,7 @@ class Reading(_HarmonicSkill):
 
 
 class Speed(_HarmonicSkill):
+    """The osu! speed skill (harmonic aggregation of per-object speed difficulty)."""
     HARMONIC_SCALE: float = 20.0
     DECAY_EXPONENT: float = 0.9
     SKILL_MULTIPLIER: float = 1.16
@@ -1190,6 +1253,7 @@ class Speed(_HarmonicSkill):
             has_relax: bool = False,
             has_autopilot: bool = False,
     ) -> None:
+        """Initialise the speed skill."""
         super().__init__()
         self._hit_window_great = hit_window_great
         self._has_relax = has_relax
@@ -1199,11 +1263,13 @@ class Speed(_HarmonicSkill):
 
     @staticmethod
     def _strain_decay(ms: float) -> float:
+        """Return the speed strain decay over a time span."""
         return math.pow(0.3, ms / 1000.0)
 
     def _object_difficulty_of(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> float:
+        """Return the speed difficulty of one object (strain times rhythm)."""
         if self._has_relax:
             return 0.0
 
@@ -1226,12 +1292,14 @@ class Speed(_HarmonicSkill):
     def _calculate_adjusted_difficulty(
             self, curr: OsuDifficultyObject, objects: OsuDifficultyObjects
     ) -> float:
+        """Apply the OD-based adjustment to the speed difficulty."""
         difficulty = speed_evaluate_diff_of(curr, objects, self._hit_window_great)
         if self._has_autopilot:
             difficulty *= 0.5
         return difficulty
 
     def relevant_object_count(self) -> float:
+        """Return the effective count of speed-relevant objects."""
         if not self._object_difficulties:
             return 0.0
         max_strain = max(self._object_difficulties)
@@ -1243,6 +1311,7 @@ class Speed(_HarmonicSkill):
         )
 
     def count_top_weighted_sliders(self, difficulty_value: float) -> float:
+        """Return the effective count of difficult speed sliders."""
         if not self._slider_strains or self._object_weight_sum == 0.0:
             return 0.0
         consistent_top = difficulty_value / self._object_weight_sum
@@ -1259,23 +1328,29 @@ _AIM_NORMALISED_DIAMETER = 100.0
 
 
 def _calc_angle_wideness(angle: float) -> float:
+    """Return how wide an angle is (0 for acute, 1 for straight)."""
     return smoothstep(angle, math.radians(40.0), math.radians(140.0))
 
 
 def _calc_angle_acuteness(angle: float) -> float:
+    """Return how acute an angle is (0 for straight, 1 for sharp)."""
     return smoothstep(angle, math.radians(140.0), math.radians(40.0))
 
 
 class _StrainPeak:
+    """A variable-length strain section peak (value plus its section length)."""
     __slots__ = ("value", "section_length")
 
     def __init__(self, value: float, section_length: float) -> None:
+        """Store the peak value and its section length."""
         self.value = value
         self.section_length = round(section_length)
 
 
 class _VariableLengthStrainSkill:
+    """Base class for skills using per-object variable-length strain sections."""
     def __init__(self, decay_weight: float = 0.9, max_section_length: int = 400) -> None:
+        """Initialise the variable-length strain state."""
         self.DECAY_WEIGHT = decay_weight
         self.MAX_SECTION_LENGTH = max_section_length
         self._max_stored_length = 11.0 / (1.0 - decay_weight)
@@ -1289,15 +1364,19 @@ class _VariableLengthStrainSkill:
         self._peaks_finalised = False
 
     def _strain_value_at(self, curr, objects) -> float:
+        """Advance and return the strain at the current object."""
         raise NotImplementedError
 
     def _calculate_initial_strain(self, time, curr, objects) -> float:
+        """Return the decayed strain carried into a new section."""
         raise NotImplementedError
 
     def process(self, curr, objects) -> None:
+        """Process one object, updating the variable-length sections."""
         self._object_difficulties.append(self._process_internal(curr, objects))
 
     def _process_internal(self, curr, objects) -> float:
+        """Core per-object processing shared by the variable-length skills."""
         if curr.idx == 0:
             self._current_section_begin = curr.start_time
             self._current_section_end = self._current_section_begin + self.MAX_SECTION_LENGTH
@@ -1322,6 +1401,7 @@ class _VariableLengthStrainSkill:
         return current_strain
 
     def _backfill_peaks(self, curr, objects) -> None:
+        """Fill in section peaks skipped over long gaps."""
         while curr.start_time > self._current_section_end:
             self._save_current_peak(self._current_section_end - self._current_section_begin)
             self._current_section_begin = self._current_section_end
@@ -1336,6 +1416,7 @@ class _VariableLengthStrainSkill:
                 self._start_new_section_from(self._current_section_begin, curr, objects)
 
     def _save_current_peak(self, section_length: float) -> None:
+        """Record the current strain as a variable-length section peak."""
         _insert_strain_peak_sorted(
             self._strain_peaks, _StrainPeak(self._current_section_peak, section_length)
         )
@@ -1345,15 +1426,18 @@ class _VariableLengthStrainSkill:
             self._strain_peaks.pop()
 
     def _start_new_section_from(self, time, curr, objects) -> None:
+        """Begin a new section from a decayed baseline."""
         self._current_section_peak = self._calculate_initial_strain(time, curr, objects)
 
     def get_current_strain_peaks(self) -> list[_StrainPeak]:
+        """Return the recorded strain peaks."""
         if not self._peaks_finalised:
             self._save_current_peak(self._current_section_end - self._current_section_begin)
             self._peaks_finalised = True
         return self._strain_peaks
 
     def count_top_weighted_strains(self, difficulty_value: float) -> float:
+        """Return the effective count of high strains."""
         if not self._object_difficulties:
             return 0.0
         consistent_top_strain = difficulty_value * (1.0 - self.DECAY_WEIGHT)
@@ -1366,6 +1450,7 @@ class _VariableLengthStrainSkill:
 
 
 def _insert_strain_peak_sorted(peaks: list[_StrainPeak], item: _StrainPeak) -> None:
+    """Insert a strain peak into the descending-by-value peak list."""
     lo, hi = 0, len(peaks) - 1
     idx = None
     while lo <= hi:
@@ -1389,10 +1474,12 @@ def _insert_strain_peak_sorted(peaks: list[_StrainPeak], item: _StrainPeak) -> N
 
 
 def _snap_high_bpm_bonus(ms: float) -> float:
+    """Return the snap-aim bonus for high BPM."""
     return 1.0 / (1.0 - math.pow(0.03, math.pow(ms / 1000.0, 0.65)))
 
 
 def _vector_angle_repetition(curr, previous, objects) -> float:
+    """Return the penalty for repeated movement vectors (snap aim)."""
     if curr.angle is None or previous.angle is None:
         return 1.0
 
@@ -1441,6 +1528,7 @@ def _vector_angle_repetition(curr, previous, objects) -> float:
 
 
 def snap_aim_evaluate_diff_of(curr, objects, with_slider_travel_distance) -> float:
+    """Return the snap-aim difficulty of one object."""
     last_obj = objects.previous(curr, 0)
     if curr.base.is_spinner() or curr.idx <= 1 or (last_obj is not None and last_obj.base.is_spinner()):
         return 0.0
@@ -1561,10 +1649,12 @@ def snap_aim_evaluate_diff_of(curr, objects, with_slider_travel_distance) -> flo
 
 
 def _agility_high_bpm_bonus(ms: float) -> float:
+    """Return the agility bonus for high BPM."""
     return 1.0 / (1.0 - math.pow(0.2, ms / 1000.0))
 
 
 def agility_evaluate_diff_of(curr, objects) -> float:
+    """Return the agility (small-jump) difficulty of one object."""
     if curr.base.is_spinner():
         return 0.0
 
@@ -1583,12 +1673,14 @@ def agility_evaluate_diff_of(curr, objects) -> float:
 
 
 def _flow_overlap_factor(first, second, object_radius) -> float:
+    """Return how much consecutive flow objects overlap."""
     distance = (first.base.stacked_pos() - second.base.stacked_pos()).length()
     _b = max(distance - object_radius, 0.0) / object_radius
     return clamp(1.0 - _b * _b, 0.0, 1.0)
 
 
 def flow_aim_evaluate_diff_of(curr, objects, with_slider_travel_distance, object_radius) -> float:
+    """Return the flow-aim difficulty of one object."""
     last_obj = objects.previous(curr, 0)
     if curr.base.is_spinner() or curr.idx <= 1 or (last_obj is not None and last_obj.base.is_spinner()):
         return 0.0
@@ -1656,6 +1748,7 @@ def flow_aim_evaluate_diff_of(curr, objects, with_slider_travel_distance, object
 
 
 class Aim(_VariableLengthStrainSkill):
+    """The osu! aim strain skill."""
     def __init__(
             self,
             include_sliders: bool = True,
@@ -1665,6 +1758,7 @@ class Aim(_VariableLengthStrainSkill):
             has_touch_device: bool = False,
             has_relax: bool = False,
     ) -> None:
+        """Initialise the aim skill."""
         super().__init__(decay_weight=0.9, max_section_length=400)
         self.include_sliders = include_sliders
         self._overall_difficulty = overall_difficulty
@@ -1679,14 +1773,17 @@ class Aim(_VariableLengthStrainSkill):
 
     @staticmethod
     def _strain_decay(ms: float) -> float:
+        """Return the aim strain decay over a time span."""
         return math.pow(0.2, ms / 1000.0)
 
     def _calculate_initial_strain(self, time, curr, objects) -> float:
+        """Return the decayed aim strain carried into a new section."""
         prev = objects.previous(curr, 0)
         prev_start_time = prev.start_time if prev is not None else 0.0
         return self._current_strain * self._strain_decay(time - prev_start_time)
 
     def _strain_value_at(self, curr, objects) -> float:
+        """Advance and return the aim strain at the current object."""
         if self._has_autopilot:
             return 0.0
         decay = self._strain_decay(curr.adjusted_delta_time)
@@ -1697,6 +1794,7 @@ class Aim(_VariableLengthStrainSkill):
         return self._current_strain
 
     def _calculate_adjusted_difficulty(self, curr, objects) -> float:
+        """Apply the OD-based adjustment to the aim difficulty."""
         skill_multiplier_snap = 70.9
         skill_multiplier_agility = 2.35
         skill_multiplier_flow = 242.0
@@ -1715,6 +1813,7 @@ class Aim(_VariableLengthStrainSkill):
         return total_difficulty
 
     def _calculate_total_value(self, snap, agility, flow) -> float:
+        """Combine snap, agility and flow into the total aim value."""
         skill_multiplier_total = 1.12
         combined_snap_norm_exponent = 1.2
 
@@ -1737,6 +1836,7 @@ class Aim(_VariableLengthStrainSkill):
 
     @staticmethod
     def _snap_flow_probability(ratio: float) -> float:
+        """Return the blend weight between snap and flow aim."""
         k = 7.27
         if ratio == 0:
             return 0.0
@@ -1745,6 +1845,7 @@ class Aim(_VariableLengthStrainSkill):
         return logistic_exp(-k * math.log(ratio))
 
     def get_difficult_sliders(self) -> float:
+        """Return the effective count of difficult sliders (slider-aim consistency)."""
         if not self._slider_strains:
             return 0.0
         max_slider_strain = max(self._slider_strains)
@@ -1756,6 +1857,7 @@ class Aim(_VariableLengthStrainSkill):
         )
 
     def count_top_weighted_sliders(self, difficulty_value: float) -> float:
+        """Return the effective count of difficult aim sliders."""
         if not self._slider_strains:
             return 0.0
         consistent_top_strain = difficulty_value * (1.0 - self.DECAY_WEIGHT)
@@ -1767,6 +1869,7 @@ class Aim(_VariableLengthStrainSkill):
         )
 
     def _get_reduced_strain_peaks(self) -> list[_StrainPeak]:
+        """Return the strain peaks with the largest ones softened."""
         strains = [p for p in self.get_current_strain_peaks() if p.value > 0.0]
         chunk_size = 20
         time = 0.0
@@ -1800,6 +1903,7 @@ class Aim(_VariableLengthStrainSkill):
         return rest
 
     def difficulty_value(self) -> float:
+        """Aggregate the variable-length aim peaks into the aim difficulty."""
         difficulty = 0.0
         time = 0.0
         for strain in self._get_reduced_strain_peaks():

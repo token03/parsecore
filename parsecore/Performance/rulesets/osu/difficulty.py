@@ -1,4 +1,5 @@
-"""
+"""osu! star-rating calculation and skill aggregation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -25,34 +26,26 @@ SOFTWARE.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 from ...data.attributes import AdjustedBeatmapAttributes, as_override
 from ...data.mode import GameMode
 from ...data.mods import PerformanceMods
-from ...utils import lerp, reverse_lerp
-
-from parsecore.Beatmap.utils import f32
-
-from .convert import convert_objects, prepare_beatmap
-from .legacy_score import OsuLegacyScoreSimulator, calculate_nested_score_per_object
+from ...utils import lerp, norm, reverse_lerp
 from .hit_objects import (
     OsuDifficultyObject,
     OsuDifficultyObjects,
-    OsuObject,
-    PREEMPT_MIN,
     ScalingFactor,
 )
+from .legacy_score import OsuLegacyScoreSimulator, calculate_nested_score_per_object
 from .skills import (
     Aim,
     Flashlight,
     Reading,
     Speed,
-    count_top_weighted_sliders,
     difficulty_to_performance,
 )
-from ...utils import norm
 
 if TYPE_CHECKING:
     from ...data.beatmap import PerformanceBeatmap
@@ -64,6 +57,7 @@ _PERFORMANCE_BASE_MULTIPLIER: float = 1.14
 
 @dataclass(slots=True)
 class OsuDifficultyAttributes:
+    """Difficulty attributes of an osu! beatmap (aim, speed, reading, flashlight, ...)."""
     aim: float = 0.0
     aim_difficult_slider_count: float = 0.0
     speed: float = 0.0
@@ -98,9 +92,11 @@ class OsuDifficultyAttributes:
     od: float = 0.0
 
     def n_objects(self) -> int:
+        """Return the total object count (circles plus sliders plus spinners)."""
         return self.n_circles + self.n_sliders + self.n_spinners
 
 class OsuRatingCalculator:
+    """Turns processed skills into the per-skill star ratings."""
     DIFFICULTY_MULTIPLIER: float = _DIFFICULTY_MULTIPLIER
 
     def __init__(
@@ -112,6 +108,7 @@ class OsuRatingCalculator:
             mechanical_difficulty_rating: float,
             slider_factor: float,
     ) -> None:
+        """Initialise with the processed skill values and beatmap attributes."""
         self.mods = mods
         self.total_hits = total_hits
         self.approach_rate = approach_rate
@@ -121,9 +118,11 @@ class OsuRatingCalculator:
 
     @staticmethod
     def calculate_difficulty_rating(difficulty_value: float) -> float:
+        """Return the combined mechanical difficulty rating."""
         return math.sqrt(max(difficulty_value, 0.0)) * _DIFFICULTY_MULTIPLIER
 
     def compute_aim_rating(self, aim_difficulty_value: float) -> float:
+        """Return the aim star rating."""
         if getattr(self.mods, "ap", False):
             return 0.0
 
@@ -172,6 +171,7 @@ class OsuRatingCalculator:
         return aim_rating * math.pow(rating_multiplier, 1.0 / 3.0)
 
     def compute_speed_rating(self, speed_difficulty_value: float) -> float:
+        """Return the speed star rating."""
         if getattr(self.mods, "rx", False):
             return 0.0
 
@@ -215,6 +215,7 @@ class OsuRatingCalculator:
         return speed_rating * math.pow(rating_multiplier, 1.0 / 3.0)
 
     def compute_flashlight_rating(self, flashlight_difficulty_value: float) -> float:
+        """Return the flashlight star rating."""
         if not getattr(self.mods, "fl", False):
             return 0.0
 
@@ -246,6 +247,7 @@ class OsuRatingCalculator:
             visibility_factor: float | None,
             slider_factor: float | None,
     ) -> float:
+        """Return the reading/visibility bonus shared by aim and speed."""
         reading_bonus = 0.04 * (12.0 - max(approach_rate, 7.0))
         reading_bonus *= visibility_factor if visibility_factor is not None else 1.0
         slider_visibility_factor = (slider_factor if slider_factor is not None else 1.0) ** 3.0
@@ -261,6 +263,7 @@ class OsuRatingCalculator:
     def _calculate_aim_visibility_factor(
             mechanical_difficulty_rating: float, approach_rate: float
     ) -> float:
+        """Return the aim-specific visibility factor."""
         AR_FACTOR_END_POINT = 11.5
         mechanical_difficulty_factor = reverse_lerp(mechanical_difficulty_rating, 5.0, 10.0)
         ar_factor_starting_point = lerp(9.0, 10.33, mechanical_difficulty_factor)
@@ -270,6 +273,7 @@ class OsuRatingCalculator:
     def _calculate_speed_visibility_factor(
             mechanical_difficulty_rating: float, approach_rate: float
     ) -> float:
+        """Return the speed-specific visibility factor."""
         AR_FACTOR_END_POINT = 11.5
         mechanical_difficulty_factor = reverse_lerp(mechanical_difficulty_rating, 5.0, 10.0)
         ar_factor_starting_point = lerp(10.0, 10.33, mechanical_difficulty_factor)
@@ -278,6 +282,7 @@ class OsuRatingCalculator:
 def _calculate_mechanical_difficulty_rating(
         aim_difficulty_value: float, speed_difficulty_value: float
 ) -> float:
+    """Combine aim, speed and cognition into the mechanical difficulty."""
     aim = difficulty_to_performance(
         OsuRatingCalculator.calculate_difficulty_rating(aim_difficulty_value)
     )
@@ -288,6 +293,7 @@ def _calculate_mechanical_difficulty_rating(
     return _calculate_star_rating(total)
 
 def _calculate_star_rating(base_performance: float) -> float:
+    """Return the final star rating from the mechanical difficulty."""
     if base_performance <= 1e-5:
         return 0.0
     return (
@@ -307,6 +313,7 @@ _PERF_BASE_MULTIPLIER: float = 1.12
 
 
 def _sum_cognition_difficulty(reading: float, flashlight: float) -> float:
+    """Combine reading and flashlight into the cognition performance."""
     if reading <= 0.0:
         return flashlight
     if flashlight <= 0.0:
@@ -318,7 +325,7 @@ def _sum_cognition_difficulty(reading: float, flashlight: float) -> float:
 
 
 def calculate_difficulty(
-        pm: "PerformanceBeatmap",
+        pm: PerformanceBeatmap,
         mods: PerformanceMods,
         *,
         lazer: bool = True,
@@ -329,6 +336,15 @@ def calculate_difficulty(
         passed_objects: int | None = None,
         **_: Any,
 ) -> OsuDifficultyAttributes:
+    """Compute the osu! difficulty attributes for a beatmap and mods.
+
+    Args:
+        pm: The performance beatmap.
+        mods: The mods and clock rate.
+
+    Returns:
+        The osu! difficulty attributes.
+    """
     adjusted = AdjustedBeatmapAttributes.create(
         base_cs=pm.base_cs, base_ar=pm.base_ar,
         base_od=pm.base_od, base_hp=pm.base_hp,
@@ -363,6 +379,8 @@ def calculate_difficulty(
     if reflection is None:
         from ...data.mods import Reflection
         reflection = Reflection.NONE
+
+    from .convert import convert_objects
 
     osu_objects = convert_objects(
         beatmap=pm,
@@ -472,9 +490,11 @@ def calculate_difficulty(
     difficult_sliders = aim.get_difficult_sliders()
 
     def _aim_rating(dv: float) -> float:
+        """Return an aim rating with or without sliders."""
         return math.pow(dv, 0.63) * 0.02275
 
     def _diff_rating(dv: float) -> float:
+        """Return a strain skill's difficulty rating."""
         return math.sqrt(dv) * 0.0675
 
     slider_factor = (
@@ -528,6 +548,7 @@ def calculate_difficulty(
     return attrs
 
 def difficulty(
-        pm: "PerformanceBeatmap", mods: PerformanceMods, **kwargs: Any
+        pm: PerformanceBeatmap, mods: PerformanceMods, **kwargs: Any
 ) -> OsuDifficultyAttributes:
+    """Public entry point returning the osu! difficulty attributes."""
     return calculate_difficulty(pm, mods, **kwargs)

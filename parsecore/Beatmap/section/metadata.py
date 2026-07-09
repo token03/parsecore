@@ -1,4 +1,5 @@
-"""
+"""Parser and data model for the ``[Metadata]`` section of a ``.osu`` file.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -31,11 +32,18 @@ from ..utils import KeyValue, ParseNumberError, parse_int
 
 
 class ParseMetadataError(Exception):
+    """Raised when a line in the ``[Metadata]`` section cannot be parsed."""
     def __init__(self, message: str):
+        """Initialise the error with a message.
+
+        Args:
+            message: Human-readable description of the parse failure.
+        """
         super().__init__(message)
 
 
 class MetadataKey(Enum):
+    """Recognised keys of the ``[Metadata]`` section."""
     Title = "Title"
     TitleUnicode = "TitleUnicode"
     Artist = "Artist"
@@ -49,6 +57,17 @@ class MetadataKey(Enum):
 
     @classmethod
     def from_str(cls, s: str) -> MetadataKey:
+        """Return the ``MetadataKey`` matching a raw key string.
+
+        Args:
+            s: The key text as it appears in the file.
+
+        Returns:
+            The matching enum member.
+
+        Raises:
+            ValueError: If the key is not a recognised metadata key.
+        """
         try:
             return cls(s)
         except ValueError:
@@ -57,6 +76,7 @@ class MetadataKey(Enum):
 
 @dataclass(slots=True, eq=True)
 class Metadata:
+    """Parsed contents of the ``[Metadata]`` section (title, artist, creator, IDs, ...)."""
     title: str
     title_unicode: str
     artist: str
@@ -69,6 +89,7 @@ class Metadata:
     beatmap_set_id: int
 
     def __init__(self):
+        """Initialise every metadata field to an empty/zero default."""
         self.title = ""
         self.title_unicode = ""
         self.artist = ""
@@ -81,6 +102,16 @@ class Metadata:
         self.beatmap_set_id = -1
 
     def parse_metadata(self, line: str) -> None:
+        """Parse a single ``[Metadata]`` line into this instance.
+
+        Unknown keys are ignored; recognised keys update the matching field in place.
+
+        Args:
+            line: One raw ``key:value`` line from the section.
+
+        Raises:
+            ParseMetadataError: If a numeric value fails to parse.
+        """
         kv = KeyValue.parse(line, MetadataKey.from_str)
         if kv is None:
             return

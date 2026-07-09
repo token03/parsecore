@@ -1,4 +1,5 @@
-"""
+"""Generation of osu! hit-result counts (and slider-tail state) from partial input.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -24,20 +25,21 @@ SOFTWARE.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 from ...data.score_state import HitResultPriority
 
+
 class OsuScoreOrigin(Enum):
+    """Whether scoring follows osu!lazer, osu!(stable) or classic slider rules."""
     STABLE = "stable"
     WITH_SLIDER_ACC = "with_slider_acc"
     WITHOUT_SLIDER_ACC = "without_slider_acc"
 
 @dataclass(slots=True)
 class OsuHitResults:
+    """A complete set of osu! hit-result counts including slider ticks and ends."""
     n300: int = 0
     n100: int = 0
     n50: int = 0
@@ -47,6 +49,7 @@ class OsuHitResults:
     slider_end_hits: int = 0
 
     def total_hits(self) -> int:
+        """Return the total number of judged objects."""
         return self.n300 + self.n100 + self.n50 + self.misses
 
     def accuracy(
@@ -56,6 +59,7 @@ class OsuHitResults:
             max_small_ticks: int = 0,
             max_slider_ends: int = 0,
     ) -> float:
+        """Return the accuracy in the ``0``-``1`` range for the scoring origin."""
         numerator = float(6 * self.n300 + 2 * self.n100 + self.n50)
         denominator = float(6 * (self.n300 + self.n100 + self.n50 + self.misses))
 
@@ -76,9 +80,10 @@ class OsuHitResults:
 
 @dataclass(slots=True)
 class OsuScoreState:
+    """An osu! score state (great/ok/meh/miss plus slider tick and end hits)."""
     max_combo: int = 0
     hit_results: OsuHitResults = field(default_factory=OsuHitResults)
-    legacy_total_score: Optional[int] = None
+    legacy_total_score: int | None = None
 
 def _tick_scores(
         origin: OsuScoreOrigin,
@@ -89,6 +94,7 @@ def _tick_scores(
         max_small_ticks: int,
         max_slider_ends: int,
 ) -> tuple[int, int]:
+    """Return the scoring weights for slider ticks/ends under a scoring origin."""
     if origin == OsuScoreOrigin.WITH_SLIDER_ACC:
         return (
             150 * slider_end_hits + 30 * large_tick_hits,
@@ -111,14 +117,15 @@ def generate_hitresults(
         n_large_ticks: int = 0,
         target_acc: float = 1.0,
         misses: int = 0,
-        n300: Optional[int] = None,
-        n100: Optional[int] = None,
-        n50: Optional[int] = None,
-        combo: Optional[int] = None,
-        max_combo: Optional[int] = None,
+        n300: int | None = None,
+        n100: int | None = None,
+        n50: int | None = None,
+        combo: int | None = None,
+        max_combo: int | None = None,
         priority: HitResultPriority = HitResultPriority.BEST_CASE,
         origin: OsuScoreOrigin = OsuScoreOrigin.WITH_SLIDER_ACC,
 ) -> OsuHitResults:
+    """Generate a complete osu! hit-result state from the requested inputs."""
     total_hits = n_objects
     misses = max(0, min(misses, total_hits))
     remain = total_hits - misses

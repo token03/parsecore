@@ -1,4 +1,5 @@
-"""
+"""osu!catch star-rating calculation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -34,7 +35,6 @@ from ...data.attributes import AdjustedBeatmapAttributes, as_override
 from ...data.beatmap import PerformanceBeatmap
 from ...data.mode import GameMode
 from ...data.mods import PerformanceMods
-
 from .convert import calculate_catch_width, convert_objects
 from .hit_objects import CatchDifficultyObject, ObjectCountBuilder
 from .skills import Movement
@@ -43,6 +43,7 @@ DIFFICULTY_MULTIPLIER = 4.59
 
 @dataclass(slots=True)
 class CatchDifficultyAttributes:
+    """Difficulty attributes of a catch beatmap (stars, object counts, AR/CS/...)."""
     stars: float = 0.0
     preempt: float = 0.0
     n_fruits: int = 0
@@ -57,6 +58,7 @@ class CatchDifficultyAttributes:
 
     @property
     def max_combo(self) -> int:
+        """Return the maximum achievable combo (fruits plus droplets)."""
         return self.n_fruits + self.n_droplets
 
 def calculate_difficulty(
@@ -71,6 +73,15 @@ def calculate_difficulty(
         passed_objects: int | None = None,
         **_: Any,
 ) -> CatchDifficultyAttributes:
+    """Compute the catch difficulty attributes for a beatmap and mods.
+
+    Args:
+        pm: The performance beatmap.
+        mods: The mods and clock rate to apply.
+
+    Returns:
+        The catch difficulty attributes.
+    """
     if pm.mode != GameMode.CATCH:
         raise ValueError(f"cannot calculate catch difficulty for {pm.mode.name} map")
 
@@ -129,6 +140,7 @@ def _create_difficulty_objects(
         half_catcher_width: float,
         palpable_objects: list,
 ) -> list[CatchDifficultyObject]:
+    """Build the per-object difficulty objects fed to the movement skill."""
     if not palpable_objects:
         return []
 

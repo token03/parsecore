@@ -1,4 +1,5 @@
-"""
+"""The :class:`GameModsLegacy` bitfield: the classic osu! integer mod flags.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -203,6 +204,7 @@ _NAME_TO_ACRONYM: dict[str, str] = {
 
 
 class GameModsLegacy:
+    """The classic osu! mod bitfield (NF=1, EZ=2, HD=8, HR=16, DT=64, ...)."""
     NoMod: GameModsLegacy
     NoFail: GameModsLegacy
     Easy: GameModsLegacy
@@ -239,14 +241,21 @@ class GameModsLegacy:
     __slots__ = ("_bits",)
 
     def __init__(self, bits: int = 0) -> None:
+        """Create the bitfield from an integer.
+
+        Args:
+            bits: The raw legacy mod bits.
+        """
         self._bits = int(bits) & _VALID_LEGACY_MASK
 
     @classmethod
     def from_bits(cls, bits: int) -> GameModsLegacy:
+        """Create the bitfield from an integer value."""
         return cls(int(bits) & _FROM_BITS_MASK)
 
     @classmethod
     def parse(cls, s: str) -> GameModsLegacy:
+        """Parse the bitfield from a concatenated acronym string (lenient)."""
         result = cls(0)
         upper = s.upper()
         i = 0
@@ -259,6 +268,11 @@ class GameModsLegacy:
 
     @classmethod
     def parse_strict(cls, s: str) -> GameModsLegacy:
+        """Parse the bitfield from acronyms, rejecting unknown ones.
+
+        Raises:
+            ValueError: If an acronym is not a valid legacy mod.
+        """
         result = cls(0)
         upper = s.upper()
         if len(upper) % 2 != 0:
@@ -275,15 +289,19 @@ class GameModsLegacy:
 
     @classmethod
     def _from_name(cls, name: str) -> GameModsLegacy:
+        """Return the single-mod bitfield for one acronym."""
         return cls(_NAMED_BITS[name])
 
     def bits(self) -> int:
+        """Return the raw integer bits."""
         return self._bits
 
     def is_empty(self) -> bool:
+        """Return whether no mods are set (NoMod)."""
         return self._bits == 0
 
     def len(self) -> int:
+        """Return the number of set mods."""
         ones = bin(self._bits).count("1")
         if self.contains(GameModsLegacy.Nightcore):
             ones -= 1
@@ -292,12 +310,15 @@ class GameModsLegacy:
         return ones
 
     def contains(self, other: GameModsLegacy) -> bool:
+        """Return whether all of ``other``'s bits are set."""
         return (self._bits & other._bits) == other._bits
 
     def intersects(self, other: GameModsLegacy) -> bool:
+        """Return whether any of ``other``'s bits are set."""
         return (self._bits & other._bits) != 0
 
     def clock_rate(self) -> float:
+        """Return the clock-rate multiplier implied by DT/NC/HT."""
         if self.contains(GameModsLegacy.DoubleTime):
             return 1.5
         if self.contains(GameModsLegacy.HalfTime):
@@ -305,6 +326,7 @@ class GameModsLegacy:
         return 1.0
 
     def iter(self) -> Iterator[GameModsLegacy]:
+        """Iterate the individual set mods as single-bit values."""
         if self._bits == 0:
             yield GameModsLegacy(0)
             return
@@ -327,9 +349,11 @@ class GameModsLegacy:
                 yield GameModsLegacy(check_bit)
 
     def __iter__(self) -> Iterator[GameModsLegacy]:
+        """Iterate the individual set mods as single-bit values."""
         return self.iter()
 
     def named_mods(self) -> list[str]:
+        """Return the human names of the set mods."""
         result = []
         for m in self.iter():
             b = m._bits
@@ -340,40 +364,51 @@ class GameModsLegacy:
         return result
 
     def acronyms(self) -> list[str]:
+        """Return the acronyms of the set mods."""
         return [a for n in self.named_mods() if (a := _NAME_TO_ACRONYM[n])]
 
     def __or__(self, other: GameModsLegacy) -> GameModsLegacy:
+        """Return the bitwise union."""
         return GameModsLegacy(self._bits | other._bits)
 
     def __ior__(self, other: GameModsLegacy) -> GameModsLegacy:
+        """In-place bitwise union; returns ``self``."""
         self._bits |= other._bits
         return self
 
     def __and__(self, other: GameModsLegacy) -> GameModsLegacy:
+        """Return the bitwise intersection."""
         return GameModsLegacy(self._bits & other._bits)
 
     def __iand__(self, other: GameModsLegacy) -> GameModsLegacy:
+        """In-place bitwise intersection; returns ``self``."""
         self._bits &= other._bits
         return self
 
     def __xor__(self, other: GameModsLegacy) -> GameModsLegacy:
+        """Return the bitwise symmetric difference."""
         return GameModsLegacy(self._bits ^ other._bits)
 
     def __ixor__(self, other: GameModsLegacy) -> GameModsLegacy:
+        """In-place bitwise symmetric difference; returns ``self``."""
         self._bits ^= other._bits
         return self
 
     def __sub__(self, other: GameModsLegacy) -> GameModsLegacy:
+        """Return this bitfield with ``other``'s bits cleared."""
         return GameModsLegacy(self._bits & ~other._bits)
 
     def __isub__(self, other: GameModsLegacy) -> GameModsLegacy:
+        """In-place bit clearing; returns ``self``."""
         self._bits &= ~other._bits
         return self
 
     def __invert__(self) -> GameModsLegacy:
+        """Return the bitwise complement."""
         return GameModsLegacy(~self._bits & 0xFFFFFFFF)
 
     def __eq__(self, other: object) -> bool:
+        """Return whether two bitfields are equal."""
         if isinstance(other, GameModsLegacy):
             return self._bits == other._bits
         if isinstance(other, int):
@@ -381,37 +416,47 @@ class GameModsLegacy:
         return NotImplemented
 
     def __hash__(self) -> int:
+        """Return a hash consistent with equality."""
         return hash(self._bits)
 
     def __lt__(self, other: GameModsLegacy) -> bool:
+        """Compare bitfields numerically."""
         return self._bits < other._bits
 
     def __le__(self, other: GameModsLegacy) -> bool:
+        """Compare bitfields numerically."""
         return self._bits <= other._bits
 
     def __gt__(self, other: GameModsLegacy) -> bool:
+        """Compare bitfields numerically."""
         return self._bits > other._bits
 
     def __ge__(self, other: GameModsLegacy) -> bool:
+        """Compare bitfields numerically."""
         return self._bits >= other._bits
 
     def __str__(self) -> str:
+        """Return the concatenated acronyms (or ``NM`` if empty)."""
         if self._bits == 0:
             return "NM"
         return "".join(self.acronyms())
 
     def __repr__(self) -> str:
+        """Return an unambiguous representation."""
         return f"GameModsLegacy({self._bits})"
 
     def __format__(self, spec: str) -> str:
+        """Format the bitfield (supports integer format specs)."""
         if spec == "b":
             return format(self._bits, "b")
         return str(self)
 
     def __int__(self) -> int:
+        """Return the raw bits as an integer."""
         return self._bits
 
     def __index__(self) -> int:
+        """Return the raw bits for use in bitwise/index contexts."""
         return self._bits
 
 

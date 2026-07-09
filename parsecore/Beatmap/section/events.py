@@ -1,4 +1,5 @@
-"""
+"""Parser and data model for the ``[Events]`` section of a ``.osu`` file.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -31,11 +32,18 @@ from ..utils import ParseNumberError, clean_filename, parse_float, trim_comment
 
 
 class ParseEventsError(Exception):
+    """Raised when a line in the ``[Events]`` section cannot be parsed."""
     def __init__(self, message: str):
+        """Initialise the error with a message.
+
+        Args:
+            message: Human-readable description of the parse failure.
+        """
         super().__init__(message)
 
 
 class EventType(Enum):
+    """Recognised event kinds (background, video, break, ...)."""
     Background = 0
     Video = 1
     Break = 2
@@ -46,6 +54,17 @@ class EventType(Enum):
 
     @classmethod
     def from_str(cls, s: str) -> EventType:
+        """Return the ``EventType`` for a raw event identifier.
+
+        Args:
+            s: The event type token (numeric id or name).
+
+        Returns:
+            The matching enum member.
+
+        Raises:
+            ValueError: If the identifier is not recognised.
+        """
         match s:
             case "0" | "Background":
                 return cls.Background
@@ -67,13 +86,24 @@ class EventType(Enum):
 
 @dataclass(slots=True, eq=True)
 class BreakPeriod:
+    """A break during gameplay, given by its start and end time in milliseconds."""
     start_time: float
     end_time: float
 
     def duration(self) -> float:
+        """Return the break length in milliseconds.
+
+        Returns:
+            ``end_time - start_time``.
+        """
         return self.end_time - self.start_time
 
     def has_effect(self) -> bool:
+        """Return whether the break is long enough to actually take effect.
+
+        Returns:
+            ``True`` if the break exceeds osu!'s minimum break duration.
+        """
         return self.duration() >= 650.0
 
 
@@ -82,14 +112,27 @@ VIDEO_EXTENSIONS = {"mp4", "mov", "avi", "flv", "mpg", "wmv", "m4v"}
 
 @dataclass(slots=True, eq=True)
 class Events:
+    """Parsed contents of the ``[Events]`` section (background, breaks, ...)."""
     background_file: str
     breaks: list[BreakPeriod]
 
     def __init__(self):
+        """Initialise with no background and an empty break list."""
         self.background_file = ""
         self.breaks = []
 
     def parse_events(self, line: str) -> None:
+        """Parse a single ``[Events]`` line into this instance.
+
+        Only the event types relevant to gameplay/parsing are stored; storyboard
+        commands are skipped.
+
+        Args:
+            line: One raw comma-separated event line.
+
+        Raises:
+            ParseEventsError: If a known event line is malformed.
+        """
         clean_file = trim_comment(line)
 
         parts = clean_file.split(",")

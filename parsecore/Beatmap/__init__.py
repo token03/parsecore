@@ -31,8 +31,16 @@ if _pkg_dir not in sys.path:
 
 from .beatmap import Beatmap
 from .utils import (
-    KeyValue, MAX_PARSE_VALUE, ParseNumberError, parse_with_limits, parse_int, parse_float, Pos, trim_comment,
-    to_standardized_path, clean_filename
+    MAX_PARSE_VALUE,
+    KeyValue,
+    ParseNumberError,
+    Pos,
+    clean_filename,
+    parse_float,
+    parse_int,
+    parse_with_limits,
+    to_standardized_path,
+    trim_comment,
 )
 
 __all__ = [

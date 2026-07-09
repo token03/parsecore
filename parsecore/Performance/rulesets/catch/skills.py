@@ -1,4 +1,5 @@
-"""
+"""The osu!catch Movement skill and its strain aggregation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -31,10 +32,13 @@ from parsecore.Beatmap.utils import F32_EPSILON, f32
 from ...utils import eq, signum
 from .hit_objects import CatchDifficultyObject
 
+
 def _eq_f32(a: float, b: float) -> bool:
+    """Return whether two values are equal when compared as 32-bit floats."""
     return abs(f32(a - b)) <= F32_EPSILON
 
 def _difficulty_value(current_strain_peaks: list[float], decay_weight: float) -> float:
+    """Aggregate strain peaks into a difficulty value (weighted decaying sum)."""
     difficulty = 0.0
     weight = 1.0
 
@@ -48,6 +52,7 @@ def _difficulty_value(current_strain_peaks: list[float], decay_weight: float) ->
     return difficulty
 
 class MovementEvaluator:
+    """Evaluates the movement difficulty of a single catch object."""
     NORMALIZED_HITOBJECT_RADIUS = 41.0
     DIRECTION_CHANGE_BONUS = 21.0
 
@@ -58,6 +63,16 @@ class MovementEvaluator:
             diff_objects: list[CatchDifficultyObject],
             clock_rate: float,
     ) -> float:
+        """Return the raw movement difficulty of one object.
+
+        Args:
+            curr: The current difficulty object.
+            diff_objects: All difficulty objects (for look-back).
+            clock_rate: The active clock rate.
+
+        Returns:
+            The object's movement difficulty contribution.
+        """
         catch_last_obj = curr.previous(0, diff_objects)
         catch_last_last_obj = curr.previous(1, diff_objects)
 
@@ -163,6 +178,7 @@ class MovementEvaluator:
 
 class Movement:
 
+    """The catch movement strain skill, accumulating per-object strain peaks."""
     SKILL_MULTIPLIER = 1.0
     STRAIN_DECAY_BASE = 0.2
     DECAY_WEIGHT = 0.94
@@ -178,6 +194,11 @@ class Movement:
     )
 
     def __init__(self, clock_rate: float) -> None:
+        """Initialise the skill.
+
+        Args:
+            clock_rate: The active clock rate.
+        """
         self.clock_rate = clock_rate
         self._current_strain = 0.0
         self._current_section_peak = 0.0
@@ -187,6 +208,7 @@ class Movement:
 
     @staticmethod
     def _strain_decay(ms: float) -> float:
+        """Return the strain decay multiplier over a time span in milliseconds."""
         return math.pow(Movement.STRAIN_DECAY_BASE, ms / 1000.0)
 
     def _strain_value_of(
@@ -194,6 +216,7 @@ class Movement:
             curr: CatchDifficultyObject,
             diff_objects: list[CatchDifficultyObject],
     ) -> float:
+        """Return the strain contribution of the current object."""
         return MovementEvaluator.evaluate_diff_of(curr, diff_objects, self.clock_rate)
 
     def _strain_value_at(
@@ -201,6 +224,7 @@ class Movement:
             curr: CatchDifficultyObject,
             diff_objects: list[CatchDifficultyObject],
     ) -> float:
+        """Advance and return the strain at the current object."""
         self._current_strain *= self._strain_decay(curr.delta_time)
         self._current_strain += (
                 self._strain_value_of(curr, diff_objects) * self.SKILL_MULTIPLIER
@@ -213,6 +237,7 @@ class Movement:
             curr: CatchDifficultyObject,
             diff_objects: list[CatchDifficultyObject],
     ) -> float:
+        """Return the decayed strain carried into a new section."""
         prev = curr.previous(0, diff_objects)
         prev_start_time = prev.start_time if prev is not None else 0.0
         return self._current_strain * self._strain_decay(time - prev_start_time)
@@ -222,6 +247,7 @@ class Movement:
             curr: CatchDifficultyObject,
             diff_objects: list[CatchDifficultyObject],
     ) -> None:
+        """Process one object, updating the running strain and peaks."""
         section_length = float(self.SECTION_LENGTH)
 
         if curr.idx == 0:
@@ -241,9 +267,11 @@ class Movement:
         self._object_strains.append(strain)
 
     def into_current_strain_peaks(self) -> list[float]:
+        """Return the recorded strain peaks."""
         peaks = list(self._strain_peaks)
         peaks.append(self._current_section_peak)
         return peaks
 
     def into_difficulty_value(self) -> float:
+        """Return the aggregated movement difficulty value."""
         return _difficulty_value(self.into_current_strain_peaks(), self.DECAY_WEIGHT)

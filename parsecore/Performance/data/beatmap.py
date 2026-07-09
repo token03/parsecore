@@ -1,4 +1,5 @@
-"""
+"""The :class:`PerformanceBeatmap` model and its control-point lookups.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -37,6 +38,7 @@ from .mods import PerformanceMods
 T = TypeVar("T")
 
 def _first_attr(obj: Any, *names: str, default: Any) -> Any:
+    """Return the first present, non-None attribute among several names, or a default."""
     if obj is None:
         return default
     for name in names:
@@ -48,6 +50,7 @@ def _first_attr(obj: Any, *names: str, default: Any) -> Any:
 
 @dataclass(slots=True)
 class TimingPoint:
+    """An uninherited timing point (beat length from a time onward)."""
     time: float
     beat_len: float
 
@@ -56,13 +59,32 @@ class TimingPoint:
 
     @classmethod
     def create(cls, time: float, beat_len: float) -> "TimingPoint":
+        """Create a timing point, clamping the beat length to the valid range.
+
+        Args:
+            time: The point's time in milliseconds.
+            beat_len: The beat length in milliseconds.
+
+        Returns:
+            The clamped timing point.
+        """
         clamped_beat_len = max(6.0, min(60000.0, beat_len))
         return cls(time=time, beat_len=clamped_beat_len)
 
     def bpm(self) -> float:
+        """Return the point's tempo in beats per minute."""
         return 60000.0 / self.beat_len
 
 def timing_point_at(points: Sequence[TimingPoint], time: float) -> TimingPoint | None:
+    """Return the timing point in effect at ``time``.
+
+    Args:
+        points: A time-sorted list of timing points.
+        time: The lookup time.
+
+    Returns:
+        The active timing point, or ``None`` if the list is empty.
+    """
     if not points:
         return None
 
@@ -72,6 +94,7 @@ def timing_point_at(points: Sequence[TimingPoint], time: float) -> TimingPoint |
 
 @dataclass(slots=True)
 class DifficultyPoint:
+    """An inherited point overriding slider velocity from a time onward."""
     time: float
     slider_velocity: float
     bpm_multiplier: float
@@ -83,6 +106,16 @@ class DifficultyPoint:
 
     @classmethod
     def create(cls, time: float, beat_len: float, speed_multiplier: float) -> "DifficultyPoint":
+        """Create a difficulty point from a speed multiplier.
+
+        Args:
+            time: The point's time in milliseconds.
+            beat_len: The (negative) inherited beat length encoding the multiplier.
+            speed_multiplier: The slider-velocity multiplier.
+
+        Returns:
+            The difficulty point.
+        """
         sv = max(0.1, min(10.0, speed_multiplier))
 
         if beat_len < 0.0:
@@ -100,10 +133,20 @@ class DifficultyPoint:
         )
 
     def is_redundant(self, existing: "DifficultyPoint") -> bool:
+        """Return whether this point has no effect over ``existing``."""
         return (self.generate_ticks == existing.generate_ticks and
                 math.isclose(self.slider_velocity, existing.slider_velocity, rel_tol=1e-9))
 
 def difficulty_point_at(points: Sequence[DifficultyPoint], time: float) -> DifficultyPoint | None:
+    """Return the difficulty point in effect at ``time``.
+
+    Args:
+        points: A time-sorted list of difficulty points.
+        time: The lookup time.
+
+    Returns:
+        The active difficulty point, or ``None`` if none precedes ``time``.
+    """
     if not points:
         return None
     times = [p.time for p in points]
@@ -112,6 +155,7 @@ def difficulty_point_at(points: Sequence[DifficultyPoint], time: float) -> Diffi
 
 @dataclass(slots=True)
 class EffectPoint:
+    """A point carrying effect state (kiai, scroll speed) from a time onward."""
     time: float
     kiai: bool
     scroll_speed: float
@@ -121,13 +165,32 @@ class EffectPoint:
 
     @classmethod
     def create(cls, time: float, kiai: bool) -> "EffectPoint":
+        """Create an effect point.
+
+        Args:
+            time: The point's time in milliseconds.
+            kiai: Whether kiai time is active.
+
+        Returns:
+            The effect point.
+        """
         return cls(time=time, kiai=kiai, scroll_speed=cls.DEFAULT_SCROLL_SPEED)
 
     def is_redundant(self, existing: "EffectPoint") -> bool:
+        """Return whether this point has no effect over ``existing``."""
         return (self.kiai == existing.kiai and
                 math.isclose(self.scroll_speed, existing.scroll_speed, rel_tol=1e-9))
 
 def effect_point_at(points: Sequence[EffectPoint], time: float) -> EffectPoint | None:
+    """Return the effect point in effect at ``time``.
+
+    Args:
+        points: A time-sorted list of effect points.
+        time: The lookup time.
+
+    Returns:
+        The active effect point, or ``None`` if none precedes ``time``.
+    """
     if not points:
         return None
     times = [p.time for p in points]
@@ -135,6 +198,15 @@ def effect_point_at(points: Sequence[EffectPoint], time: float) -> EffectPoint |
     return points[idx - 1] if idx > 0 else None
 
 def calculate_bpm(last_hit_object: HitObject | None, timing_points: Sequence[TimingPoint]) -> float:
+    """Return the beatmap's most common (modal) BPM.
+
+    Args:
+        last_hit_object: The final hit object, bounding the measured range.
+        timing_points: The map's timing points.
+
+    Returns:
+        The modal BPM, or ``0`` if it cannot be determined.
+    """
     if last_hit_object is not None:
         last_time = last_hit_object.end_time
     elif timing_points:
@@ -145,6 +217,7 @@ def calculate_bpm(last_hit_object: HitObject | None, timing_points: Sequence[Tim
     bpm_durations: dict[float, float] = defaultdict(float)
 
     def add_duration(beat_len: float, curr_time: float, next_time: float) -> None:
+        """Accumulate the played duration attributed to one beat length."""
         rounded_beat_len = round(beat_len * 1000.0) / 1000.0
         if curr_time <= last_time:
             bpm_durations[rounded_beat_len] += (next_time - curr_time)
@@ -174,6 +247,16 @@ def calculate_bpm(last_hit_object: HitObject | None, timing_points: Sequence[Tim
     return 60000.0 / most_common_beat_len
 
 def check_suspicion(hit_objects: Sequence[HitObject], mode: GameMode, cs: float) -> None:
+    """Reject maps that are too large/dense to be genuine gameplay.
+
+    Args:
+        hit_objects: The map's hit objects.
+        mode: The ruleset.
+        cs: The circle size (used for the mania per-hand density limit).
+
+    Raises:
+        ValueError: If the map exceeds osu!'s object-count, duration or density limits.
+    """
     if len(hit_objects) < 2:
         return
 
@@ -189,6 +272,7 @@ def check_suspicion(hit_objects: Sequence[HitObject], mode: GameMode, cs: float)
     THRESHOLD_10S = 500
 
     def is_too_dense(i: int, per_1s: int, per_10s: int) -> bool:
+        """Return whether objects around index ``i`` exceed the density limits."""
         total_objs = len(hit_objects)
         if total_objs > i + per_1s and hit_objects[i + per_1s].start_time - hit_objects[i].start_time < 1000.0:
             return True
@@ -234,12 +318,19 @@ def check_suspicion(hit_objects: Sequence[HitObject], mode: GameMode, cs: float)
             raise ValueError("Suspicous Map: Too many sliders repeats.")
 
 class PerformanceBeatmap:
+    """A parsed beatmap prepared for calculation (objects, control points, difficulty)."""
     __slots__ = ("version", "is_convert", "stack_leniency", "mode", "base_ar",
                  "base_cs", "base_hp", "base_od", "slider_multiplier", "slider_tick_rate",
                  "timing_points", "difficulty_points", "effect_points", "hit_objects",
                  "breaks")
 
     def __init__(self, raw_beatmap: Any, override_mode: GameMode | None = None):
+        """Build the calculation model from a parsed map, optionally converting it.
+
+        Args:
+            raw_beatmap: The parsed source beatmap.
+            override_mode: The target ruleset to convert to, or ``None`` for native.
+        """
         self.version = int(getattr(raw_beatmap, "format_version",
                                    getattr(raw_beatmap, "version_number", 14)))
         self.is_convert = False
@@ -283,7 +374,7 @@ class PerformanceBeatmap:
                 pos_x = float(getattr(pos_obj, "x", 0.0))
                 pos_y = float(getattr(pos_obj, "y", 0.0))
             elif hasattr(inner, "pos_x"):
-                pos_x = float(getattr(inner, "pos_x"))
+                pos_x = float(inner.pos_x)
                 pos_y = float(getattr(inner, "pos_y", 0.0))
             else:
                 pos_x, pos_y = 0.0, 0.0
@@ -389,11 +480,20 @@ class PerformanceBeatmap:
                     self.effect_points.append(ep)
 
     def attributes(self, mods: PerformanceMods) -> AdjustedBeatmapAttributes:
+        """Return the adjusted AR/CS/OD/HP for the given mods.
+
+        Args:
+            mods: The mods and clock rate to apply.
+
+        Returns:
+            The adjusted beatmap attributes.
+        """
         return AdjustedBeatmapAttributes.create(
             base_cs=self.base_cs, base_ar=self.base_ar, base_od=self.base_od, base_hp=self.base_hp,
             mode=self.mode, mods=mods
         )
 
     def bpm(self) -> float:
+        """Return the beatmap's most common BPM."""
         last_obj = self.hit_objects[-1] if self.hit_objects else None
         return calculate_bpm(last_obj, self.timing_points)

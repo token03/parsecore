@@ -1,4 +1,5 @@
-"""
+"""Gradual (object-by-object) catch difficulty and performance calculation.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -33,7 +34,6 @@ from parsecore.Beatmap.utils import f32
 from ...data.attributes import AdjustedBeatmapAttributes, as_override
 from ...data.mode import GameMode
 from ...data.mods import PerformanceMods
-
 from .convert import calculate_catch_width, convert_objects
 from .difficulty import (
     DIFFICULTY_MULTIPLIER,
@@ -42,17 +42,26 @@ from .difficulty import (
 )
 from .hit_objects import GradualObjectCountBuilder
 from .hitresult_generator import CatchHitResults
-from .performance import calculate_performance, CatchPerformanceAttributes
+from .performance import CatchPerformanceAttributes, calculate_performance
 from .skills import Movement
+
 
 @dataclass(slots=True)
 class CatchScoreState:
+    """A catch score state (fruits, droplets, tiny droplets and their misses)."""
     max_combo: int = 0
     hitresults: CatchHitResults = field(default_factory=CatchHitResults)
 
 class CatchGradualDifficulty:
 
+    """Iterates catch difficulty attributes, revealing one more object each step."""
     def __init__(self, difficulty: Any, beatmap: Any) -> None:
+        """Prepare the gradual calculation.
+
+        Args:
+            difficulty: A configured :class:`~parsecore.Performance.api.Difficulty`.
+            beatmap: The beatmap to evaluate.
+        """
         from ...api import Difficulty, _coerce_to_performance_beatmap
 
         if not isinstance(difficulty, Difficulty):
@@ -111,13 +120,16 @@ class CatchGradualDifficulty:
             clock_rate=clock_rate,
         )
 
-    def __iter__(self) -> "CatchGradualDifficulty":
+    def __iter__(self) -> CatchGradualDifficulty:
+        """Return the iterator (``self``)."""
         return self
 
     def __len__(self) -> int:
+        """Return the number of remaining steps."""
         return len(self._diff_objects) + 1 - self.idx
 
     def _add_object_count(self) -> None:
+        """Advance the internal object counts by the next object."""
         count = self._count[self.idx]
         if count.fruit:
             self._attrs.n_fruits += 1
@@ -126,12 +138,14 @@ class CatchGradualDifficulty:
         self._attrs.n_tiny_droplets += count.tiny_droplets
 
     def _current_attrs(self) -> CatchDifficultyAttributes:
+        """Compute the attributes for the objects revealed so far."""
         attrs = replace(self._attrs)
         movement = self._movement.into_difficulty_value()
         attrs.stars = math.sqrt(movement) * DIFFICULTY_MULTIPLIER
         return attrs
 
     def __next__(self) -> CatchDifficultyAttributes:
+        """Reveal the next object and return the attributes, or stop."""
         if self.idx > 0:
             if self.idx - 1 >= len(self._diff_objects):
                 raise StopIteration
@@ -146,12 +160,21 @@ class CatchGradualDifficulty:
         return self._current_attrs()
 
     def next(self) -> CatchDifficultyAttributes | None:
+        """Reveal the next object and return its attributes, or ``None``."""
         try:
             return self.__next__()
         except StopIteration:
             return None
 
     def nth(self, n: int) -> CatchDifficultyAttributes | None:
+        """Skip ahead and return the attributes after the ``n``-th next object.
+
+        Args:
+            n: How many objects to advance (0 = the next object).
+
+        Returns:
+            The attributes at that point, or ``None`` if exhausted.
+        """
         skip_from = max(self.idx - 1, 0)
         take = min(n, max(len(self) - 1, 0))
 
@@ -169,19 +192,37 @@ class CatchGradualDifficulty:
 
 class CatchGradualPerformance:
 
+    """Feeds gradual difficulty into pp for object-by-object performance."""
     def __init__(self, difficulty: Any, beatmap: Any) -> None:
+        """Prepare the gradual performance calculation.
+
+        Args:
+            difficulty: A configured difficulty builder.
+            beatmap: The beatmap to evaluate.
+        """
         self._difficulty = CatchGradualDifficulty(difficulty, beatmap)
 
     def __len__(self) -> int:
+        """Return the number of remaining steps."""
         return len(self._difficulty)
 
     def next(self, state: CatchScoreState) -> CatchPerformanceAttributes | None:
+        """Advance one object and return the pp for the given state.
+
+        Args:
+            state: The score state so far.
+
+        Returns:
+            The performance attributes, or ``None`` if exhausted.
+        """
         return self.nth(state, 0)
 
     def last(self, state: CatchScoreState) -> CatchPerformanceAttributes | None:
+        """Advance to the final object and return the pp for the state."""
         return self.nth(state, (1 << 62))
 
     def nth(self, state: CatchScoreState, n: int) -> CatchPerformanceAttributes | None:
+        """Advance ``n`` objects and return the pp for the state."""
         attrs = self._difficulty.nth(n)
         if attrs is None:
             return None

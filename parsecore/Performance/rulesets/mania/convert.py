@@ -1,4 +1,5 @@
-"""
+"""osu! -> osu!mania conversion via the legacy pattern generator (osu!-stable RNG).
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -30,7 +31,8 @@ from __future__ import annotations
 
 import math
 from collections import deque
-from typing import TYPE_CHECKING, Callable, Optional
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from ....Beatmap.utils import f32
 from ...data.beatmap import (
@@ -68,6 +70,7 @@ _REVERSE_STAIR = 1 << 12
 
 
 def _rte_i32(v: float) -> int:
+    """Round half-to-even then cast to a 32-bit int, saturating (osu!/C# semantics)."""
     if math.isnan(v):
         return 0
     r = round(v)
@@ -79,6 +82,7 @@ def _rte_i32(v: float) -> int:
 
 
 def _as_i32(v: float) -> int:
+    """Cast a float to a 32-bit int, truncating toward zero and saturating (Rust ``as i32``)."""
     if math.isnan(v):
         return 0
     if v <= -2147483648.0:
@@ -89,41 +93,51 @@ def _as_i32(v: float) -> int:
 
 
 def _i32_div(a: int, b: int) -> int:
+    """Integer division truncating toward zero (C semantics)."""
     q = abs(a) // abs(b)
     return q if (a >= 0) == (b >= 0) else -q
 
 
 class _CObj:
 
+    """A converted mania object: a note (``duration`` ``None``) or a hold note."""
     __slots__ = ("start_time", "duration", "column")
 
     def __init__(self, start_time: float, duration: float | None, column: int) -> None:
+        """Store the object's start time, optional duration and column."""
         self.start_time = start_time
         self.duration = duration
         self.column = column
 
     def end_time(self) -> float:
+        """Return the object's end time (start time for plain notes)."""
         return self.start_time if self.duration is None else self.start_time + self.duration
 
 
 class _Pattern:
+    """A set of mania notes placed in one time step, tracking occupied columns."""
     __slots__ = ("objs", "contained")
 
     def __init__(self) -> None:
+        """Initialise an empty pattern."""
         self.objs: list[_CObj] = []
         self.contained: int = 0
 
     def add(self, obj: _CObj) -> None:
+        """Add an object and mark its column occupied."""
         self.objs.append(obj)
         self.contained |= 1 << obj.column
 
     def column_has_obj(self, column: int) -> bool:
+        """Return whether a column already holds an object."""
         return (self.contained >> column) & 1 == 1
 
     def column_with_objs(self) -> int:
+        """Return the number of occupied columns."""
         return bin(self.contained).count("1")
 
-    def append_from(self, other: "_Pattern") -> None:
+    def append_from(self, other: _Pattern) -> None:
+        """Move all objects from another pattern into this one."""
         self.objs.extend(other.objs)
         other.objs.clear()
         self.contained |= other.contained
@@ -132,6 +146,7 @@ class _Pattern:
 
 class _PatternGenerator:
 
+    """Shared column-picking state for the pattern generators (RNG, column count)."""
     __slots__ = ("hit_object", "total_columns", "random", "conv_diff")
 
     def __init__(
@@ -141,15 +156,18 @@ class _PatternGenerator:
             random: OsuRandom,
             conv_diff: float,
     ) -> None:
+        """Initialise with the source object, column count, RNG and conversion difficulty."""
         self.hit_object = hit_object
         self.total_columns = total_columns
         self.random = random
         self.conv_diff = conv_diff
 
     def random_start(self) -> int:
+        """Return the first usable column (``1`` on 8K to reserve the special key)."""
         return 1 if self.total_columns == 8 else 0
 
     def get_column(self, allow_special: bool = False) -> int:
+        """Return the column derived from the object's x position."""
         if allow_special and self.total_columns == 8:
             local_x_divisor = float(f32(512.0 / 7.0))
             v = math.floor(float(f32(self.hit_object.pos.x / local_x_divisor)))
@@ -165,6 +183,7 @@ class _PatternGenerator:
             p5: float = 0.0,
             p6: float = 0.0,
     ) -> int:
+        """Draw a random note count from the given per-count probabilities."""
         val = self.random.next_double()
 
         if val >= 1.0 - p6:
@@ -178,17 +197,20 @@ class _PatternGenerator:
         return 1 + (1 if val >= 1.0 - p2 else 0)
 
     def conversion_difficulty(self) -> float:
+        """Return the map's precomputed conversion difficulty."""
         return self.conv_diff
 
     def get_random_column(
-            self, lower: Optional[int] = None, upper: Optional[int] = None
+            self, lower: int | None = None, upper: int | None = None
     ) -> int:
+        """Draw a random column within a range from the legacy RNG."""
         lo = self.random_start() if lower is None else lower
         hi = self.total_columns if upper is None else upper
         return self.random.next_int_range(lo, hi)
 
 
 def _calculate_conversion_difficulty(pm: PerformanceBeatmap) -> float:
+    """Compute the map's conversion difficulty from drain time, HP, AR and object count."""
     objs = pm.hit_objects
     last_obj_time = objs[-1].start_time if objs else 0.0
     first_obj_time = objs[0].start_time if objs else 0.0
@@ -216,6 +238,7 @@ def _calculate_conversion_difficulty(pm: PerformanceBeatmap) -> float:
 
 class _HitObjectPatternGenerator:
 
+    """Generates the mania pattern for a converted hit circle."""
     def __init__(
             self,
             random: OsuRandom,
@@ -231,6 +254,7 @@ class _HitObjectPatternGenerator:
             pm: PerformanceBeatmap,
             conv_diff: float,
     ) -> None:
+        """Choose the pattern type from timing/spacing/density and sample flags."""
         tp = timing_point_at(pm.timing_points, hit_object.start_time)
         beat_len = tp.beat_len if tp is not None else 1000.0
 
@@ -276,9 +300,11 @@ class _HitObjectPatternGenerator:
         self.inner = _PatternGenerator(hit_object, total_columns, random, conv_diff)
 
     def _note(self, column: int) -> _CObj:
+        """Return a single note in the given column at the object's time."""
         return _CObj(self.inner.hit_object.start_time, None, column)
 
     def generate(self) -> _Pattern:
+        """Generate the pattern and update the stair-step state."""
         pattern = self._generate_core()
 
         for obj in pattern.objs:
@@ -293,6 +319,7 @@ class _HitObjectPatternGenerator:
         return pattern
 
     def _generate_core(self) -> _Pattern:
+        """Dispatch to the concrete pattern generator for the chosen type."""
         if self.inner.total_columns == 1:
             p = _Pattern()
             p.add(self._note(0))
@@ -375,6 +402,7 @@ class _HitObjectPatternGenerator:
         return self._generate_random_pattern(0.0, 0.0, 0.0, 0.0)
 
     def _generate_random_notes(self, note_count: int) -> _Pattern:
+        """Place a number of random notes, respecting stacking rules."""
         pattern = _Pattern()
 
         allow_stacking = not self.convert_type & _FORCE_NOT_STACK
@@ -405,6 +433,7 @@ class _HitObjectPatternGenerator:
         return pattern
 
     def _get_next_column(self, last: int) -> int:
+        """Return the next column for gathered or random placement."""
         if self.convert_type & _GATHERED:
             last += 1
             if last == self.inner.total_columns:
@@ -415,11 +444,13 @@ class _HitObjectPatternGenerator:
         return last
 
     def _has_special_column(self) -> bool:
+        """Return whether the sample marks the special (centre) column."""
         return bool(self.sample & _CLAP) and bool(self.sample & _FINISH)
 
     def _generate_random_pattern(
             self, p2: float, p3: float, p4: float, p5: float
     ) -> _Pattern:
+        """Generate a random pattern for the given probabilities."""
         random_note_count = self._get_random_note_count(p2, p3, p4, p5)
         pattern = self._generate_random_notes(random_note_count)
 
@@ -431,6 +462,7 @@ class _HitObjectPatternGenerator:
     def _get_random_note_count(
             self, p2: float, p3: float, p4: float, p5: float
     ) -> int:
+        """Clamp the note-count probabilities to the column count and draw a count."""
         total_columns = self.inner.total_columns
         if total_columns == 2:
             p2 = 0.0
@@ -460,6 +492,7 @@ class _HitObjectPatternGenerator:
     def _generate_random_pattern_with_mirrored(
             self, centre_probability: float, p2: float, p3: float
     ) -> _Pattern:
+        """Generate a pattern mirrored about the stage centre."""
         if self.convert_type & _FORCE_NOT_STACK:
             return self._generate_random_pattern(
                 1.0 / 2.0 + p2 / 2.0, p2, (p2 + p3) / 2.0, p3
@@ -500,6 +533,7 @@ class _HitObjectPatternGenerator:
     def _get_random_note_count_mirrored(
             self, centre_probability: float, p2: float, p3: float
     ) -> tuple[int, bool]:
+        """Draw a mirrored note count plus whether to add a centre note."""
         total_columns = self.inner.total_columns
 
         if total_columns == 2:
@@ -539,15 +573,17 @@ class _HitObjectPatternGenerator:
     def _find_available_column(
             self,
             initial_column: int,
-            upper: Optional[int],
-            next_column: Optional[Callable[[int], int]],
+            upper: int | None,
+            next_column: Callable[[int], int] | None,
             patterns: list[_Pattern],
     ) -> int:
+        """Find a free column, retrying via the RNG or a stepping function."""
         lower = self.inner.random_start()
         if upper is None:
             upper = self.inner.total_columns
 
         def is_valid(column: int) -> bool:
+            """Return whether a column is free in all given patterns."""
             return all(not p.column_has_obj(column) for p in patterns)
 
         if is_valid(initial_column):
@@ -567,6 +603,7 @@ class _HitObjectPatternGenerator:
 
 class _PathObjectPatternGenerator:
 
+    """Generates the mania pattern for a converted slider."""
     def __init__(
             self,
             random: OsuRandom,
@@ -580,6 +617,7 @@ class _PathObjectPatternGenerator:
             node_sounds: list[int],
             conv_diff: float,
     ) -> None:
+        """Compute the slider's span timing and choose the base pattern type."""
         tp = timing_point_at(pm.timing_points, hit_object.start_time)
         timing_beat_len = tp.beat_len if tp is not None else 1000.0
 
@@ -615,11 +653,13 @@ class _PathObjectPatternGenerator:
         self.inner = _PatternGenerator(hit_object, total_columns, random, conv_diff)
 
     def _slider_note(self, column: int, start_time: int, end_time: int) -> _CObj:
+        """Return a note or hold note spanning the given start and end times."""
         if start_time == end_time:
             return _CObj(float(start_time), None, column)
         return _CObj(float(start_time), float(end_time) - float(start_time), column)
 
     def generate(self) -> list[_Pattern]:
+        """Generate the slider pattern, splitting intermediate and end-time notes."""
         orig_pattern = self._generate()
 
         if len(orig_pattern.objs) == 1:
@@ -637,6 +677,7 @@ class _PathObjectPatternGenerator:
         return [intermediate_pattern, end_time_pattern]
 
     def _generate(self) -> _Pattern:
+        """Dispatch to the concrete slider pattern based on span duration/difficulty."""
         conversion_diff = self.inner.conversion_difficulty()
 
         if self.inner.total_columns == 1:
@@ -703,6 +744,7 @@ class _PathObjectPatternGenerator:
         return self._generate_n_random_notes(self.start_time, 0.27, 0.0, 0.0)
 
     def _generate_random_hold_notes(self, start_time: int, note_count: int) -> _Pattern:
+        """Place random hold notes across the slider duration."""
         pattern = _Pattern()
 
         random_start = self.inner.random_start()
@@ -726,6 +768,7 @@ class _PathObjectPatternGenerator:
         return pattern
 
     def _generate_random_notes(self, start_time: int, note_count: int) -> _Pattern:
+        """Place random notes stepping across the slider spans."""
         next_column = self.inner.get_column(allow_special=True)
 
         if (
@@ -752,6 +795,7 @@ class _PathObjectPatternGenerator:
         return pattern
 
     def _generate_stair(self, start_time: int) -> _Pattern:
+        """Place notes in a rising/falling stair across the spans."""
         column = self.inner.get_column(allow_special=True)
         increasing = self.inner.random.next_double() > 0.5
         pattern = _Pattern()
@@ -775,6 +819,7 @@ class _PathObjectPatternGenerator:
         return pattern
 
     def _generate_random_multiple_notes(self, start_time: int) -> _Pattern:
+        """Place multiple random notes per span."""
         legacy = 4 <= self.inner.total_columns <= 8
         interval = self.inner.random.next_int_range(
             1, self.inner.total_columns - (1 if legacy else 0)
@@ -809,6 +854,7 @@ class _PathObjectPatternGenerator:
     def _generate_n_random_notes(
             self, start_time: int, p2: float, p3: float, p4: float
     ) -> _Pattern:
+        """Place N random hold notes for the given probabilities."""
         total_columns = self.inner.total_columns
         if total_columns == 2:
             p2 = 0.0
@@ -828,6 +874,7 @@ class _PathObjectPatternGenerator:
             p4 = min(p4, 0.03)
 
         def is_double_sample(sample: int) -> bool:
+            """Return whether a sample requests a double (clap+finish) note."""
             return bool(sample & (_CLAP | _FINISH))
 
         can_generate_two_notes = not self.convert_type & _LOW_PROBABILITY and (
@@ -843,6 +890,7 @@ class _PathObjectPatternGenerator:
         return self._generate_random_hold_notes(start_time, note_count)
 
     def _generate_tiled_hold_notes(self, start_time: int) -> _Pattern:
+        """Place tiled, staggered hold notes across the spans."""
         column_repeat = min(self.span_count, self.inner.total_columns)
 
         end_time = start_time + self.segment_duration * self.span_count
@@ -869,6 +917,7 @@ class _PathObjectPatternGenerator:
     def _generate_hold_and_normal_notes(
             self, start_time: int, conversion_diff: float
     ) -> _Pattern:
+        """Place a hold note plus interleaved normal notes."""
         pattern = _Pattern()
 
         hold_column = self.inner.get_column(allow_special=True)
@@ -920,10 +969,12 @@ class _PathObjectPatternGenerator:
         return pattern
 
     def _sample_info_list_at(self, time: int) -> int:
+        """Return the effective hit sound at a span time."""
         samples = self._note_samples_at(time)
         return samples[0] if samples else self.sample
 
     def _note_samples_at(self, time: int) -> list[int]:
+        """Return the node sounds from a span time onward."""
         if self.segment_duration == 0:
             idx = 0
         else:
@@ -933,13 +984,15 @@ class _PathObjectPatternGenerator:
     def _find_available_column(
             self,
             initial_column: int,
-            validation: Optional[Callable[[int], bool]],
+            validation: Callable[[int], bool] | None,
             patterns: list[_Pattern],
     ) -> int:
+        """Find a free column, optionally constrained by a validator."""
         lower = self.inner.random_start()
         upper = self.inner.total_columns
 
         def is_valid(column: int) -> bool:
+            """Return whether a column passes the validator and is free."""
             if validation is not None and not validation(column):
                 return False
             return all(not p.column_has_obj(column) for p in patterns)
@@ -957,6 +1010,7 @@ class _PathObjectPatternGenerator:
 
 class _EndTimeObjectPatternGenerator:
 
+    """Generates the mania pattern for a converted spinner or hold note."""
     def __init__(
             self,
             random: OsuRandom,
@@ -967,6 +1021,7 @@ class _EndTimeObjectPatternGenerator:
             prev_pattern: _Pattern,
             conv_diff: float,
     ) -> None:
+        """Choose the stacking behaviour from the previous pattern."""
         if prev_pattern.column_with_objs() == total_columns:
             self.convert_type = 0
         else:
@@ -978,12 +1033,14 @@ class _EndTimeObjectPatternGenerator:
         self.inner = _PatternGenerator(hit_object, total_columns, random, conv_diff)
 
     def _end_time_note(self, column: int, hold: bool) -> _CObj:
+        """Return a note or a hold note ending at the object's end time."""
         start = self.inner.hit_object.start_time
         if hold:
             return _CObj(start, self.end_time - start, column)
         return _CObj(start, None, column)
 
     def generate(self) -> _Pattern:
+        """Generate the single note/hold for the end-time object."""
         generate_hold = self.end_time - self.inner.hit_object.start_time >= 100.0
         pattern = _Pattern()
 
@@ -1003,6 +1060,7 @@ class _EndTimeObjectPatternGenerator:
         return pattern
 
     def _get_random_column(self, lower: int) -> int:
+        """Draw a free column at or above a lower bound."""
         column = self.inner.get_random_column(lower, None)
 
         if self.convert_type & _FORCE_NOT_STACK:
@@ -1012,9 +1070,11 @@ class _EndTimeObjectPatternGenerator:
     def _find_available_column(
             self, initial_column: int, lower: int, patterns: list[_Pattern]
     ) -> int:
+        """Find a free column, retrying via the RNG."""
         upper = self.inner.total_columns
 
         def is_valid(column: int) -> bool:
+            """Return whether a column is free in all given patterns."""
             return all(not p.column_has_obj(column) for p in patterns)
 
         if is_valid(initial_column):
@@ -1028,7 +1088,8 @@ class _EndTimeObjectPatternGenerator:
                 return initial_column
 
 
-def _target_columns(pm: PerformanceBeatmap, mods: "PerformanceMods | None") -> float:
+def _target_columns(pm: PerformanceBeatmap, mods: PerformanceMods | None) -> float:
+    """Return the mania key count for a converted map (key mods override it)."""
     keys = getattr(mods, "mania_keys", None) if mods is not None else None
     if keys is not None:
         return float(keys)
@@ -1057,8 +1118,9 @@ def _target_columns(pm: PerformanceBeatmap, mods: "PerformanceMods | None") -> f
 
 def _convert_osu_to_mania(
         pm: PerformanceBeatmap,
-        mods: "PerformanceMods | None",
+        mods: PerformanceMods | None,
 ) -> tuple[list[_CObj], int]:
+    """Run the full legacy pattern generator over a beatmap's objects."""
     hp_cs = float(f32(pm.base_hp + pm.base_cs))
     od_412 = float(f32(pm.base_od * float(f32(41.2))))
     seed = _rte_i32(hp_cs) * 20 + _as_i32(od_412) + _rte_i32(pm.base_ar)
@@ -1072,6 +1134,7 @@ def _convert_osu_to_mania(
     density_ref = [float(_I32_MAX)]
 
     def compute_density(new_note_time: float) -> None:
+        """Update the rolling note-density estimate with a new note time."""
         prev_note_times.append(new_note_time)
         if len(prev_note_times) >= 2:
             density_ref[0] = (
@@ -1153,9 +1216,22 @@ def _convert_osu_to_mania(
 def convert_to_mania_objects(
         pm: PerformanceBeatmap,
         *,
-        mods: "PerformanceMods | None" = None,
+        mods: PerformanceMods | None = None,
         total_columns: int | None = None,
 ) -> tuple[list[ManiaObject], int, int, int]:
+    """Build the mania objects for a beatmap.
+
+    Runs the legacy pattern generator for converts, or maps native mania objects
+    directly.
+
+    Args:
+        pm: The performance beatmap.
+        mods: The mods (key mods change the column count for converts).
+        total_columns: An explicit column count, or ``None`` to derive it.
+
+    Returns:
+        ``(objects, max_combo, n_hold_notes, total_columns)``.
+    """
     if pm.is_convert:
         converted, columns = _convert_osu_to_mania(pm, mods)
 

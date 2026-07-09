@@ -1,4 +1,5 @@
-"""
+"""Math, RNG and sort helpers reproducing osu!/Rust/C# semantics for bit-exact parity.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -23,27 +24,29 @@ SOFTWARE.
 """
 
 import math
-import bisect
 from collections import deque
 from typing import Generic, TypeVar
 
 from parsecore.Beatmap.section.hit_objects import Curve
 from parsecore.Beatmap.utils import Pos, f32
-from .data.beatmap import PerformanceBeatmap
 
 
 def lerp(value1: float, value2: float, amount: float) -> float:
+    """Linear interpolation ``a*(1-t) + b*t`` (.NET ``double.Lerp`` form)."""
     return (value1 * (1.0 - amount)) + (value2 * amount)
 
 def bpm_to_milliseconds(bpm: float, delimiter: int | None = None) -> float:
+    """Convert a BPM (optionally with a beat delimiter) to a beat length in ms."""
     d = delimiter if delimiter is not None else 4
     return 60000.0 / d / bpm
 
 def millisecods_to_bpm(ms: float, delimiter: int | None = None) -> float:
+    """Convert a beat length in ms (optionally with a delimiter) to BPM."""
     d = delimiter if delimiter is not None else 4
     return 60000.0 / (ms * d)
 
 def ieee_div(a: float, b: float) -> float:
+    """IEEE-754 division like Rust: ``x/0`` is +/-inf, ``0/0`` is NaN (never raises)."""
     if b != 0.0:
         return a / b
     if a == 0.0 or math.isnan(a):
@@ -52,6 +55,7 @@ def ieee_div(a: float, b: float) -> float:
     return math.copysign(math.inf, sign)
 
 def ieee_pow(base: float, exp: float) -> float:
+    """IEEE-754 ``powf`` like Rust for the cases where Python would raise."""
     try:
         return math.pow(base, exp)
     except ValueError:
@@ -62,6 +66,7 @@ def ieee_pow(base: float, exp: float) -> float:
         return math.inf
 
 def ieee_ln(x: float) -> float:
+    """Natural log like Rust: ``ln(0)`` is -inf, ``ln(negative)`` is NaN."""
     if x > 0.0:
         return math.log(x)
     if x == 0.0:
@@ -69,6 +74,7 @@ def ieee_ln(x: float) -> float:
     return math.nan
 
 def rust_max(a: float, b: float) -> float:
+    """Rust ``f64::max``: returns the non-NaN operand when one is NaN."""
     if math.isnan(a):
         return b
     if math.isnan(b):
@@ -76,6 +82,7 @@ def rust_max(a: float, b: float) -> float:
     return max(a, b)
 
 def rust_min(a: float, b: float) -> float:
+    """Rust ``f64::min``: returns the non-NaN operand when one is NaN."""
     if math.isnan(a):
         return b
     if math.isnan(b):
@@ -83,37 +90,46 @@ def rust_min(a: float, b: float) -> float:
     return min(a, b)
 
 def logistic(x: float, midpoint_offset: float, multiplier: float, max_value: float | None = None) -> float:
+    """Return the value of a logistic sigmoid curve."""
     m = max_value if max_value is not None else 1.0
     return m / (1.0 + math.exp(multiplier * (midpoint_offset - x)))
 
 def logistic_exp(exp: float, max_value: float | None = None) -> float:
+    """Return a logistic curve evaluated on an exponent argument."""
     m = max_value if max_value is not None else 1.0
     return m / (1.0 + math.exp(exp))
 
 def norm(p: float, values: list[float]) -> float:
+    """Return the p-norm of several values."""
     return math.pow(sum(math.pow(x, p) for x in values), 1.0 / p)
 
 def bell_curve(x: float, mean: float, width: float, multiplier: float | None = None) -> float:
+    """Return a bell-curve weight peaking at a given centre."""
     m = multiplier if multiplier is not None else 1.0
     return m * math.exp(math.e * -(math.pow(x - mean, 2.0) / math.pow(width, 2.0)))
 
 def smoothstep_bell_curve(x: float, mean: float = 0.5, width: float = 0.5) -> float:
+    """Return a smoothstep-based bell curve."""
     x -= mean
     x = width - x if x > 0 else width + x
     return smoothstep(x, 0, width)
 
 def smoothstep(x: float, start: float, end: float) -> float:
+    """Return the smoothstep interpolation of a value between two edges."""
     x = clamp((x - start) / (end - start), 0.0, 1.0)
     return x * x * (3.0 - 2.0 * x)
 
 def smootherstep(x: float, start: float, end: float) -> float:
+    """Return the smootherstep interpolation of a value between two edges."""
     x = clamp((x - start) / (end - start), 0.0, 1.0)
     return x * x * x * (x * (6.0 * x - 15.0) + 10.0)
 
 def reverse_lerp(x: float, start: float, end: float) -> float:
+    """Return the clamped ``0``-``1`` position of a value between two bounds."""
     return clamp((x - start) / (end - start), 0.0, 1.0)
 
 def erf(x: float) -> float:
+    """Return the Gauss error function."""
     if x == 0.0:
         return 0.0
 
@@ -131,6 +147,7 @@ def erf(x: float) -> float:
     return erf if x >= 0.0 else -erf
 
 def erf_inv(x: float) -> float:
+    """Return the inverse Gauss error function."""
     if x <= -1.0:
         return -math.inf
     if x >= 1.0:
@@ -153,6 +170,7 @@ def erf_inv(x: float) -> float:
     return sgn * (math.sqrt(base_approx) + c)
 
 def clamp(value: float, minimum: float, maximum: float) -> float:
+    """Clamp a value to the ``[lo, hi]`` range."""
     if value <= minimum:
         value = minimum
     elif value >= maximum:
@@ -163,30 +181,43 @@ def clamp(value: float, minimum: float, maximum: float) -> float:
 T = TypeVar("T")
 
 class LimitedQueue(Generic[T]):
+    """A fixed-capacity queue that drops the oldest element when full."""
     __slots__ = ("_queue",)
 
     def __init__(self, capacity: int) -> None:
+        """Create the queue.
+
+        Args:
+            capacity: The maximum number of retained elements.
+        """
         self._queue: deque[T] = deque(maxlen=capacity)
 
     def push(self, elem: T) -> None:
+        """Append an element, evicting the oldest if at capacity."""
         self._queue.append(elem)
 
     def is_empty(self) -> bool:
+        """Return whether the queue holds no elements."""
         return not self._queue
 
     def is_full(self) -> bool:
+        """Return whether the queue is at capacity."""
         return len(self._queue) == self._queue.maxlen
 
     def __len__(self) -> int:
+        """Return the number of retained elements."""
         return len(self._queue)
 
     def __getitem__(self, idx: int) -> T:
+        """Return the element at an index (0 = oldest)."""
         return self._queue[idx]
 
     def last(self) -> T | None:
+        """Return the most recently pushed element."""
         return self._queue[-1] if self._queue else None
 
     def as_list(self) -> list[T]:
+        """Return the retained elements as a list, oldest first."""
         return list(self._queue)
 
 U32_MASK: int = 0xFFFFFFFF
@@ -195,9 +226,15 @@ INT_MAX: int = 2147483647
 INT_TO_REAL: float = 1.0 / (float(INT_MAX) + 1.0)
 
 class OsuRandom:
+    """The osu!-stable xorshift RNG (used by the catch and mania converts)."""
     __slots__ = ("x", "y", "z", "w", "bit_buf", "bit_idx")
 
     def __init__(self, seed: int) -> None:
+        """Seed the generator.
+
+        Args:
+            seed: The 32-bit seed.
+        """
         self.x: int = seed & U32_MASK
         self.y: int = 842502087
         self.z: int = 3579807591
@@ -206,6 +243,7 @@ class OsuRandom:
         self.bit_idx: int = 32
 
     def gen_unsigned(self) -> int:
+        """Advance the state and return the next raw unsigned 32-bit value."""
         t = (self.x ^ ((self.x << 11) & U32_MASK)) & U32_MASK
         self.x = self.y
         self.y = self.z
@@ -215,18 +253,23 @@ class OsuRandom:
         return self.w
 
     def next_int(self) -> int:
+        """Return the next non-negative 31-bit integer."""
         return INT_MASK & self.gen_unsigned()
 
     def next_double(self) -> float:
+        """Return the next double in ``[0, 1)``."""
         return INT_TO_REAL * float(self.next_int())
 
     def next_int_range(self, minimum: int, maximum: int) -> int:
+        """Return the next integer in ``[minimum, maximum)``."""
         return int(float(minimum) + self.next_double() * float(maximum - minimum))
 
     def next_double_range(self, minimum: float, maximum: float) -> int:
+        """Return the next value in ``[minimum, maximum)``."""
         return int(minimum + self.next_double() * (maximum - minimum))
 
     def next_bool(self) -> bool:
+        """Return the next random boolean (consuming one bit)."""
         if self.bit_idx == 32:
             self.bit_buf = self.gen_unsigned()
             self.bit_idx = 1
@@ -237,13 +280,20 @@ class OsuRandom:
         return (self.bit_buf & 1) == 1
 
 def _wrap_int(value: int) -> int:
+    """Wrap an integer into signed 32-bit range (C# overflow semantics)."""
     value &= U32_MASK
     return value - 0x100000000 if value & 0x80000000 else value
 
 class CSharpRandom:
+    """A port of .NET ``System.Random`` (used where osu! relies on it)."""
     __slots__ = ("seed_array", "inext", "inextp")
 
     def __init__(self, seed: int) -> None:
+        """Seed the generator like .NET ``Random``.
+
+        Args:
+            seed: The seed value.
+        """
         self.seed_array: list[int] = [0] * 56
         self.inext: int = 0
         self.inextp: int = 21
@@ -280,15 +330,19 @@ class CSharpRandom:
                     self.seed_array[i] += INT_MAX
 
     def next(self) -> int:
+        """Return the next non-negative 31-bit integer."""
         return self._internal_sample()
 
     def next_max(self, maximum: int) -> int:
+        """Return the next integer in ``[0, max)``."""
         return int(self._sample() * float(maximum))
 
     def _sample(self) -> float:
+        """Return the next double in ``[0, 1)`` (raw sample)."""
         return float(self._internal_sample()) * (1.0 / float(INT_MAX))
 
     def _internal_sample(self) -> int:
+        """Advance the internal subtractive-generator state."""
         loc_inext = self.inext + 1
         if loc_inext >= 56:
             loc_inext = 1
@@ -312,6 +366,15 @@ class CSharpRandom:
         return ret_val
 
 def get_precision_adjusted_beat_length(slider_velocity_multiplier: float, beat_len: float) -> float:
+    """Return the beat length adjusted by slider velocity, rounded as osu! does.
+
+    Args:
+        slider_velocity_multiplier: The active slider velocity multiplier.
+        beat_len: The uninherited beat length.
+
+    Returns:
+        The precision-adjusted beat length (rounds ``-100/sv`` through f32).
+    """
     slider_velocity_as_beat_len = -100.0 / slider_velocity_multiplier
 
     if slider_velocity_as_beat_len < 0.0:
@@ -329,6 +392,7 @@ def calculate_difficulty_peppy_stars(
         od: float,
         cs: float,
 ) -> int:
+    """Return the osu!-stable ScoreV1 difficulty multiplier ('peppy stars')."""
     if drain_length != 0:
         object_to_drain_ratio = clamp(float(object_count) / float(drain_length) * 8.0, 0.0, 16.0)
     else:
@@ -337,25 +401,30 @@ def calculate_difficulty_peppy_stars(
     return int(_round_ties_even((hp + od + cs + object_to_drain_ratio) / 38.0 * 5.0))
 
 def _round_ties_even(x: float) -> float:
+    """Round half-to-even (banker's rounding), matching osu!/C#."""
     return float(round(x))
 
 def csharp_sort_unstable(keys: list, key) -> None:
+    """Sort a list in place using C#'s unstable introsort (matches .NET ordering)."""
     n = len(keys)
     if n >= 2:
         _cs_intro_sort(keys, 0, n - 1, 2 * (n.bit_length() - 1), key)
 
 
 def _cs_swap(keys: list, i: int, j: int) -> None:
+    """Swap two list elements (introsort helper)."""
     if i != j:
         keys[i], keys[j] = keys[j], keys[i]
 
 
 def _cs_swap_if_greater(keys: list, key, a: int, b: int) -> None:
+    """Swap two elements if the first compares greater (introsort helper)."""
     if a != b and key(keys[a]) > key(keys[b]):
         keys[a], keys[b] = keys[b], keys[a]
 
 
 def _cs_intro_sort(keys: list, lo: int, hi: int, depth_limit: int, key) -> None:
+    """The recursive introsort core (quicksort with heap-sort fallback)."""
     INTRO_SORT_SIZE_THRESHOLD = 16
 
     while hi > lo:
@@ -383,6 +452,7 @@ def _cs_intro_sort(keys: list, lo: int, hi: int, depth_limit: int, key) -> None:
 
 
 def _cs_pick_pivot_and_partition(keys: list, lo: int, hi: int, key) -> int:
+    """Median-of-three pivot selection and partition step."""
     mid = lo + (hi - lo) // 2
     _cs_swap_if_greater(keys, key, lo, mid)
     _cs_swap_if_greater(keys, key, lo, hi)
@@ -411,6 +481,7 @@ def _cs_pick_pivot_and_partition(keys: list, lo: int, hi: int, key) -> int:
 
 
 def _cs_insertion_sort(keys: list, lo: int, hi: int, key) -> None:
+    """Insertion sort for small partitions."""
     for i in range(lo, hi):
         t = keys[i + 1]
         kt = key(t)
@@ -422,6 +493,7 @@ def _cs_insertion_sort(keys: list, lo: int, hi: int, key) -> None:
 
 
 def _cs_heap_sort(keys: list, lo: int, hi: int, key) -> None:
+    """Heap sort fallback when the recursion depth limit is hit."""
     n = hi - lo + 1
     for i in range(n // 2, 0, -1):
         _cs_down_heap(keys, i, n, lo, key)
@@ -431,6 +503,7 @@ def _cs_heap_sort(keys: list, lo: int, hi: int, key) -> None:
 
 
 def _cs_down_heap(keys: list, i: int, n: int, lo: int, key) -> None:
+    """Sift an element down the heap (heap-sort helper)."""
     while i <= n // 2:
         child = 2 * i
         if child < n and key(keys[lo + child - 1]) < key(keys[lo + child]):
@@ -442,6 +515,7 @@ def _cs_down_heap(keys: list, i: int, n: int, lo: int, key) -> None:
 
 
 def _idx_of_dist(lengths: list[float], d: float) -> int:
+    """Return the index of a distance along a cumulative-length table."""
     left = 0
     right = len(lengths)
     while left < right:
@@ -457,6 +531,7 @@ def _idx_of_dist(lengths: list[float], d: float) -> int:
 
 
 def _interpolate_curve_position(curve: Curve, progress: float) -> Pos:
+    """Interpolate a position at a distance along a sampled curve."""
     path = curve.path
     lengths = curve.lengths
 
@@ -486,15 +561,19 @@ def _interpolate_curve_position(curve: Curve, progress: float) -> Pos:
 EPSILON = 2.2204460492503131e-16
 
 def almost_eq(a: float, b: float, acceptable_difference: float) -> bool:
+    """Return whether two values are equal within a small margin."""
     return abs(a - b) <= acceptable_difference
 
 def eq(a: float, b: float) -> bool:
+    """Return whether two floats are exactly equal (total-order aware)."""
     return almost_eq(a, b, EPSILON)
 
 def not_eq(a: float, b: float) -> bool:
+    """Return whether two floats are not equal."""
     return abs(a - b) >= EPSILON
 
 def cmp_key(x: float) -> tuple[int, float]:
+    """Return a sort key giving floats a total order (NaN last)."""
     sign = math.copysign(1.0, x)
 
     if math.isnan(x):
@@ -510,6 +589,7 @@ def cmp_key(x: float) -> tuple[int, float]:
         return (5, x)
 
 def total_cmp(a: float, b: float) -> int:
+    """Compare two floats with a total order like Rust ``f64::total_cmp``."""
     key_a = cmp_key(a)
     key_b = cmp_key(b)
 
@@ -520,7 +600,8 @@ def total_cmp(a: float, b: float) -> int:
 
     return 0
 
-def signum(x: float | int) -> float | int:
+def signum(x: float) -> float | int:
+    """Return the sign of a value (-1, 0 or 1), with NaN handling."""
     if math.isnan(x):
         return ("nan")
 

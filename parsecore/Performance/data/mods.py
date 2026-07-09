@@ -1,4 +1,5 @@
-"""
+"""The :class:`PerformanceMods` view of a mod set used by the calculators.
+
 MIT License
 
 Copyright (c) 2026-Present O!Lib Contributors
@@ -26,13 +27,16 @@ from dataclasses import dataclass
 from enum import IntEnum, IntFlag
 from typing import Any
 
+
 class Reflection(IntEnum):
+    """Helper flags describing how mods reflect playfield coordinates."""
     NONE = 0
     VERTICAL = 1
     HORIZONTAL = 2
     BOTH = 3
 
 class ModBits(IntFlag):
+    """Named legacy mod bit constants (NF, EZ, HD, HR, DT, mania keys, ...)."""
     NO_FAIL = 1 << 0
     EASY = 1 << 1
     TOUCH_DEVICE = 1 << 2
@@ -59,6 +63,7 @@ class ModBits(IntFlag):
 
 @dataclass(slots=True)
 class PerformanceMods:
+    """The mod settings relevant to calculation (clock rate, key count, flags)."""
     bits: int = 0
     clock_rate: float = 1.0
     hardrock_offsets: bool = False
@@ -84,6 +89,14 @@ class PerformanceMods:
     sv2: bool = False
 
     def no_slider_head_acc(self, lazer: bool) -> bool:
+        """Return whether classic slider accuracy (no slider-head judgement) applies.
+
+        Args:
+            lazer: Whether the score uses lazer scoring.
+
+        Returns:
+            ``True`` if slider heads are not judged for accuracy (classic behaviour).
+        """
         if self._is_legacy_only:
             return not lazer
         if self._classic_osu_present is not None:
@@ -92,6 +105,14 @@ class PerformanceMods:
 
     @classmethod
     def from_mods(cls, mods: Any) -> "PerformanceMods":
+        """Build the calculation mods from any mod representation.
+
+        Args:
+            mods: Legacy bitflags, an acronym string, or a mods object.
+
+        Returns:
+            The resolved :class:`PerformanceMods`.
+        """
         bits = 0
         is_legacy_only = True
         classic_osu_present: bool | None = None
@@ -202,13 +223,30 @@ class PerformanceMods:
 
     @staticmethod
     def _extract_legacy_mania_keys(bits: int) -> float | None:
-        if bits & ModBits.KEY1: return 1.0
-        if bits & ModBits.KEY2: return 2.0
-        if bits & ModBits.KEY3: return 3.0
-        if bits & ModBits.KEY4: return 4.0
-        if bits & ModBits.KEY5: return 5.0
-        if bits & ModBits.KEY6: return 6.0
-        if bits & ModBits.KEY7: return 7.0
-        if bits & ModBits.KEY8: return 8.0
-        if bits & ModBits.KEY9: return 9.0
+        """Return the mania key count from legacy key-mod bits, if any.
+
+        Args:
+            bits: The legacy mod bitfield.
+
+        Returns:
+            The forced key count (``1``-``9``), or ``None`` if no key mod is set.
+        """
+        if bits & ModBits.KEY1:
+            return 1.0
+        if bits & ModBits.KEY2:
+            return 2.0
+        if bits & ModBits.KEY3:
+            return 3.0
+        if bits & ModBits.KEY4:
+            return 4.0
+        if bits & ModBits.KEY5:
+            return 5.0
+        if bits & ModBits.KEY6:
+            return 6.0
+        if bits & ModBits.KEY7:
+            return 7.0
+        if bits & ModBits.KEY8:
+            return 8.0
+        if bits & ModBits.KEY9:
+            return 9.0
         return None
