@@ -260,15 +260,17 @@ To report a security vulnerability, see [SECURITY.md](SECURITY.md).
 
 parsecore's documentation is translated by the community on [Crowdin](https://crowdin.com/project/parsecore). Want to see it in your language? Join the project and help translate no coding required.
 
-[![Crowdin translation progress](https://badges.crowdin.net/parsecore/localized.svg)](https://crowdin.com/project/parsecore)
-
 **Currently supported languages**
 
-| Language | Status |
+| Language | |
 | --- | --- |
 | 🇺🇸 English (US) | Source |
+| 🇩🇪 German | [Translate →](https://crowdin.com/project/parsecore) |
+| 🇫🇷 French | [Translate →](https://crowdin.com/project/parsecore) |
+| 🇱🇺 Luxembourgish | [Translate →](https://crowdin.com/project/parsecore) |
+| 🇵🇹 Portuguese | [Translate →](https://crowdin.com/project/parsecore) |
 
-_More languages appear here as they reach completion on Crowdin; the live translated site is on [Read the Docs](https://parsecore.readthedocs.io)._
+_The live translated site is on [Read the Docs](https://parsecore.readthedocs.io). Want to help? Join the project on [Crowdin](https://crowdin.com/project/parsecore) no coding required._
 
 ---
 
