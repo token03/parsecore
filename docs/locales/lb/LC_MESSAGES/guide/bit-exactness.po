@@ -1,0 +1,99 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: parsecore\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-10 20:17+0000\n"
+"PO-Revision-Date: 2026-07-10 20:17\n"
+"Last-Translator: \n"
+"Language-Team: Luxembourgish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: parsecore\n"
+"X-Crowdin-Project-ID: 912087\n"
+"X-Crowdin-Language: lb\n"
+"X-Crowdin-File: /docs/_build/gettext/guide/bit-exactness.pot\n"
+"X-Crowdin-File-ID: 13\n"
+"Language: lb_LU\n"
+
+#: ../../guide/bit-exactness.md:1
+#: 6f8dce2515694dff866ea6718c564689
+msgid "Bit-exactness & parity"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:3
+#: 17c41565b2ef4ac481cacec6703e53bc
+msgid "parsecore's star ratings and pp values are **bit-for-bit identical** to the official osu! implementation. This is the project's core promise."
+msgstr ""
+
+#: ../../guide/bit-exactness.md:6
+#: 4db203a054334623b19d06dedb75c768
+msgid "How it's achieved"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:8
+#: 10a7e881aa11473096e6c5c96a03c7db
+msgid "Reproducing the reference *closely* is not enough parsecore reproduces it *exactly*, including the floating-point behaviour of the original:"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:12
+#: 400a6f0b105348baa2f4d1bc347f121c
+msgid "**f32 intermediates** positions, curve math and several constants are computed in 32-bit floats, matching the game client (and rosu-pp's Rust ``f32``)."
+msgstr ""
+
+#: ../../guide/bit-exactness.md:14
+#: 5e14610e5d314f67a88eb1b91ec51b25
+msgid "**Explicit integer powers** ``x * x * x`` where the reference uses ``DiffUtils.Pow(x, 3)``, not ``math.pow`` (they can differ in the last bit)."
+msgstr ""
+
+#: ../../guide/bit-exactness.md:16
+#: 3e896bec044740108fa9cbd165d76a1e
+msgid "**IEEE semantics** division by zero, NaN handling and negative-base powers follow Rust/C# rules via dedicated helpers (``ieee_div``, ``rust_min``, ...), never Python's exceptions."
+msgstr ""
+
+#: ../../guide/bit-exactness.md:19
+#: 7b7457b88a30474b8b2c4c3966c9b6cd
+msgid "**Exact RNG and sorting** the legacy converters use osu!stable's RNG in the exact call order, and the C# unstable sort is reproduced for nested slider objects."
+msgstr ""
+
+#: ../../guide/bit-exactness.md:23
+#: 3ad823687ec940d597b79901a8ec7b95
+msgid "How it's verified"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:25
+#: e49cdab5cc484e5cbb817e74704de6a8
+msgid "Correctness is enforced by a parity test suite that compares parsecore against an oracle built from the official `ppy.osu.Game` packages (with rosu-pp as a secondary cross-check):"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:29
+#: 0d991d572daf43a58d045a42cb57b0a0
+msgid "4,400+ cases: star ratings and pp across all four rulesets"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:30
+#: 0480d57096b04176929e21296205fa5f
+msgid "extended mod matrix (EZ/HR/DT/NC/HT/HD/FL/TD/RX/AP/SO, key mods 1K-9K, combinations)"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:31
+#: 159ad5ae30854ea7a928abfb0498ced6
+msgid "all convert directions, native maps, edge-case and pathological maps"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:32
+#: 3921b9d9c44d40169b86d160b0eeac97
+msgid "randomized full score states, partial states, fails, lazer & stable scores"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:33
+#: 9ef1f85c310d45d9b6acb0eaa9e56ea6
+msgid "**result: 0 differences every value bit-identical to the official implementation**"
+msgstr ""
+
+#: ../../guide/bit-exactness.md:37
+#: 0c46007823e54dc7b168b119eb387b4d
+msgid "After a pp rework deploys, public calculators and bots that rely on outdated libraries can disagree with parsecore. When in doubt: new scores set in-game receive exactly the values parsecore computes."
+msgstr ""
+
