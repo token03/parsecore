@@ -1,72 +1,52 @@
----
-sd_hide_title: true
----
+# Welcome to parsecore
 
-```{raw} html
-<section class="pc-hero" aria-label="parsecore introduction">
-  <div class="pc-hero__eyebrow">Stable Python library for osu! tooling</div>
-  <h1>parsecore</h1>
-  <p>The all-in-one Python library for osu! beatmap parsing, mod handling, and
-  performance-point calculation — bit-exact with the official osu! algorithm.</p>
-  <div class="pc-hero__actions">
-    <a class="pc-button pc-button--primary" href="installation.html">Install parsecore</a>
-    <a class="pc-button" href="quickstart/pp.html">Quickstart</a>
-  </div>
-</section>
-```
+parsecore is a modern, easy to use, feature-rich Python library for osu! beatmap
+parsing, mod handling, and performance-point calculation.
 
-**parsecore** parses `.osu` files, models every osu! mod, and computes star ratings
-and performance points for **all four rulesets** (osu!, osu!taiko, osu!catch,
-osu!mania). Its results are verified **bit-for-bit identical** to the official osu!
-implementation — currently the **2026 Q2 pp/star-rating rework** (`2026.702.1`).
+**Features:**
 
-::::{grid} 1 2 2 2
-:gutter: 3
-:class-container: pc-card-grid sd-mb-4
+- Bit-exact with the official osu! implementation — currently the
+  **2026 Q2 pp/star-rating rework** (`2026.702.1`)
+- Star rating and performance points for **all four rulesets**
+  (osu!, osu!taiko, osu!catch, osu!mania)
+- Faithful osu! → taiko / catch / mania converts
+- Complete mod model — lazer and legacy mods, acronyms, settings
+- Fully typed, mypy-checked, dependency-light pure-Python core
 
-:::{grid-item-card} 🚀 Installation
-:link: installation
-:link-type: doc
-:class-card: pc-feature-card
+## Getting started
 
-Get parsecore from PyPI and be ready in seconds.
-:::
+Is this your first time using the library? This is the place to get started!
 
-:::{grid-item-card} 🎯 Quickstart
-:link: quickstart/pp
-:link-type: doc
-:class-card: pc-feature-card
+- **First steps:** [Installation](installation) | [Quickstart](quickstart/pp)
+- **Working with beatmaps:** [Parsing](quickstart/parsing) |
+  [Star rating](quickstart/star-rating) | [Performance points](quickstart/pp)
+- **Going further:** [Converts](quickstart/converts) | [Mods](quickstart/mods)
 
-Compute pp and star ratings in just a few lines.
-:::
+## Getting help
 
-:::{grid-item-card} 🧠 How pp works
-:link: guide/how-pp-works
-:link-type: doc
-:class-card: pc-feature-card
+If you're having trouble with something, these resources might help.
 
-The parse → convert → skills → performance pipeline.
-:::
+- Read the [guide to how pp calculation works](guide/how-pp-works).
+- Wondering why results differ from other tools? See
+  [Bit-exactness & parity](guide/bit-exactness) and
+  [Lazer vs stable scoring](guide/lazer-vs-stable).
+- Try the search, or browse the API reference below.
+- Report bugs in the [issue tracker](https://github.com/O-Lib/parsecore/issues).
 
-:::{grid-item-card} 📖 API Reference
-:link: api/performance
-:link-type: doc
-:class-card: pc-feature-card
+## Manuals
 
-Every class and function, generated from the source.
-:::
+These pages go into great detail about everything the library can do.
 
-::::
+- [Beatmap API](api/beatmap) — parsing, sections, hit objects, encoding
+- [Mods API](api/mods) — mods, acronyms, game modes
+- [Performance API](api/performance) — difficulty and performance calculation
 
-## Why parsecore?
+## Meta
 
-- **Bit-exact** verified identical to the official osu! C# implementation across a
-  4,400+ case test matrix (all rulesets, mods, converts, lazer & stable scores).
-- **Up to date** implements the 2026 Q2 rework: the new Reading skill, Snap/Flow aim,
-  deviation-based speed pp, reworked taiko rhythm, catch linear-spacing nerf.
-- **Complete** parsing, mods, star rating and pp for osu!, taiko, catch and mania,
-  including faithful osu! → other-mode converts.
-- **Type-safe & dependency-light** fully typed, mypy-checked, pure-Python core.
+If you're looking for something related to the project itself, it's here.
+
+- [Versioning & algorithm tracking](about/versioning) — how parsecore follows osu! updates
+- [Changelog](about/changelog) — the changelog for the library
 
 ```{toctree}
 :hidden:
