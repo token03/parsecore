@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-10 20:17+0000\n"
-"PO-Revision-Date: 2026-07-10 20:17\n"
+"POT-Creation-Date: 2026-07-11 11:10+0000\n"
+"PO-Revision-Date: 2026-07-11 11:11\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "MIME-Version: 1.0\n"
@@ -18,42 +18,42 @@ msgstr ""
 "Language: pt_PT\n"
 
 #: ../../guide/lazer-vs-stable.md:1
-#: f2b75a9558dd4762ac333bd2c3d21b2a
+#: 64e375bcab1c4222b7a0f6f6c380e619
 msgid "Lazer vs stable scoring"
 msgstr ""
 
 #: ../../guide/lazer-vs-stable.md:3
-#: ad6976b477ed4d8bb5d77eaba93ae682
+#: e6e91311bf664703a52606ceba404e91
 msgid "osu! has two scoring systems, and pp is computed slightly differently for each. parsecore supports both via {meth}`~parsecore.Performance.api.Performance.lazer`."
 msgstr ""
 
 #: ../../guide/lazer-vs-stable.md:6
-#: 4837a2d012114e89a2275d319cb99556
+#: 4f5b5043b4a74ae2996061fb3ffae392
 msgid "osu!lazer"
 msgstr ""
 
 #: ../../guide/lazer-vs-stable.md:8
-#: d4fbb9c0d84a4334b7ecaead53f7779b
+#: 5b40943c62aa4a8fae129aedf5ac377f
 msgid "Lazer scores carry richer statistics slider **tail hits** and **large ticks** are judged individually. Provide them for the most accurate result:"
 msgstr ""
 
 #: ../../guide/lazer-vs-stable.md:23
-#: 41e6e5790d7d488c85b392f22343d34a
+#: be483a901f224cd18f94af4eb801cf62
 msgid "osu!(stable) / classic"
 msgstr ""
 
 #: ../../guide/lazer-vs-stable.md:25
-#: f433cb6ddd58478d8bedf41ebc0a47bb
+#: 4555d1b029da40dbb59f6b5e6583a853
 msgid "Stable scores don't expose slider-tail or large-tick judgements, so misses and slider breaks are **estimated**. Passing the legacy total score enables the score-based miss estimator (without it, top plays can be off by a couple of percent):"
 msgstr ""
 
 #: ../../guide/lazer-vs-stable.md:40
-#: 2d8edd4fee1340a5ad5431237321fa8a
+#: 04140966e4214f7798da3db9ede9fa73
 msgid "Which should I use?"
 msgstr ""
 
 #: ../../guide/lazer-vs-stable.md:42
-#: d3d6e56268094d109364bcbd5a2fe3ee
+#: 5b5af1177fe6464e97059ccb90085cab
 msgid "Use whichever matches the score you're evaluating. The osu! API tells you which client a score came from; feed lazer statistics for lazer scores and the legacy total score for stable scores."
 msgstr ""
 

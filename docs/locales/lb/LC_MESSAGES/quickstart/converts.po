@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-10 20:17+0000\n"
-"PO-Revision-Date: 2026-07-10 20:17\n"
+"POT-Creation-Date: 2026-07-11 11:10+0000\n"
+"PO-Revision-Date: 2026-07-11 11:11\n"
 "Last-Translator: \n"
 "Language-Team: Luxembourgish\n"
 "MIME-Version: 1.0\n"
@@ -18,27 +18,27 @@ msgstr ""
 "Language: lb_LU\n"
 
 #: ../../quickstart/converts.md:1
-#: f288b25c854248099f68e6a5c15522a4
+#: e5f5b5e60b864e90b793ac2df31e8c2a
 msgid "Converts (osu! → taiko / catch / mania)"
 msgstr ""
 
 #: ../../quickstart/converts.md:3
-#: 0a76f311ca3f454487aca19660a3a5d0
+#: e9b97f21142e4b9cb030c920e2d3031e
 msgid "parsecore converts osu! beatmaps to the other rulesets exactly like the game including the legacy osu!mania pattern generator with its osu!stable RNG."
 msgstr ""
 
 #: ../../quickstart/converts.md:18
-#: 31f8f800fcfa47e59b19d46e9cd5e5fb
+#: bdd59f663c0e4a8c989638f513a12178
 msgid "Key mods on mania converts"
 msgstr ""
 
 #: ../../quickstart/converts.md:20
-#: 0deba6c493ab41dab949c6c74221a61e
+#: 0bcc44f431c94f959d134376a53bbacf
 msgid "Mania key mods change the **column count** of a convert, and therefore its star rating and pp (`7K` is the legacy bit `1 << 18`):"
 msgstr ""
 
 #: ../../quickstart/converts.md:28
-#: 88dd02b06a3643c1b598020684db8d2b
+#: 70434dfc4a304ada94b82b3930af609b
 msgid "Key mods only affect osu! → mania **converts**. On native mania maps they have no effect, which matches the game."
 msgstr ""
 

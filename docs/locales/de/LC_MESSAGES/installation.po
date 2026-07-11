@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-10 20:17+0000\n"
-"PO-Revision-Date: 2026-07-10 20:17\n"
+"POT-Creation-Date: 2026-07-11 11:10+0000\n"
+"PO-Revision-Date: 2026-07-11 11:11\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "MIME-Version: 1.0\n"
@@ -18,37 +18,37 @@ msgstr ""
 "Language: de_DE\n"
 
 #: ../../installation.md:1
-#: 3ba4dcc1263a410cbb7699ab89a14e6c
+#: 83ace4daa41c4c04a3babf9a44b851de
 msgid "Installation"
 msgstr ""
 
 #: ../../installation.md:3
-#: d34553afe3e346acb2bda306f82c4909
+#: 50845e9f46c9497ea748f0e94464a726
 msgid "parsecore is published on [PyPI](https://pypi.org/project/parsecore/) and requires **Python 3.10+**."
 msgstr ""
 
 #: ../../installation.md:6
-#: f11247c9033d4c6e97e1434f43386c7b
+#: f27a4d604ed14ff697c82ea1f9b14809
 msgid "pip"
 msgstr ""
 
 #: ../../installation.md:12
-#: 3d4edca765fc42cc9705c451277a50e8
+#: 917b4267d50e49e7b71750d6e00d1eb5
 msgid "uv"
 msgstr ""
 
 #: ../../installation.md:18
-#: 628a415aba13423e995adb642d34a182
+#: 96d68c0734a641978c6dbad040e923e9
 msgid "Verify"
 msgstr ""
 
 #: ../../installation.md:28
-#: dbc8280d12044c4f8aee78df8742a39f
+#: f7eddf7ef55b429fac19d0f292b5779b
 msgid "If that prints a star rating, you're ready head to the {doc}`quickstart/pp`."
 msgstr ""
 
 #: ../../installation.md:31
-#: 169b21f87da84cc2a292eaad74d80449
+#: f3aacb5a321d4c3bb48066baed498846
 msgid "After a new osu! pp rework deploys, third-party tools and websites can lag behind for a while. parsecore tracks the **official in-game algorithm**, so make sure you're on the latest version to get current values."
 msgstr ""
 
