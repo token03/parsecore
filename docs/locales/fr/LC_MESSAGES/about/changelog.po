@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 14:07+0000\n"
-"PO-Revision-Date: 2026-07-11 14:08\n"
+"POT-Creation-Date: 2026-07-11 19:08+0000\n"
+"PO-Revision-Date: 2026-07-11 19:08\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "MIME-Version: 1.0\n"
@@ -18,77 +18,77 @@ msgstr ""
 "Language: fr_FR\n"
 
 #: ../../about/changelog.md:1
-#: 3738e10c72b04d7fb22b51260a5395c1
+#: d5eb6c2797e74453bf79d09d1c5ac3ea
 msgid "Changelog"
-msgstr ""
+msgstr "Journal des modifications"
 
 #: ../../about/changelog.md:3
-#: 411832e0ce5b44bea757ccdfaf1c6d4a
+#: 4dc795fdcb714bdbaa57421668654e30
 msgid "All notable changes to parsecore are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/)."
-msgstr ""
+msgstr "Toutes les modifications notables apportées à parsecore sont répertoriées ici. Le format s'inspire de [Keep a Changelog](https://keepachangelog.com/)."
 
 #: ../../about/changelog.md:6
-#: ab9b21558e344aeebbfc6ae34a2dbae6
+#: 399d53d4181849e6920da76d5d0b0493
 msgid "1.0.1"
-msgstr ""
+msgstr "1.0.1"
 
 #: ../../about/changelog.md:8
-#: 761a880a3d71473b97115cd932bafb4b
+#: 1d740811d1fc475ab5e76a540f28e631
 msgid "Fixed"
-msgstr ""
+msgstr "Corrigé"
 
 #: ../../about/changelog.md:10
-#: 246c21cf55474a7a88bc8e6070b74476
+#: 911cfdf568bf4d979b0442b360e92c56
 msgid "Repaired the `parsecore.Mods` package import (`game_mod_intermode` had shipped a duplicate module, which raised `ImportError`)."
-msgstr ""
+msgstr "Correction de l'importation du paquet `parsecore.Mods` (le module `game_mod_intermode` avait été livré en double, ce qui provoquait une erreur `ImportError`)."
 
 #: ../../about/changelog.md:13
-#: 289d5d691e8b44a4a189ffe1cb364ba6
+#: e9efc4afbe14477684a725ddfb90b290
 msgid "Documentation"
-msgstr ""
+msgstr "Documentation"
 
 #: ../../about/changelog.md:15
-#: 670b33cd40af4568bfc3fbca0828c37b
+#: 6f75ce2f72f0413ea8ac4c13fde7f4ef
 msgid "Added Google-style docstrings across the entire package (100% coverage)."
-msgstr ""
+msgstr "Ajout de chaînes de documentation de type Google dans l'ensemble du paquet (couverture à 100 %)."
 
 #: ../../about/changelog.md:16
-#: 4be7f7bbae6e409481e05f78129fde5c
+#: b7a0fd5577c34ba0a64fa1008067f047
 msgid "Added this Sphinx documentation site."
-msgstr ""
+msgstr "Ajout du site de documentation de Sphinx."
 
 #: ../../about/changelog.md:18
-#: c5338b02bc454450bcba81cad0684c96
+#: 57f3737f17fb4c298881788f4e3e5ec0
 msgid "1.0.0"
-msgstr ""
+msgstr "1.0.0"
 
 #: ../../about/changelog.md:20
-#: b37bf7beed5d4af0a3b46655384722ca
+#: aebad314842d492eb99683ddbcb0e49f
 msgid "Initial public release."
-msgstr ""
+msgstr "Première mise à disposition au public."
 
 #: ../../about/changelog.md:22
-#: f6cc8055d25f4c83a1cc40346840caf4
+#: 14d2728837b54f0e8923440593285c02
 msgid "`.osu` beatmap parsing (all sections) and re-encoding."
-msgstr ""
+msgstr "Analyse des beatmaps `.osu` (toutes les sections) et réencodage."
 
 #: ../../about/changelog.md:23
-#: 893f5d35272a4d49ba2ee12285300f1e
+#: b2626b1d3fef4e5f817cafeb16f35fcf
 msgid "Complete mod system for all four rulesets, with legacy and intermode representations."
-msgstr ""
+msgstr "Système de modification complet pour les quatre ensembles de règles, avec des représentations « legacy » et « intermode »."
 
 #: ../../about/changelog.md:24
-#: 111767ffd2f341b5a27b9b0c2453c7d8
+#: 2b525c395a434c20a61c1cbef3cef9f0
 msgid "Star rating and pp for osu!, osu!taiko, osu!catch and osu!mania, implementing the **2026 Q2** rework and verified bit-exact against the official implementation."
-msgstr ""
+msgstr "Évaluation par étoiles et pp pour osu!, osu!taiko, osu!catch et osu!mania, intégrant la refonte du **2e trimestre 2026** et vérifiée bit à bit par rapport à l'implémentation officielle."
 
 #: ../../about/changelog.md:26
-#: 60739f38efa24bbcbde8c44b21e41198
+#: 66b2e227460840f6ab732fa8551d09f8
 msgid "Faithful osu! → taiko / catch / mania converts."
-msgstr ""
+msgstr "Fidèles adeptes d'osu! → taiko / catch / mania."
 
 #: ../../about/changelog.md:27
-#: bf5e856edae648518d4c56f888cd2e03
+#: 8d78f2a4a1a7409788bb47d00e103224
 msgid "Lazer and stable scoring support."
-msgstr ""
+msgstr "Prise en charge de Lazer et d'un système de notation stable."
 

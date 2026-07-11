@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 14:07+0000\n"
-"PO-Revision-Date: 2026-07-11 14:08\n"
+"POT-Creation-Date: 2026-07-11 19:08+0000\n"
+"PO-Revision-Date: 2026-07-11 19:08\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "MIME-Version: 1.0\n"
@@ -18,42 +18,42 @@ msgstr ""
 "Language: de_DE\n"
 
 #: ../../about/versioning.md:1
-#: 43668166b32e4b729ed6c36dfbfd4a18
+#: 3ace159d74a54914b9213125a8c86330
 msgid "Versioning & algorithm tracking"
 msgstr ""
 
 #: ../../about/versioning.md:3
-#: c9466d88dcea40e38bb71168cb702364
+#: 2e74e95f73b14967b86a68197032a16e
 msgid "parsecore follows [Semantic Versioning](https://semver.org/)."
 msgstr ""
 
 #: ../../about/versioning.md:5
-#: 68999dab88c94ef1be59a0bd9f0185eb
+#: cc3a34106cc94f6e88275ea63b3384c6
 msgid "Algorithm updates"
 msgstr ""
 
 #: ../../about/versioning.md:7
-#: 0d6d87a00cd245bfa9866d0db21804c0
+#: 9cc7e1341cdb48ebb84e14ed4572d851
 msgid "parsecore tracks the **official osu! difficulty and performance algorithm**. When ppy deploys a pp/star-rating rework, parsecore is updated to match the new deploy and the parity suite is re-run to confirm bit-exactness."
 msgstr ""
 
 #: ../../about/versioning.md:11
-#: 4678a314fa9d47849f5cef8b9e6966cf
+#: 32c4a56c86c344ae82f0cf01d477e7a2
 msgid "The current target is the **2026 Q2 rework**, osu! deploy **`2026.702.1`**."
 msgstr ""
 
 #: ../../about/versioning.md:14
-#: cc2ca82bbd0d4b65a914249d6ac24993
+#: 9c10388c7a9a4180825fbb9a64ea05f0
 msgid "Because parsecore follows the official algorithm directly, its values can differ from third-party calculators or the osu! website in the days after a rework those are often still recalculating or running an older algorithm. Values for newly set in-game scores are the source of truth."
 msgstr ""
 
 #: ../../about/versioning.md:20
-#: 47ce9afd1f564714bdd4ce404e9cd5b5
+#: 72a6460a9f004883ba3490b4aaf86f32
 msgid "Python support"
 msgstr ""
 
 #: ../../about/versioning.md:22
-#: 7c285fd7ae3d47edb7c843b8647c7aea
+#: 2749412303ef49c1816242035c167e95
 msgid "parsecore supports **Python 3.10, 3.11, 3.12 and 3.13**."
 msgstr ""
 
