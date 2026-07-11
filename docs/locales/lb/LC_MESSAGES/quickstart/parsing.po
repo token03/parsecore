@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 14:04+0000\n"
-"PO-Revision-Date: 2026-07-11 14:05\n"
+"POT-Creation-Date: 2026-07-11 14:07+0000\n"
+"PO-Revision-Date: 2026-07-11 14:08\n"
 "Last-Translator: \n"
 "Language-Team: Luxembourgish\n"
 "MIME-Version: 1.0\n"
@@ -18,32 +18,32 @@ msgstr ""
 "Language: lb_LU\n"
 
 #: ../../quickstart/parsing.md:1
-#: 8fda40337def4f48a9a4368bc9f6d501
+#: 5b921cb2bc1b4c42b3ec1c5c5daeda8b
 msgid "Beatmap parsing"
 msgstr ""
 
 #: ../../quickstart/parsing.md:3
-#: 6bcf91d591fa424c94bef87e3c14a943
+#: 85d56061abb643eb84e53eebf4bbfe66
 msgid "Parse any `.osu` file into a fully typed {class}`~parsecore.Beatmap.beatmap.Beatmap`."
 msgstr ""
 
 #: ../../quickstart/parsing.md:22
-#: 38c9984874264d75aa34649f23ff9487
+#: f09ae90f29b64800be44dafdd4ed28e5
 msgid "Every section is parsed: **General**, **Metadata**, **Difficulty**, **Events**, **Timing Points**, **Hit Objects**, **Colours** and **Editor**. Slider paths are sampled exactly like osu!-stable (bezier, catmull and perfect-circle segments), so distances and tick placement match the game."
 msgstr ""
 
 #: ../../quickstart/parsing.md:27
-#: 11a3119d0a8c436d994b3294da125c6c
+#: 5d357fc4bbe54580b04c7ac9ca45395b
 msgid "Re-encoding"
 msgstr ""
 
 #: ../../quickstart/parsing.md:29
-#: 1f74790945a444beb7a13cd451593dcc
+#: 39687b0eaaea4b5096eae94f5c1262df
 msgid "A parsed beatmap can be written back out to `.osu` text:"
 msgstr ""
 
 #: ../../quickstart/parsing.md:36
-#: 28b2e61543bf4fceb96b8b2f5d7d674e
+#: b87cdd96c6b1472d9cc1aab0edd987aa
 msgid "See the {doc}`../api/beatmap` reference for every field."
 msgstr ""
 
