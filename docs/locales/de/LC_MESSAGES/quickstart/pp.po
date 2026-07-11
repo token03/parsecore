@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-10 20:17+0000\n"
-"PO-Revision-Date: 2026-07-10 20:17\n"
+"POT-Creation-Date: 2026-07-11 11:10+0000\n"
+"PO-Revision-Date: 2026-07-11 11:11\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "MIME-Version: 1.0\n"
@@ -18,37 +18,37 @@ msgstr ""
 "Language: de_DE\n"
 
 #: ../../quickstart/pp.md:1
-#: c9a2ac48c637404e868c566dfa7e9fbe
+#: 5c0031cb42d0443eb1e4f7023915c170
 msgid "Performance points (pp)"
 msgstr ""
 
 #: ../../quickstart/pp.md:3
-#: 6d9ad3c573204c64a34e8877a2bc8418
+#: 45c3b95b49524167b63be96996f6ab37
 msgid "Use {class}`~parsecore.Performance.api.Performance` to compute pp. Unset hit counts are generated automatically from the accuracy and miss count."
 msgstr ""
 
 #: ../../quickstart/pp.md:6
-#: ba521fcd2ba2487d9404ca8305e5e6c6
+#: 8f64e2fa04014282a7283544f21e3861
 msgid "From accuracy"
 msgstr ""
 
 #: ../../quickstart/pp.md:17
-#: 4c9cf79ff63c440c827e7a85ce1a372f
+#: dde5b11816714c3795a1c29a1bf1a398
 msgid "From an explicit lazer score"
 msgstr ""
 
 #: ../../quickstart/pp.md:32
-#: 419a6917233341b19b0a861b64caa958
+#: cd11df52f7aa4fb7b1a996f9e6982939
 msgid "From an osu!(stable) / classic score"
 msgstr ""
 
 #: ../../quickstart/pp.md:34
-#: 280db152e535455695ebdb25734a837a
+#: e3b502dbc713477d94d5492e24d7eb17
 msgid "Stable scores estimate slider breaks from the legacy total score:"
 msgstr ""
 
 #: ../../quickstart/pp.md:49
-#: 424cc11245994df79e4530a481493063
+#: 239e531220da4e33b1a06e5b5c044fe3
 msgid "The difference between the two scoring systems is explained in {doc}`../guide/lazer-vs-stable`."
 msgstr ""
 
