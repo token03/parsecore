@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 14:04+0000\n"
-"PO-Revision-Date: 2026-07-11 14:05\n"
+"POT-Creation-Date: 2026-07-11 14:07+0000\n"
+"PO-Revision-Date: 2026-07-11 14:08\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "MIME-Version: 1.0\n"
@@ -18,77 +18,77 @@ msgstr ""
 "Language: fr_FR\n"
 
 #: ../../about/changelog.md:1
-#: af1afc985f3e44ddaaa05cc4d59f870d
+#: 3738e10c72b04d7fb22b51260a5395c1
 msgid "Changelog"
 msgstr ""
 
 #: ../../about/changelog.md:3
-#: 3c5bf33df2f74fda8c29f9bdd1268874
+#: 411832e0ce5b44bea757ccdfaf1c6d4a
 msgid "All notable changes to parsecore are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/)."
 msgstr ""
 
 #: ../../about/changelog.md:6
-#: 57e207e11724453f8f789b64cad2e97e
+#: ab9b21558e344aeebbfc6ae34a2dbae6
 msgid "1.0.1"
 msgstr ""
 
 #: ../../about/changelog.md:8
-#: c3ae14bb0f794226b82b7a9e02d4614a
+#: 761a880a3d71473b97115cd932bafb4b
 msgid "Fixed"
 msgstr ""
 
 #: ../../about/changelog.md:10
-#: af144c71bf2e4d879496028a0be22b8a
+#: 246c21cf55474a7a88bc8e6070b74476
 msgid "Repaired the `parsecore.Mods` package import (`game_mod_intermode` had shipped a duplicate module, which raised `ImportError`)."
 msgstr ""
 
 #: ../../about/changelog.md:13
-#: c23b5b1f17cf4a9fae34a54cdad62310
+#: 289d5d691e8b44a4a189ffe1cb364ba6
 msgid "Documentation"
 msgstr ""
 
 #: ../../about/changelog.md:15
-#: 32540dc69b2b45829da7bd90e20a4c3b
+#: 670b33cd40af4568bfc3fbca0828c37b
 msgid "Added Google-style docstrings across the entire package (100% coverage)."
 msgstr ""
 
 #: ../../about/changelog.md:16
-#: 24a8ff3c3000498eaa7c5858e0ba4233
+#: 4be7f7bbae6e409481e05f78129fde5c
 msgid "Added this Sphinx documentation site."
 msgstr ""
 
 #: ../../about/changelog.md:18
-#: e0854e26a62843d28804c88a26906cfd
+#: c5338b02bc454450bcba81cad0684c96
 msgid "1.0.0"
 msgstr ""
 
 #: ../../about/changelog.md:20
-#: 3cac7b6af224420db3caec07d42c7a5a
+#: b37bf7beed5d4af0a3b46655384722ca
 msgid "Initial public release."
 msgstr ""
 
 #: ../../about/changelog.md:22
-#: bcef96ee19534889956e90a5cc2f7b9b
+#: f6cc8055d25f4c83a1cc40346840caf4
 msgid "`.osu` beatmap parsing (all sections) and re-encoding."
 msgstr ""
 
 #: ../../about/changelog.md:23
-#: 590bacf547714657987b86fb5f3283c2
+#: 893f5d35272a4d49ba2ee12285300f1e
 msgid "Complete mod system for all four rulesets, with legacy and intermode representations."
 msgstr ""
 
 #: ../../about/changelog.md:24
-#: 4bf8337a35e64d1d972311b3f3edbd75
+#: 111767ffd2f341b5a27b9b0c2453c7d8
 msgid "Star rating and pp for osu!, osu!taiko, osu!catch and osu!mania, implementing the **2026 Q2** rework and verified bit-exact against the official implementation."
 msgstr ""
 
 #: ../../about/changelog.md:26
-#: db9a8b6c9db94962b232808686dd2b5d
+#: 60739f38efa24bbcbde8c44b21e41198
 msgid "Faithful osu! → taiko / catch / mania converts."
 msgstr ""
 
 #: ../../about/changelog.md:27
-#: b86eef63abab4fb98e7cf9b4d83e8d24
+#: bf5e856edae648518d4c56f888cd2e03
 msgid "Lazer and stable scoring support."
 msgstr ""
 

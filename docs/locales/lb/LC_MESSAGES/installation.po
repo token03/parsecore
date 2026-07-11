@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 14:04+0000\n"
-"PO-Revision-Date: 2026-07-11 14:05\n"
+"POT-Creation-Date: 2026-07-11 14:07+0000\n"
+"PO-Revision-Date: 2026-07-11 14:08\n"
 "Last-Translator: \n"
 "Language-Team: Luxembourgish\n"
 "MIME-Version: 1.0\n"
@@ -18,37 +18,37 @@ msgstr ""
 "Language: lb_LU\n"
 
 #: ../../installation.md:1
-#: d8c47e9e1f2b4800aa3324711ab239f3
+#: e929c617d2ba43828e70e427a0c03942
 msgid "Installation"
 msgstr "Installatioun"
 
 #: ../../installation.md:3
-#: 744a3ce881af493c9535de5d5ebc2e8b
+#: e40302ae4a4f44f49fd263aa073f0631
 msgid "parsecore is published on [PyPI](https://pypi.org/project/parsecore/) and requires **Python 3.10+**."
 msgstr "parsecore gëtt op [PyPI](https://pypi.org/project/parsecore/) verëffentlecht an erfuerdert **Python 3.10+**."
 
 #: ../../installation.md:6
-#: 271823a9a37a4dcb99d4ecca2abc34ae
+#: ab0ac0b9bdb54739bfd6151b9d09396d
 msgid "pip"
 msgstr "pip"
 
 #: ../../installation.md:12
-#: 26441672f5fd453bbd304d162a1745c5
+#: 7260c79c883d47fdad43a5729c2ebd24
 msgid "uv"
 msgstr "uv"
 
 #: ../../installation.md:18
-#: 87c281ee06444a38a802a0fa6808f7bd
+#: 6f30414bcfd94cc787ec0136f951e84d
 msgid "Verify"
 msgstr "Iwwerpréiwen"
 
 #: ../../installation.md:28
-#: 400d5b83aac54593b8bf485f4a909d79
+#: 020944d159cc4b6a9a6e64fba4fd1404
 msgid "If that prints a star rating, you're ready head to the {doc}`quickstart/pp`."
 msgstr "Wann dat e Star-Rating ausgëtt, sidd Dir prett a kënnt op {doc}`quickstart/pp` weidergoen."
 
 #: ../../installation.md:31
-#: 331998eab31645faa4cb01c5093f5dbc
+#: 89691bcb7f104454b8ee87d18940f427
 msgid "After a new osu! pp rework deploys, third-party tools and websites can lag behind for a while. parsecore tracks the **official in-game algorithm**, so make sure you're on the latest version to get current values."
 msgstr "Nodeems en neien osu!-pp-Rework verëffentlecht gouf, kënnen Tools a Websäite vun Drëttubidder eng Zäit hannendru leien. parsecore verfollegt den **offiziellen Algorithmus am Spill**, dofir vergewëssert Iech, datt Dir déi neist Versioun benotzt, fir aktuell Wäerter ze kréien."
 
