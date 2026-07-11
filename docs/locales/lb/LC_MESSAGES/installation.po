@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 11:10+0000\n"
-"PO-Revision-Date: 2026-07-11 11:11\n"
+"POT-Creation-Date: 2026-07-11 14:04+0000\n"
+"PO-Revision-Date: 2026-07-11 14:05\n"
 "Last-Translator: \n"
 "Language-Team: Luxembourgish\n"
 "MIME-Version: 1.0\n"
@@ -18,37 +18,37 @@ msgstr ""
 "Language: lb_LU\n"
 
 #: ../../installation.md:1
-#: 83ace4daa41c4c04a3babf9a44b851de
+#: d8c47e9e1f2b4800aa3324711ab239f3
 msgid "Installation"
-msgstr ""
+msgstr "Installatioun"
 
 #: ../../installation.md:3
-#: 50845e9f46c9497ea748f0e94464a726
+#: 744a3ce881af493c9535de5d5ebc2e8b
 msgid "parsecore is published on [PyPI](https://pypi.org/project/parsecore/) and requires **Python 3.10+**."
-msgstr ""
+msgstr "parsecore gëtt op [PyPI](https://pypi.org/project/parsecore/) verëffentlecht an erfuerdert **Python 3.10+**."
 
 #: ../../installation.md:6
-#: f27a4d604ed14ff697c82ea1f9b14809
+#: 271823a9a37a4dcb99d4ecca2abc34ae
 msgid "pip"
-msgstr ""
+msgstr "pip"
 
 #: ../../installation.md:12
-#: 917b4267d50e49e7b71750d6e00d1eb5
+#: 26441672f5fd453bbd304d162a1745c5
 msgid "uv"
-msgstr ""
+msgstr "uv"
 
 #: ../../installation.md:18
-#: 96d68c0734a641978c6dbad040e923e9
+#: 87c281ee06444a38a802a0fa6808f7bd
 msgid "Verify"
-msgstr ""
+msgstr "Iwwerpréiwen"
 
 #: ../../installation.md:28
-#: f7eddf7ef55b429fac19d0f292b5779b
+#: 400d5b83aac54593b8bf485f4a909d79
 msgid "If that prints a star rating, you're ready head to the {doc}`quickstart/pp`."
-msgstr ""
+msgstr "Wann dat e Star-Rating ausgëtt, sidd Dir prett a kënnt op {doc}`quickstart/pp` weidergoen."
 
 #: ../../installation.md:31
-#: f3aacb5a321d4c3bb48066baed498846
+#: 331998eab31645faa4cb01c5093f5dbc
 msgid "After a new osu! pp rework deploys, third-party tools and websites can lag behind for a while. parsecore tracks the **official in-game algorithm**, so make sure you're on the latest version to get current values."
-msgstr ""
+msgstr "Nodeems en neien osu!-pp-Rework verëffentlecht gouf, kënnen Tools a Websäite vun Drëttubidder eng Zäit hannendru leien. parsecore verfollegt den **offiziellen Algorithmus am Spill**, dofir vergewëssert Iech, datt Dir déi neist Versioun benotzt, fir aktuell Wäerter ze kréien."
 
