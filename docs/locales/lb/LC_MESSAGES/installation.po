@@ -1,0 +1,54 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: parsecore\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-10 20:17+0000\n"
+"PO-Revision-Date: 2026-07-10 20:17\n"
+"Last-Translator: \n"
+"Language-Team: Luxembourgish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: parsecore\n"
+"X-Crowdin-Project-ID: 912087\n"
+"X-Crowdin-Language: lb\n"
+"X-Crowdin-File: /docs/_build/gettext/installation.pot\n"
+"X-Crowdin-File-ID: 21\n"
+"Language: lb_LU\n"
+
+#: ../../installation.md:1
+#: 3ba4dcc1263a410cbb7699ab89a14e6c
+msgid "Installation"
+msgstr ""
+
+#: ../../installation.md:3
+#: d34553afe3e346acb2bda306f82c4909
+msgid "parsecore is published on [PyPI](https://pypi.org/project/parsecore/) and requires **Python 3.10+**."
+msgstr ""
+
+#: ../../installation.md:6
+#: f11247c9033d4c6e97e1434f43386c7b
+msgid "pip"
+msgstr ""
+
+#: ../../installation.md:12
+#: 3d4edca765fc42cc9705c451277a50e8
+msgid "uv"
+msgstr ""
+
+#: ../../installation.md:18
+#: 628a415aba13423e995adb642d34a182
+msgid "Verify"
+msgstr ""
+
+#: ../../installation.md:28
+#: dbc8280d12044c4f8aee78df8742a39f
+msgid "If that prints a star rating, you're ready head to the {doc}`quickstart/pp`."
+msgstr ""
+
+#: ../../installation.md:31
+#: 169b21f87da84cc2a292eaad74d80449
+msgid "After a new osu! pp rework deploys, third-party tools and websites can lag behind for a while. parsecore tracks the **official in-game algorithm**, so make sure you're on the latest version to get current values."
+msgstr ""
+

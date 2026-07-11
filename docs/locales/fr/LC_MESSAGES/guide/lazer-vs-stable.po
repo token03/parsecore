@@ -1,0 +1,59 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: parsecore\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-10 20:17+0000\n"
+"PO-Revision-Date: 2026-07-10 20:17\n"
+"Last-Translator: \n"
+"Language-Team: French\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Crowdin-Project: parsecore\n"
+"X-Crowdin-Project-ID: 912087\n"
+"X-Crowdin-Language: fr\n"
+"X-Crowdin-File: /docs/_build/gettext/guide/lazer-vs-stable.pot\n"
+"X-Crowdin-File-ID: 31\n"
+"Language: fr_FR\n"
+
+#: ../../guide/lazer-vs-stable.md:1
+#: f2b75a9558dd4762ac333bd2c3d21b2a
+msgid "Lazer vs stable scoring"
+msgstr ""
+
+#: ../../guide/lazer-vs-stable.md:3
+#: ad6976b477ed4d8bb5d77eaba93ae682
+msgid "osu! has two scoring systems, and pp is computed slightly differently for each. parsecore supports both via {meth}`~parsecore.Performance.api.Performance.lazer`."
+msgstr ""
+
+#: ../../guide/lazer-vs-stable.md:6
+#: 4837a2d012114e89a2275d319cb99556
+msgid "osu!lazer"
+msgstr ""
+
+#: ../../guide/lazer-vs-stable.md:8
+#: d4fbb9c0d84a4334b7ecaead53f7779b
+msgid "Lazer scores carry richer statistics slider **tail hits** and **large ticks** are judged individually. Provide them for the most accurate result:"
+msgstr ""
+
+#: ../../guide/lazer-vs-stable.md:23
+#: 41e6e5790d7d488c85b392f22343d34a
+msgid "osu!(stable) / classic"
+msgstr ""
+
+#: ../../guide/lazer-vs-stable.md:25
+#: f433cb6ddd58478d8bedf41ebc0a47bb
+msgid "Stable scores don't expose slider-tail or large-tick judgements, so misses and slider breaks are **estimated**. Passing the legacy total score enables the score-based miss estimator (without it, top plays can be off by a couple of percent):"
+msgstr ""
+
+#: ../../guide/lazer-vs-stable.md:40
+#: 2d8edd4fee1340a5ad5431237321fa8a
+msgid "Which should I use?"
+msgstr ""
+
+#: ../../guide/lazer-vs-stable.md:42
+#: d3d6e56268094d109364bcbd5a2fe3ee
+msgid "Use whichever matches the score you're evaluating. The osu! API tells you which client a score came from; feed lazer statistics for lazer scores and the legacy total score for stable scores."
+msgstr ""
+

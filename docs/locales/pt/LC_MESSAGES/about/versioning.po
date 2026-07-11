@@ -1,0 +1,59 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: parsecore\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-10 20:17+0000\n"
+"PO-Revision-Date: 2026-07-10 20:17\n"
+"Last-Translator: \n"
+"Language-Team: Portuguese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: parsecore\n"
+"X-Crowdin-Project-ID: 912087\n"
+"X-Crowdin-Language: pt-PT\n"
+"X-Crowdin-File: /docs/_build/gettext/about/versioning.pot\n"
+"X-Crowdin-File-ID: 33\n"
+"Language: pt_PT\n"
+
+#: ../../about/versioning.md:1
+#: d34688b2b0484d7f9ca348b0c9549341
+msgid "Versioning & algorithm tracking"
+msgstr ""
+
+#: ../../about/versioning.md:3
+#: 5e2c624b07e24c49b277695f441be1ad
+msgid "parsecore follows [Semantic Versioning](https://semver.org/)."
+msgstr ""
+
+#: ../../about/versioning.md:5
+#: 4ae00fe574e34a58aadd3ce437204643
+msgid "Algorithm updates"
+msgstr ""
+
+#: ../../about/versioning.md:7
+#: f0be189c4c184ba28d7e89f429ba3166
+msgid "parsecore tracks the **official osu! difficulty and performance algorithm**. When ppy deploys a pp/star-rating rework, parsecore is updated to match the new deploy and the parity suite is re-run to confirm bit-exactness."
+msgstr ""
+
+#: ../../about/versioning.md:11
+#: 5e73222c3b274b889c8038ee03d18c2b
+msgid "The current target is the **2026 Q2 rework**, osu! deploy **`2026.702.1`**."
+msgstr ""
+
+#: ../../about/versioning.md:14
+#: 1b8934d625f64fc4a6d5c845af24f71b
+msgid "Because parsecore follows the official algorithm directly, its values can differ from third-party calculators or the osu! website in the days after a rework those are often still recalculating or running an older algorithm. Values for newly set in-game scores are the source of truth."
+msgstr ""
+
+#: ../../about/versioning.md:20
+#: 663b6a6d266145208523a1acd2533ce1
+msgid "Python support"
+msgstr ""
+
+#: ../../about/versioning.md:22
+#: 85e73199d0e0463b9ad73fb339a20979
+msgid "parsecore supports **Python 3.10, 3.11, 3.12 and 3.13**."
+msgstr ""
+

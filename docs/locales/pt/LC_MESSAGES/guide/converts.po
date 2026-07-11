@@ -1,0 +1,64 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: parsecore\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-10 20:17+0000\n"
+"PO-Revision-Date: 2026-07-10 20:17\n"
+"Last-Translator: \n"
+"Language-Team: Portuguese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: parsecore\n"
+"X-Crowdin-Project-ID: 912087\n"
+"X-Crowdin-Language: pt-PT\n"
+"X-Crowdin-File: /docs/_build/gettext/guide/converts.pot\n"
+"X-Crowdin-File-ID: 15\n"
+"Language: pt_PT\n"
+
+#: ../../guide/converts.md:1
+#: 5a145d3391f742ac89e30481db8415b5
+msgid "Converts in depth"
+msgstr ""
+
+#: ../../guide/converts.md:3
+#: e58d2de272c443a38533766ce1370517
+msgid "An osu! beatmap can be played in another ruleset. parsecore reproduces each conversion exactly like osu!, so converted star ratings and pp match the game."
+msgstr ""
+
+#: ../../guide/converts.md:6
+#: 9ae9db04eefe4a3e9e6aa2671987f471
+msgid "osu! → taiko"
+msgstr ""
+
+#: ../../guide/converts.md:8
+#: beb214fb206b46a58a4dd6815e6edcae
+msgid "Circles become don/kat notes (decided by hit sound), and sliders are either kept as drum rolls or split into a run of hit circles following osu!-stable's tick-spacing and velocity rules. Scroll-speed effect points are inserted so the new **Reading** skill sees the right velocities."
+msgstr ""
+
+#: ../../guide/converts.md:13
+#: 147330d981d14e5483d6b98d9ece5d54
+msgid "osu! → catch"
+msgstr ""
+
+#: ../../guide/converts.md:15
+#: d8dc8ad878024835a443e5ebb2727010
+msgid "Objects become fruits, droplets and juice streams. Hyperdashes are detected, and the legacy RNG is consumed for droplet jitter and banana showers exactly as in the game."
+msgstr ""
+
+#: ../../guide/converts.md:18
+#: b349f6b238c24dbea19f1d21b3d4939b
+msgid "osu! → mania"
+msgstr ""
+
+#: ../../guide/converts.md:20
+#: 76ef7302a1904968884850f13e9c4155
+msgid "This is the most involved conversion: the full **legacy pattern generator** decides how many columns the map uses and places notes/hold notes using osu!stable's RNG. The generated pattern and therefore the star rating and pp is bit-identical to osu!."
+msgstr ""
+
+#: ../../guide/converts.md:34
+#: 67a702b385d74ee9988c2c2095f05baa
+msgid "Native maps of each ruleset are, of course, calculated directly without conversion."
+msgstr ""
+
