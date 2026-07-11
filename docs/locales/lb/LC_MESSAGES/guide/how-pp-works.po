@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 14:07+0000\n"
-"PO-Revision-Date: 2026-07-11 14:08\n"
+"POT-Creation-Date: 2026-07-11 19:08+0000\n"
+"PO-Revision-Date: 2026-07-11 19:08\n"
 "Last-Translator: \n"
 "Language-Team: Luxembourgish\n"
 "MIME-Version: 1.0\n"
@@ -18,77 +18,77 @@ msgstr ""
 "Language: lb_LU\n"
 
 #: ../../guide/how-pp-works.md:1
-#: 4e8bf4e0c2694f5c8bd6eefea7c5476c
+#: 1662df8ea70f4c57b0594e80a048596e
 msgid "How the pp calculation works"
 msgstr ""
 
 #: ../../guide/how-pp-works.md:3
-#: d71ebcc78b5e4a089906aee717d61a71
+#: 6f132e1614b6441b9bb045c0fcd6ae0e
 msgid "`parsecore.Performance` is a pure-Python port of the **official osu! difficulty and performance algorithms** (ppy/osu, deploy `2026.702.1`) not of a third-party reimplementation."
 msgstr ""
 
 #: ../../guide/how-pp-works.md:7
-#: a4ade09bdea5414eae2a5f5b564371c3
+#: f620d033c7574b21823f5155a35416ee
 msgid "The pipeline"
 msgstr ""
 
 #: ../../guide/how-pp-works.md:10
-#: 895f8ca402364891bf63bef0753bb111
+#: c0796088fea1417d9f53cc0155963b0d
 msgid "**Parse** the ``.osu`` file is decoded into hit objects and timing/difficulty/effect points with osu!-faithful float semantics (positions and curve math run in 32-bit floats, exactly like the game client)."
 msgstr ""
 
 #: ../../guide/how-pp-works.md:13
-#: db4da26759e348d29c2e83b6c9ece57c
+#: 323da63cc10447f9b7caa62e19c29893
 msgid "**Convert** if the target ruleset differs from the map's native mode, the map is converted first (taiko drum-roll splitting with scroll-speed effect points, catch mode flag, mania legacy pattern generator with osu!stable RNG)."
 msgstr ""
 
 #: ../../guide/how-pp-works.md:16
-#: de011ee0b8974873a45549a21fe3790a
+#: 614ba977a28e419189244bf8f4509a51
 msgid "**Preprocess** per-ruleset difficulty objects are built (distances, angles, rhythm groupings, effective BPM, ...)."
 msgstr ""
 
 #: ../../guide/how-pp-works.md:18
-#: bb4c7d6225eb41cab6f9b4c1b00fe7ff
+#: de0ba43eedbe4a849755569b6f5afed6
 msgid "**Skills** each ruleset evaluates its skills and aggregates them into the star rating:"
 msgstr ""
 
 #: ../../guide/how-pp-works.md:21
-#: 9d2d5f266d7443c794efd8c4e17e90f4
+#: 4dad16fdcc5d4dccb7337d30ab3b56a7
 msgid "osu!: Aim (snap/flow), Speed, Reading, Flashlight"
 msgstr ""
 
 #: ../../guide/how-pp-works.md:22
-#: 8042dec0b8eb4d48b34106c588985faa
+#: 443473e366fd4b5282b5d50c48127efd
 msgid "taiko: Rhythm, Reading, Colour, Stamina"
 msgstr ""
 
 #: ../../guide/how-pp-works.md:23
-#: 0a788d8b16b74360a83a29cf265097e6
+#: 922e88215c0a455cb2e1c52788eba169
 msgid "catch: Movement"
 msgstr ""
 
 #: ../../guide/how-pp-works.md:24
-#: 74feb734086c4cb798e0403f47c79fb3
+#: af72128c224d4384934573aeedd89d39
 msgid "mania: Strain (individual + overall)"
 msgstr ""
 
 #: ../../guide/how-pp-works.md:26
-#: cdd035df41ee4ee6aff9e7d203930e89
+#: adc0e43889c54e93a21323a2390d8737
 msgid "**Performance** the score state (given explicitly or generated from accuracy and miss count) is combined with the difficulty attributes into pp, including miss penalties, slider-break estimation, and the classic/lazer scoring differences."
 msgstr ""
 
 #: ../../guide/how-pp-works.md:31
-#: 08c63ae87a5349358e6efabec89611e7
+#: 573c6301fc894d78a49dfa837a206473
 msgid "What's new in the 2026 Q2 rework"
 msgstr ""
 
 #: ../../guide/how-pp-works.md:33
-#: a48600c1f9b647d481cd5e635043e613
+#: cc7f29a864db4433bc938902e7965a58
 msgid "parsecore implements the July 2026 rework: the AR/HD bonuses were replaced by a dedicated **Reading** skill, aim was split into **Snap** and **Flow** components, speed pp became **deviation-based**, taiko rhythm gained a long-gap penalty, and catch received a linear-spacing nerf."
 msgstr ""
 
 #: ../../guide/how-pp-works.md:38
-#: f054fdfddfd94c31933d362b3c60122f
+#: 258edcb6f08c4d8d8e89ddf52b2309f4
 msgid "Every step reproduces the C# reference **including its floating-point quirks**, which is what makes the results {doc}`bit-exact <bit-exactness>` rather than merely close."
 msgstr ""
 

@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 14:07+0000\n"
-"PO-Revision-Date: 2026-07-11 14:08\n"
+"POT-Creation-Date: 2026-07-11 19:08+0000\n"
+"PO-Revision-Date: 2026-07-11 19:08\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "MIME-Version: 1.0\n"
@@ -38,142 +38,142 @@ msgid "About"
 msgstr ""
 
 #: ../../index.md:1
-#: 1803c5bfdeaa4947b87fc96547783ee6
+#: 337c32d30b4e497abcb6fbc458574ee8
 msgid "Welcome to parsecore"
 msgstr ""
 
 #: ../../index.md:3
-#: cfad00621b6c4a19a357cd3c3593a88f
+#: 7e49cb839fa64b6b95b3587bdc225a0e
 msgid "parsecore is a modern, easy to use, feature-rich Python library for osu! beatmap parsing, mod handling, and performance-point calculation."
 msgstr ""
 
 #: ../../index.md:6
-#: 0b862075b0be44878875d079baf9cde8
+#: 1385c8fcec6440a199a42a1445e466d5
 msgid "**Features:**"
 msgstr ""
 
 #: ../../index.md:8
-#: 06c98f9aaf2c42bd9a3ca7225e5d7f9d
+#: 902bcd45c73e482185acdf39c9dcbd50
 msgid "Bit-exact with the official osu! implementation — currently the **2026 Q2 pp/star-rating rework** (`2026.702.1`)"
 msgstr ""
 
 #: ../../index.md:10
-#: af4a123d064d45168c18acf7b28ac7a2
+#: 311646c2ad7f4127943f802e0746d437
 msgid "Star rating and performance points for **all four rulesets** (osu!, osu!taiko, osu!catch, osu!mania)"
 msgstr ""
 
 #: ../../index.md:12
-#: feef74d47c0348e68733313f7d3f6590
+#: 86f04a13734a41e19bdbcb1232910bbc
 msgid "Faithful osu! → taiko / catch / mania converts"
 msgstr ""
 
 #: ../../index.md:13
-#: 151fe412c8344b7b836c7fd9e55a7645
+#: 74414bd21e744d62ac4b4366bebf3807
 msgid "Complete mod model — lazer and legacy mods, acronyms, settings"
 msgstr ""
 
 #: ../../index.md:14
-#: cc213ef8d1af40a7b9612018e167847a
+#: ae3ad7e368e4412f8919299523db6b2e
 msgid "Fully typed, mypy-checked, dependency-light pure-Python core"
 msgstr ""
 
 #: ../../index.md:16
-#: f394f6d162ec47688feb2d6176247d76
+#: 69ec2ecf45924622b620a3671d7a5f8c
 msgid "Getting started"
 msgstr ""
 
 #: ../../index.md:18
-#: 4a71a350e86d4a2d80f21ccbffe291be
+#: 82ccd7128e9b49fb882c8d7c2d79e07b
 msgid "Is this your first time using the library? This is the place to get started!"
 msgstr ""
 
 #: ../../index.md:20
-#: 07dd542e9830428eb888ef566165c80d
+#: ff2dfeeb6fb34dfc9eacdb3042a230d8
 msgid "**First steps:** [Installation](installation) | [Quickstart](quickstart/pp)"
 msgstr ""
 
 #: ../../index.md:21
-#: a0c8459747f84290820c79bdb7b2bd7b
+#: 38f7e404c9d74c4985407795f9b4be2b
 msgid "**Working with beatmaps:** [Parsing](quickstart/parsing) | [Star rating](quickstart/star-rating) | [Performance points](quickstart/pp)"
 msgstr ""
 
 #: ../../index.md:23
-#: 3f116c6582ad420b86bce78b52e02ce0
+#: a70ece07e18f4c6db367f3cdff821230
 msgid "**Going further:** [Converts](quickstart/converts) | [Mods](quickstart/mods)"
 msgstr ""
 
 #: ../../index.md:25
-#: b811a87c276042ae9ef17d7d27aa16b8
+#: 84f97db2704f465f9df1f6db2764b07c
 msgid "Getting help"
 msgstr ""
 
 #: ../../index.md:27
-#: f07102ee61144ab4b466c9f4b0dc778a
+#: d23df5aa252d48b39ae14ed0e1620010
 msgid "If you're having trouble with something, these resources might help."
 msgstr ""
 
 #: ../../index.md:29
-#: d61d48d45dab45f48bc16a9d04994337
+#: 0ed02635e3c4401eb7b634d119dbe3ce
 msgid "Read the [guide to how pp calculation works](guide/how-pp-works)."
 msgstr ""
 
 #: ../../index.md:30
-#: e033e9c5c1674a05a6df829c4368cb31
+#: da9ae600b2bd4857ad3740797339a02b
 msgid "Wondering why results differ from other tools? See [Bit-exactness & parity](guide/bit-exactness) and [Lazer vs stable scoring](guide/lazer-vs-stable)."
 msgstr ""
 
 #: ../../index.md:33
-#: 35e56c72dbe74b75ac0a147646e38105
+#: 05903595b2cf415789c79a99ea9524e6
 msgid "Try the search, or browse the API reference below."
 msgstr ""
 
 #: ../../index.md:34
-#: c4443d66927749a8ba57133403ecd91e
+#: 19b1327749d54d129590b4336ca76481
 msgid "Report bugs in the [issue tracker](https://github.com/O-Lib/parsecore/issues)."
 msgstr ""
 
 #: ../../index.md:36
-#: e5ea3c9f809942e1869783c61c0616f9
+#: bc3219263c2d481b8b83fa14b670b0f4
 msgid "Manuals"
 msgstr ""
 
 #: ../../index.md:38
-#: dee14b2c329e47e0ba72b433cef12381
+#: 0beffed222044e9a85b5e7ee9a1bf1d1
 msgid "These pages go into great detail about everything the library can do."
 msgstr ""
 
 #: ../../index.md:40
-#: 5f32b4746d1f4a3d88a01ed046a31587
+#: aa59f20b190e4011b01a2e6688be46f3
 msgid "[Beatmap API](api/beatmap) — parsing, sections, hit objects, encoding"
 msgstr ""
 
 #: ../../index.md:41
-#: 3f7e0859efcb4ad9b812b29b0bb5567d
+#: 60d5891c36054bf29b9d4a029ff7f080
 msgid "[Mods API](api/mods) — mods, acronyms, game modes"
 msgstr ""
 
 #: ../../index.md:42
-#: 0ebc287c0e594839a1bb1681a9acbdbd
+#: 908083451df64236a86dc7be76a9caa7
 msgid "[Performance API](api/performance) — difficulty and performance calculation"
 msgstr ""
 
 #: ../../index.md:44
-#: fa3b59e4c55c4045a516df80c7e6bf9f
+#: 1b0e2622a5dc4fc08ff22366c4058593
 msgid "Meta"
 msgstr ""
 
 #: ../../index.md:46
-#: 804d35c9f1fb4f1098f2f7d10a62e792
+#: 630fd922a96d43ae9cf4a83470274081
 msgid "If you're looking for something related to the project itself, it's here."
 msgstr ""
 
 #: ../../index.md:48
-#: 014a10bf5f424bf38a88ede9da638a37
+#: 6480b003bcda4cebb4615d11613cdb70
 msgid "[Versioning & algorithm tracking](about/versioning) — how parsecore follows osu! updates"
 msgstr ""
 
 #: ../../index.md:49
-#: 3a9e0a380ff44b5c9f83cdc1d33fe505
+#: cff5b065458547fcafb7f1b4ba60d3d3
 msgid "[Changelog](about/changelog) — the changelog for the library"
 msgstr ""
 
