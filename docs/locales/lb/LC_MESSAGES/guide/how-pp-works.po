@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: Luxembourgish\n"
 "MIME-Version: 1.0\n"
@@ -18,77 +18,77 @@ msgstr ""
 "Language: lb_LU\n"
 
 #: ../../guide/how-pp-works.md:1
-#: 1662df8ea70f4c57b0594e80a048596e
+#: 9522d227e4ba4973abf58cfff2f56c32
 msgid "How the pp calculation works"
-msgstr ""
+msgstr "Wéi d'pp-Berechnung funktionéiert"
 
 #: ../../guide/how-pp-works.md:3
-#: 6f132e1614b6441b9bb045c0fcd6ae0e
+#: d1df781af83b4afebf8b0a85d6dc4022
 msgid "`parsecore.Performance` is a pure-Python port of the **official osu! difficulty and performance algorithms** (ppy/osu, deploy `2026.702.1`) not of a third-party reimplementation."
-msgstr ""
+msgstr "`parsecore.Performance` ass eng Pure-Python-Portéierung vun den **offiziellen osu!-Algorithme fir d'Schwieregkeets- an d'Performanceberechnung** (ppy/osu, Deploy `2026.702.1`) an net vun enger Reimplementatioun vun engem Drëttubidder."
 
 #: ../../guide/how-pp-works.md:7
-#: f620d033c7574b21823f5155a35416ee
+#: d2e26d6631034ed2b2d1c4eeae19cf20
 msgid "The pipeline"
-msgstr ""
+msgstr "D'Veraarbechtungspipeline"
 
 #: ../../guide/how-pp-works.md:10
-#: c0796088fea1417d9f53cc0155963b0d
+#: 8af32ca548ee464d84403715e776631c
 msgid "**Parse** the ``.osu`` file is decoded into hit objects and timing/difficulty/effect points with osu!-faithful float semantics (positions and curve math run in 32-bit floats, exactly like the game client)."
-msgstr ""
+msgstr "**Parsing** D'`.osu`-Datei gëtt an Hit-Objeten an Timing-, Schwieregkeets- an Effektpunkte dekodéiert, mat enger Gleitkomma-Semantik, déi osu! genee entsprécht (Positiounen a Kureberechnunge ginn a 32-Bit-Gleitkommazuele gemaach, genee wéi am Spillclient)."
 
 #: ../../guide/how-pp-works.md:13
-#: 323da63cc10447f9b7caa62e19c29893
+#: a1993ed9d6ae4988b14fb4558c5cbcbc
 msgid "**Convert** if the target ruleset differs from the map's native mode, the map is converted first (taiko drum-roll splitting with scroll-speed effect points, catch mode flag, mania legacy pattern generator with osu!stable RNG)."
-msgstr ""
+msgstr "**Konvertéierung** Wann d'Zil-Ruleset vum native Modus vun der Map ofwäicht, gëtt d'Map fir d'éischt konvertéiert (Opdeele vun Taiko-Trommelwirbelen mat Scroll-Speed-Effektpunkten, Catch-Modus-Flag, Mania-Legacy-Pattern-Generator mam RNG vun osu!stable)."
 
 #: ../../guide/how-pp-works.md:16
-#: 614ba977a28e419189244bf8f4509a51
+#: e1e677eca8ae46b38b2e6a0ce06a9c72
 msgid "**Preprocess** per-ruleset difficulty objects are built (distances, angles, rhythm groupings, effective BPM, ...)."
-msgstr ""
+msgstr "**Virveraarbechtung** Fir all Ruleset gi Schwieregkeetsobjeten erstallt (Distanzen, Wénkelen, Rhythmusgruppéierungen, effektiv BPM, ...)."
 
 #: ../../guide/how-pp-works.md:18
-#: de0ba43eedbe4a849755569b6f5afed6
+#: 53cffa25af664948baf0d56db18b1131
 msgid "**Skills** each ruleset evaluates its skills and aggregates them into the star rating:"
-msgstr ""
+msgstr "**Skills** All Ruleset evaluéiert seng Skills a kombinéiert se zum Star-Rating:"
 
 #: ../../guide/how-pp-works.md:21
-#: 4dad16fdcc5d4dccb7337d30ab3b56a7
+#: fa6977345dbc4e3290e45d76eb4e8f48
 msgid "osu!: Aim (snap/flow), Speed, Reading, Flashlight"
-msgstr ""
+msgstr "osu!: Aim (Snap/Flow), Speed, Reading, Flashlight"
 
 #: ../../guide/how-pp-works.md:22
-#: 443473e366fd4b5282b5d50c48127efd
+#: 402c31496104473a8ec10388093ea9b1
 msgid "taiko: Rhythm, Reading, Colour, Stamina"
-msgstr ""
+msgstr "taiko: Rhythm, Reading, Colour, Stamina"
 
 #: ../../guide/how-pp-works.md:23
-#: 922e88215c0a455cb2e1c52788eba169
+#: f6274617734e456d8d18390935bcd8b9
 msgid "catch: Movement"
-msgstr ""
+msgstr "catch: Movement"
 
 #: ../../guide/how-pp-works.md:24
-#: af72128c224d4384934573aeedd89d39
+#: 324a36a6d9f446faa09f5d27f7b72640
 msgid "mania: Strain (individual + overall)"
-msgstr ""
+msgstr "mania: Strain (individuell + insgesamt)"
 
 #: ../../guide/how-pp-works.md:26
-#: adc0e43889c54e93a21323a2390d8737
+#: 0cc5dff984c24740bd488eab56bfa31b
 msgid "**Performance** the score state (given explicitly or generated from accuracy and miss count) is combined with the difficulty attributes into pp, including miss penalties, slider-break estimation, and the classic/lazer scoring differences."
-msgstr ""
+msgstr "**Performance** De Score-Zoustand, deen entweder explizitt uginn oder aus der Genauegkeet an der Unzuel vun de Feeler generéiert gëtt, gëtt mat de Schwieregkeetsattributer zu pp kombinéiert. Dobäi gi Feelerstrofen, d'Aschätzung vu Slider-Breaks an d'Ënnerscheeder tëscht Classic- a Lazer-Scoring berücksichtegt."
 
 #: ../../guide/how-pp-works.md:31
-#: 573c6301fc894d78a49dfa837a206473
+#: ed8eade90a154794925e4758af20bace
 msgid "What's new in the 2026 Q2 rework"
-msgstr ""
+msgstr "Wat ass nei am 2026 Q2-Rework?"
 
 #: ../../guide/how-pp-works.md:33
-#: cc7f29a864db4433bc938902e7965a58
+#: b931ee344bb14615a895775a994add48
 msgid "parsecore implements the July 2026 rework: the AR/HD bonuses were replaced by a dedicated **Reading** skill, aim was split into **Snap** and **Flow** components, speed pp became **deviation-based**, taiko rhythm gained a long-gap penalty, and catch received a linear-spacing nerf."
-msgstr ""
+msgstr "parsecore setzt de Rework vum Juli 2026 ëm: D'AR-/HD-Bonusse goufen duerch en dedizéierte **Reading**-Skill ersat, Aim gouf an d'Komponente **Snap** a **Flow** opgedeelt, Speed-pp baséiert elo op **Ofwäichungen**, den Taiko-Rhythmus krut eng Strof fir laang Ofstänn, a Catch krut en Nerf fir linear Ofstänn."
 
 #: ../../guide/how-pp-works.md:38
-#: 258edcb6f08c4d8d8e89ddf52b2309f4
+#: d0e9c82d6da7432aa8b4bf6eea606ca4
 msgid "Every step reproduces the C# reference **including its floating-point quirks**, which is what makes the results {doc}`bit-exact <bit-exactness>` rather than merely close."
-msgstr ""
+msgstr "All Schrëtt reproduzéiert d'C#-Referenz **inklusiv hire Besonneschheete bei Gleitkommazuelen**, an dat ass de Grond, firwat d'Resultater {doc}`bitgenau <bit-exactness>` sinn an net nëmmen ongeféier iwwereneestëmmen."
 

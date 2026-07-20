@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "MIME-Version: 1.0\n"
@@ -18,27 +18,27 @@ msgstr ""
 "Language: pt_PT\n"
 
 #: ../../quickstart/converts.md:1
-#: 710e00f5c90048a9b75048da48e5b32f
+#: e74a47fba810415a960f63004c73eca0
 msgid "Converts (osu! → taiko / catch / mania)"
-msgstr ""
+msgstr "Conversão (osu! → taiko / catch / mania)"
 
 #: ../../quickstart/converts.md:3
-#: ee5642211cc2438684457e0c3206806b
+#: 5c7fe325e35f4152b7af5c882543ae4f
 msgid "parsecore converts osu! beatmaps to the other rulesets exactly like the game including the legacy osu!mania pattern generator with its osu!stable RNG."
-msgstr ""
+msgstr "O parsecore converte os beatmaps do osu! para os outros rulesets exatamente como no jogo, incluindo o gerador de padrões do osu!mania antigo com o seu RNG osu!stable."
 
 #: ../../quickstart/converts.md:18
-#: b9936cdc368749c78ea7f1e8e8833a01
+#: 3ad3ccf8ba5749ee8983d5eebd92419a
 msgid "Key mods on mania converts"
-msgstr ""
+msgstr "Mods de key na conversão para mania"
 
 #: ../../quickstart/converts.md:20
-#: 3d9851626b8c4bedba607cbf3ca0fb41
+#: 715a53ea904843ca9c5fb9be416f309d
 msgid "Mania key mods change the **column count** of a convert, and therefore its star rating and pp (`7K` is the legacy bit `1 << 18`):"
-msgstr ""
+msgstr "Os mods key da mania alteram o **número de colunas** de uma conversão e, consequentemente, a sua classificação de estrelas e os pontos de desempenho (`7K` é o bit antigo `1 << 18`):"
 
 #: ../../quickstart/converts.md:28
-#: 362866755ec84422b655ae2a7270a3c6
+#: e6ee1c03bc49481b8579cb66469f4735
 msgid "Key mods only affect osu! → mania **converts**. On native mania maps they have no effect, which matches the game."
-msgstr ""
+msgstr "Os mods de key afetam apenas as **conversões** do osu! → mania. Nos mapas nativos da mania, não têm qualquer efeito, o que corresponde ao comportamento do jogo."
 

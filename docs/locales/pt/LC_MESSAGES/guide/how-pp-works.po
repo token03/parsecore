@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "MIME-Version: 1.0\n"
@@ -18,77 +18,77 @@ msgstr ""
 "Language: pt_PT\n"
 
 #: ../../guide/how-pp-works.md:1
-#: 1662df8ea70f4c57b0594e80a048596e
+#: 9522d227e4ba4973abf58cfff2f56c32
 msgid "How the pp calculation works"
-msgstr ""
+msgstr "Como funciona o cálculo do ponto de desempenho"
 
 #: ../../guide/how-pp-works.md:3
-#: 6f132e1614b6441b9bb045c0fcd6ae0e
+#: d1df781af83b4afebf8b0a85d6dc4022
 msgid "`parsecore.Performance` is a pure-Python port of the **official osu! difficulty and performance algorithms** (ppy/osu, deploy `2026.702.1`) not of a third-party reimplementation."
-msgstr ""
+msgstr "o `parsecore.Performance` é uma adaptação em Python puro dos **algoritmos oficiais de dificuldade e de desempenho do osu!** (ppy/osu, deploy `2026.702.1`), e não uma reimplementação de terceiros."
 
 #: ../../guide/how-pp-works.md:7
-#: f620d033c7574b21823f5155a35416ee
+#: d2e26d6631034ed2b2d1c4eeae19cf20
 msgid "The pipeline"
-msgstr ""
+msgstr "O pipeline"
 
 #: ../../guide/how-pp-works.md:10
-#: c0796088fea1417d9f53cc0155963b0d
+#: 8af32ca548ee464d84403715e776631c
 msgid "**Parse** the ``.osu`` file is decoded into hit objects and timing/difficulty/effect points with osu!-faithful float semantics (positions and curve math run in 32-bit floats, exactly like the game client)."
-msgstr ""
+msgstr "**Analisa** o ficheiro ``.osu``, que é descodificado em notas de objeto e timing/difficulty/effect points, com a semântica de números \"float\" fiel ao osu! (as posições e os cálculos das curvas são processados em números \"float\" de 32 bits, exatamente como no cliente do jogo)."
 
 #: ../../guide/how-pp-works.md:13
-#: 323da63cc10447f9b7caa62e19c29893
+#: a1993ed9d6ae4988b14fb4558c5cbcbc
 msgid "**Convert** if the target ruleset differs from the map's native mode, the map is converted first (taiko drum-roll splitting with scroll-speed effect points, catch mode flag, mania legacy pattern generator with osu!stable RNG)."
-msgstr ""
+msgstr "**Converte** se o ruleset for diferente do modo nativo do mapa, o mapa é convertido primeiro (divisão de \"drum-roll\" do taiko com \"effect points\" de \"scroll-speed\", sinalizador do modo catch, gerador de padrões de mania legado com RNG do osu!stable)."
 
 #: ../../guide/how-pp-works.md:16
-#: 614ba977a28e419189244bf8f4509a51
+#: e1e677eca8ae46b38b2e6a0ce06a9c72
 msgid "**Preprocess** per-ruleset difficulty objects are built (distances, angles, rhythm groupings, effective BPM, ...)."
-msgstr ""
+msgstr "**Pré-processa* objetos de dificuldade por cada ruleset (distâncias, ângulos, agrupamentos rítmicos, BPM efetivo, ...)."
 
 #: ../../guide/how-pp-works.md:18
-#: de0ba43eedbe4a849755569b6f5afed6
+#: 53cffa25af664948baf0d56db18b1131
 msgid "**Skills** each ruleset evaluates its skills and aggregates them into the star rating:"
-msgstr ""
+msgstr "**Skills** cada ruleset avalia as suas skills e agrupa-as na classificação de estrelas:"
 
 #: ../../guide/how-pp-works.md:21
-#: 4dad16fdcc5d4dccb7337d30ab3b56a7
+#: fa6977345dbc4e3290e45d76eb4e8f48
 msgid "osu!: Aim (snap/flow), Speed, Reading, Flashlight"
-msgstr ""
+msgstr "osu!: Mira(snap/flow), Velocidade, Leitura, Flashlight"
 
 #: ../../guide/how-pp-works.md:22
-#: 443473e366fd4b5282b5d50c48127efd
+#: 402c31496104473a8ec10388093ea9b1
 msgid "taiko: Rhythm, Reading, Colour, Stamina"
-msgstr ""
+msgstr "taiko: Ritmo, Leitura, Cor, Resistência"
 
 #: ../../guide/how-pp-works.md:23
-#: 922e88215c0a455cb2e1c52788eba169
+#: f6274617734e456d8d18390935bcd8b9
 msgid "catch: Movement"
-msgstr ""
+msgstr "catch: Movimento"
 
 #: ../../guide/how-pp-works.md:24
-#: af72128c224d4384934573aeedd89d39
+#: 324a36a6d9f446faa09f5d27f7b72640
 msgid "mania: Strain (individual + overall)"
-msgstr ""
+msgstr "mania: Tensão (individual + geral)"
 
 #: ../../guide/how-pp-works.md:26
-#: adc0e43889c54e93a21323a2390d8737
+#: 0cc5dff984c24740bd488eab56bfa31b
 msgid "**Performance** the score state (given explicitly or generated from accuracy and miss count) is combined with the difficulty attributes into pp, including miss penalties, slider-break estimation, and the classic/lazer scoring differences."
-msgstr ""
+msgstr "**Desempenho** o estado da pontuação (indicado explicitamente ou gerado a partir da precisão e do número de erros) é combinado com os atributos de dificuldade para formar o ponto de desempenho, incluindo penalizações por erros, estimativa de slider-break, e as diferenças de pontuação entre o modo clássico e o modo lazer."
 
 #: ../../guide/how-pp-works.md:31
-#: 573c6301fc894d78a49dfa837a206473
+#: ed8eade90a154794925e4758af20bace
 msgid "What's new in the 2026 Q2 rework"
-msgstr ""
+msgstr "Novidades da reformulação 2026 Q2"
 
 #: ../../guide/how-pp-works.md:33
-#: cc7f29a864db4433bc938902e7965a58
+#: b931ee344bb14615a895775a994add48
 msgid "parsecore implements the July 2026 rework: the AR/HD bonuses were replaced by a dedicated **Reading** skill, aim was split into **Snap** and **Flow** components, speed pp became **deviation-based**, taiko rhythm gained a long-gap penalty, and catch received a linear-spacing nerf."
-msgstr ""
+msgstr "O parsecore implementa a reformulação de julho de 2026: os bónus de AR/HD foram substituídas por uma skill específica de **Leitura**, a mira foi dividida nos componentes **Snap** e **Flow**, os pontos de desempenho de velocidade passaram a ser **baseados no desvio**, o ritmo do taiko passou a ter uma penalização por intervalos longos e o catch sofreu um enfraquecimento no espaçamento linear."
 
 #: ../../guide/how-pp-works.md:38
-#: 258edcb6f08c4d8d8e89ddf52b2309f4
+#: d0e9c82d6da7432aa8b4bf6eea606ca4
 msgid "Every step reproduces the C# reference **including its floating-point quirks**, which is what makes the results {doc}`bit-exact <bit-exactness>` rather than merely close."
-msgstr ""
+msgstr "Cada passo reproduz a referência do C# **incluindo as suas peculiaridades relativas aos números de \"floating-point\"**, o que faz com que os resultados sejam {doc}`exatos ao nível do bit <bit-exactness>` em vez de serem apenas aproximados."
 

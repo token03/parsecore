@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "MIME-Version: 1.0\n"
@@ -18,82 +18,82 @@ msgstr ""
 "Language: de_DE\n"
 
 #: ../../guide/bit-exactness.md:1
-#: fd38a4909d444c4dbbf7b75c6764d7d9
+#: 57f637d92c7b47a0866a83553858c9ae
 msgid "Bit-exactness & parity"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:3
-#: 25c82daccc4b4fdb96b303a6e3fc25d8
+#: 5a4bcf17e2244d4ea823c2a7a207c388
 msgid "parsecore's star ratings and pp values are **bit-for-bit identical** to the official osu! implementation. This is the project's core promise."
 msgstr ""
 
 #: ../../guide/bit-exactness.md:6
-#: ddde2bb0063f437eb60d6ccb23fbd556
+#: 946d7723dffd43a2bcf23ad3fa34cd20
 msgid "How it's achieved"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:8
-#: 80daca505bc74fd594238e94a30c855c
+#: a7cf2f88f5c54448ad22f475c4965eca
 msgid "Reproducing the reference *closely* is not enough parsecore reproduces it *exactly*, including the floating-point behaviour of the original:"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:12
-#: 26cf4382658d4acba099037d9468d4c4
+#: f789240bdf5e4edc9fbc9a67ab5e543c
 msgid "**f32 intermediates** positions, curve math and several constants are computed in 32-bit floats, matching the game client (and rosu-pp's Rust ``f32``)."
 msgstr ""
 
 #: ../../guide/bit-exactness.md:14
-#: 5963a23a8c8f415abaafaa78dc0efd3e
+#: 2439c5a0807841a48d810b6d4ef8af85
 msgid "**Explicit integer powers** ``x * x * x`` where the reference uses ``DiffUtils.Pow(x, 3)``, not ``math.pow`` (they can differ in the last bit)."
 msgstr ""
 
 #: ../../guide/bit-exactness.md:16
-#: 98b8a795eb5e4854a6e330160ead432f
+#: b756206e3aeb4b4cad30daba18ad54e5
 msgid "**IEEE semantics** division by zero, NaN handling and negative-base powers follow Rust/C# rules via dedicated helpers (``ieee_div``, ``rust_min``, ...), never Python's exceptions."
 msgstr ""
 
 #: ../../guide/bit-exactness.md:19
-#: 27c6f479bef549b38b6138fcace9111c
+#: 7d93326798fa4f57a593b9d357bda3a1
 msgid "**Exact RNG and sorting** the legacy converters use osu!stable's RNG in the exact call order, and the C# unstable sort is reproduced for nested slider objects."
 msgstr ""
 
 #: ../../guide/bit-exactness.md:23
-#: dfa62ee6e67945dfb6dc02d78624a854
+#: ed278f9b4e46438c88de30932f1046e8
 msgid "How it's verified"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:25
-#: 002c7c01b43d4d7da0a190a2d2a2f15f
+#: 33516f9f1a464629bff4dc4ac532b76b
 msgid "Correctness is enforced by a parity test suite that compares parsecore against an oracle built from the official `ppy.osu.Game` packages (with rosu-pp as a secondary cross-check):"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:29
-#: 0a35fd950ac14c36938f5d9a9d94cda5
+#: 8146088c14fe49eb8bcd338fb428fc01
 msgid "4,400+ cases: star ratings and pp across all four rulesets"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:30
-#: d9d0ea2eb8a14cf78229a46683a6bcac
+#: 3cd9cc7d3fbc48eb9ad10758061df6cd
 msgid "extended mod matrix (EZ/HR/DT/NC/HT/HD/FL/TD/RX/AP/SO, key mods 1K-9K, combinations)"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:31
-#: 953197a9b8bb4b3485fce55ecf2db723
+#: f3d7443257b140e7871450f567ae9480
 msgid "all convert directions, native maps, edge-case and pathological maps"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:32
-#: 628f3adfb50341c7ac030b276f6737a7
+#: 210555e86bdb4a81baa3e2925ff99f60
 msgid "randomized full score states, partial states, fails, lazer & stable scores"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:33
-#: dd1bdea154d24947b0bef73bc5b545fe
+#: 3c5702a544e449be8fe8df7298e04104
 msgid "**result: 0 differences every value bit-identical to the official implementation**"
 msgstr ""
 
 #: ../../guide/bit-exactness.md:37
-#: 6377da51e8b14cf18be1338aa44ac274
+#: ec993cc0313a4aa6b3a83998d0cde740
 msgid "After a pp rework deploys, public calculators and bots that rely on outdated libraries can disagree with parsecore. When in doubt: new scores set in-game receive exactly the values parsecore computes."
 msgstr ""
 
