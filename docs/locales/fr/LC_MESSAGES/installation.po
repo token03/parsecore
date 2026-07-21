@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "MIME-Version: 1.0\n"
@@ -18,37 +18,37 @@ msgstr ""
 "Language: fr_FR\n"
 
 #: ../../installation.md:1
-#: e242fc5a99494110bedaf3e790ad96df
+#: 09fb11ff5c3a4b289da288e03819bb8f
 msgid "Installation"
 msgstr "Installation"
 
 #: ../../installation.md:3
-#: 15681424f044481882153fe6d8b31f3a
+#: e0579e3f8ded45d9810de95cfbc9ed95
 msgid "parsecore is published on [PyPI](https://pypi.org/project/parsecore/) and requires **Python 3.10+**."
 msgstr "parsecore est publié sur [PyPI](https://pypi.org/project/parsecore/) et nécessite **Python 3.10 ou une version ultérieure**."
 
 #: ../../installation.md:6
-#: 0a3d59cb96854d6d8d5b99879035c15d
+#: 10a7efab5b05485bb19b2c9f78a178b8
 msgid "pip"
 msgstr "pip"
 
 #: ../../installation.md:12
-#: 3ade8c1a340244f0a9d389dd320f410e
+#: ed9bc692f03d4beb89c7782a74172237
 msgid "uv"
 msgstr "uv"
 
 #: ../../installation.md:18
-#: fbb37e261d334d9190fd2c116de218a2
+#: c11c22d6d2e24c24b5a94c6568556d47
 msgid "Verify"
 msgstr "Vérifier"
 
 #: ../../installation.md:28
-#: 54b361f6c9b9481da33021247cfe4b60
+#: 249ada6e3c8b42fd94f1b514b28cb2bc
 msgid "If that prints a star rating, you're ready head to the {doc}`quickstart/pp`."
 msgstr "Si cela affiche une note sous forme d'étoiles, vous pouvez passer à la section {doc}`quickstart/pp`."
 
 #: ../../installation.md:31
-#: 9aa7f6f6fb164e9296aca706ae56c452
+#: 030bef0f34c34392b5f7f5e0ee80807e
 msgid "After a new osu! pp rework deploys, third-party tools and websites can lag behind for a while. parsecore tracks the **official in-game algorithm**, so make sure you're on the latest version to get current values."
 msgstr "Après le déploiement d'une nouvelle version d'osu! pp, les outils et sites web tiers peuvent mettre un certain temps à se mettre à jour. Parsecore suit l'**algorithme officiel du jeu** ; assurez-vous donc d'utiliser la dernière version pour obtenir les valeurs actuelles."
 

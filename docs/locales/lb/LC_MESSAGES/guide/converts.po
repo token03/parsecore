@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: Luxembourgish\n"
 "MIME-Version: 1.0\n"
@@ -18,47 +18,47 @@ msgstr ""
 "Language: lb_LU\n"
 
 #: ../../guide/converts.md:1
-#: 21c6955e1edb40b18f832547a8fa1872
+#: a04314237f934bbb820aa5dfde4b462a
 msgid "Converts in depth"
-msgstr ""
+msgstr "Konvertéierungen am Detail"
 
 #: ../../guide/converts.md:3
-#: abab7e168daf4a7fb24ca9edb66a7c89
+#: 51f1cd8fc9a042cc9606018c10eb1c62
 msgid "An osu! beatmap can be played in another ruleset. parsecore reproduces each conversion exactly like osu!, so converted star ratings and pp match the game."
-msgstr ""
+msgstr "Eng osu!-Beatmap kann an engem anere Ruleset gespillt ginn. parsecore reproduzéiert all Konvertéierung genee wéi osu!, sou datt déi konvertéiert Star-Ratings an d'pp-Wäerter mam Spill iwwereneestëmmen."
 
 #: ../../guide/converts.md:6
-#: af8a9d36553945bc81f41faf65f03bf1
+#: 4419c5bacf6a4b1d8b542b071a164f04
 msgid "osu! → taiko"
-msgstr ""
+msgstr "osu! → taiko"
 
 #: ../../guide/converts.md:8
-#: f31e6d2ccdc843d3b57bd12dd696a199
+#: 3b3fa77a20b7482d92f31d76e5003f4c
 msgid "Circles become don/kat notes (decided by hit sound), and sliders are either kept as drum rolls or split into a run of hit circles following osu!-stable's tick-spacing and velocity rules. Scroll-speed effect points are inserted so the new **Reading** skill sees the right velocities."
-msgstr ""
+msgstr "Circles ginn zu Don-/Kat-Noten, jee no Hitsound. Slider ginn entweder als Trommelwirbele bäibehalen oder an eng Rei vun Hit-Circles opgedeelt, dobäi ginn d'Reegele vun osu!stable fir den Tick-Ofstand an d'Geschwindegkeet befollegt. Scroll-Speed-Effektpunkte ginn agefüügt, sou datt den neie **Reading**-Skill déi richteg Geschwindegkeeten erfaasst."
 
 #: ../../guide/converts.md:13
-#: 7f3a45af99d049fa8beb9a2e7e909d05
+#: 65380149ce3c4066a1002acfe5e40e43
 msgid "osu! → catch"
-msgstr ""
+msgstr "osu! → catch"
 
 #: ../../guide/converts.md:15
-#: 6505cf87160e4035a65ee21fbd668c9a
+#: df221e6510c74edaa3d5735d57a6a75f
 msgid "Objects become fruits, droplets and juice streams. Hyperdashes are detected, and the legacy RNG is consumed for droplet jitter and banana showers exactly as in the game."
-msgstr ""
+msgstr "Objete ginn zu Friichten, Drëpsen a Juice-Streams. Hyperdashes ginn erkannt, an de Legacy-RNG gëtt fir d'Variatioun vun den Drëpsen an d'Bananneschauere genee wéi am Spill verbraucht."
 
 #: ../../guide/converts.md:18
-#: 1edf991f77414ba1953aa1c6cfcdf34c
+#: bbdbf9a429b84a2190d23fc2f884c79f
 msgid "osu! → mania"
-msgstr ""
+msgstr "osu! → mania"
 
 #: ../../guide/converts.md:20
-#: 7e5e3617c8e047af9c9a2f245412e0d8
+#: 1b014beddfe84c63b0e1fced591550e4
 msgid "This is the most involved conversion: the full **legacy pattern generator** decides how many columns the map uses and places notes/hold notes using osu!stable's RNG. The generated pattern and therefore the star rating and pp is bit-identical to osu!."
-msgstr ""
+msgstr "Dëst ass déi komplexst Konvertéierung: De komplette **Legacy-Pattern-Generator** bestëmmt, wéi vill Kolonnen d'Map benotzt, a plazéiert Noten an Hold-Notte mam RNG vun osu!stable. Dat generéiert Pattern an domat och de Star-Rating an d'pp-Wäerter si Bit fir Bit identesch mat osu!."
 
 #: ../../guide/converts.md:34
-#: a7660e7d80834235a9dc300c41fea0a4
+#: 6d2a69935e5642bfbab0caaa076e25cb
 msgid "Native maps of each ruleset are, of course, calculated directly without conversion."
-msgstr ""
+msgstr "Nativ Maps vun all Ruleset ginn natierlech direkt an ouni Konvertéierung berechent."
 

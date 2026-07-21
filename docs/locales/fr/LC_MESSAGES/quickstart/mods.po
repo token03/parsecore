@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "MIME-Version: 1.0\n"
@@ -18,22 +18,22 @@ msgstr ""
 "Language: fr_FR\n"
 
 #: ../../quickstart/mods.md:1
-#: 7fc2435c6dbc42e0a0db22cc269722e7
+#: d7e4aff9a44e4203a8cfcd1fa5587b0b
 msgid "Mod handling"
 msgstr ""
 
 #: ../../quickstart/mods.md:3
-#: 0dfcd5ee70214c068fb429ae73a23e0e
+#: d04ebaf9fe2644c7abaae071e7b7e818
 msgid "parsecore models every osu! mod across all rulesets, plus the classic legacy bitfield and ruleset-agnostic (intermode) representations."
 msgstr ""
 
 #: ../../quickstart/mods.md:24
-#: 55eab653815e4dd1a42c58aa34840f6e
+#: 9ad064d0440c4bce841fb9336d1961e5
 msgid "Concrete mod classes"
 msgstr ""
 
 #: ../../quickstart/mods.md:26
-#: a891f0e8ceb542b28de63d9e860520dd
+#: df8243b4620440debedd6ac43073e5f4
 msgid "Every mod has a concrete, ruleset-specific class (e.g. {class}`~parsecore.Mods.generated_mods.HardRockOsu`, {class}`~parsecore.Mods.generated_mods.DoubleTimeCatch`) carrying its acronym, description, kind and legacy bit. See the full list in the {doc}`../api/mods` reference."
 msgstr ""
 

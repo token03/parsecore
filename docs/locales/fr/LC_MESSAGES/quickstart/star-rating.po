@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "MIME-Version: 1.0\n"
@@ -18,27 +18,27 @@ msgstr ""
 "Language: fr_FR\n"
 
 #: ../../quickstart/star-rating.md:1
-#: 180ca03cb5364e6886699ab029615862
+#: 74deba15e37b4ffa9a00bcd6964b1b97
 msgid "Star rating (difficulty)"
 msgstr ""
 
 #: ../../quickstart/star-rating.md:3
-#: 79ddca79d0ca4b38afa42f3ccec0751f
+#: 3f58b1a39e40431ba321b341be51325b
 msgid "Use {class}`~parsecore.Performance.api.Difficulty` to compute the star rating and the per-skill difficulty attributes."
 msgstr ""
 
 #: ../../quickstart/star-rating.md:23
-#: 069f16c6c17846b18e87dd3287637f10
+#: 9f484c58056f4087a49b71b51310c264
 msgid "Clock rate, overrides and partial maps"
 msgstr ""
 
 #: ../../quickstart/star-rating.md:37
-#: 37237859024743c1824b553192873b7d
+#: d089dd889303406baa55ae499f7d08ee
 msgid "`fixed=False` (the default) means EZ/HR and the clock rate still adjust the value, just like an in-game difficulty override; `fixed=True` uses your value verbatim."
 msgstr ""
 
 #: ../../quickstart/star-rating.md:41
-#: 7c2d6a31d3454d478429f60e43f42dcb
+#: 8759bbfc87394b4b911cc921c1452a60
 msgid "Each ruleset returns its own attributes type see {doc}`../api/performance`."
 msgstr ""
 

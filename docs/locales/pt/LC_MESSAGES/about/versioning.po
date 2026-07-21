@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "MIME-Version: 1.0\n"
@@ -18,42 +18,42 @@ msgstr ""
 "Language: pt_PT\n"
 
 #: ../../about/versioning.md:1
-#: 3ace159d74a54914b9213125a8c86330
+#: 09dbea4fbaa3469f8cd48c5576726edb
 msgid "Versioning & algorithm tracking"
-msgstr ""
+msgstr "Rastreamento de versionamento e algoritmo"
 
 #: ../../about/versioning.md:3
-#: 2e74e95f73b14967b86a68197032a16e
+#: 87cc1dce67f14581911b19bad3c52d96
 msgid "parsecore follows [Semantic Versioning](https://semver.org/)."
-msgstr ""
+msgstr "O parsecore segue [Semantic Versioning](https://semver.org/)."
 
 #: ../../about/versioning.md:5
-#: cc3a34106cc94f6e88275ea63b3384c6
+#: ffd472067f7d4b94b99621e9b5ca3fb0
 msgid "Algorithm updates"
-msgstr ""
+msgstr "Atualizações no algoritmo"
 
 #: ../../about/versioning.md:7
-#: 9cc7e1341cdb48ebb84e14ed4572d851
+#: 79aa8efe4590480697ebc5d0e4611342
 msgid "parsecore tracks the **official osu! difficulty and performance algorithm**. When ppy deploys a pp/star-rating rework, parsecore is updated to match the new deploy and the parity suite is re-run to confirm bit-exactness."
-msgstr ""
+msgstr "O parsecore segue o **algoritmo oficial de dificuldade e de desempenho do osu!** Quando o ppy implementa a reformulação de pontos de desempenho e de classificação de estrelas, o parsecore é atualizado para se adequar à nova implementação e o conjunto de testes de paridade é executado novamente para confirmar a exatidão bit a bit."
 
 #: ../../about/versioning.md:11
-#: 32c4a56c86c344ae82f0cf01d477e7a2
+#: b15496b1946640cfbf3220f7c7d1c18d
 msgid "The current target is the **2026 Q2 rework**, osu! deploy **`2026.702.1`**."
-msgstr ""
+msgstr "O alvo atual é o **2026 Q2 rework* implementação do osu! **`2026.702.1`**."
 
 #: ../../about/versioning.md:14
-#: 9c10388c7a9a4180825fbb9a64ea05f0
+#: 119e63af71cc4f758e2327b9ceeeddda
 msgid "Because parsecore follows the official algorithm directly, its values can differ from third-party calculators or the osu! website in the days after a rework those are often still recalculating or running an older algorithm. Values for newly set in-game scores are the source of truth."
-msgstr ""
+msgstr "Como o parsecore segue diretamente o algoritmo oficial, os seus valores podem diferir das calculadoras de terceiros ou do site do osu! nos dias que se segue a uma reformulação, uma vez que ainda se encontram frequentemente a recalcular ou a utilizar um algoritmo mais antigo. Os valores das pontuações recém-definidas no jogo são a fonte de verdade."
 
 #: ../../about/versioning.md:20
-#: 72a6460a9f004883ba3490b4aaf86f32
+#: 56b2acc357124994ada71389374dd1c6
 msgid "Python support"
-msgstr ""
+msgstr "Suporta a Python"
 
 #: ../../about/versioning.md:22
-#: 2749412303ef49c1816242035c167e95
+#: 2bf6b602eb4d4de7aaef819ba81e27b8
 msgid "parsecore supports **Python 3.10, 3.11, 3.12 and 3.13**."
-msgstr ""
+msgstr "O parsecore suporta **Python 3.10, 3.11, 3.12 e 3.13**."
 

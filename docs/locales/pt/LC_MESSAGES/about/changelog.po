@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parsecore\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 19:08+0000\n"
-"PO-Revision-Date: 2026-07-11 19:08\n"
+"POT-Creation-Date: 2026-07-20 06:08+0000\n"
+"PO-Revision-Date: 2026-07-20 06:08\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "MIME-Version: 1.0\n"
@@ -18,77 +18,77 @@ msgstr ""
 "Language: pt_PT\n"
 
 #: ../../about/changelog.md:1
-#: d5eb6c2797e74453bf79d09d1c5ac3ea
+#: 781783e368bf4782947830f134afe2ee
 msgid "Changelog"
-msgstr ""
+msgstr "Registo de alterações"
 
 #: ../../about/changelog.md:3
-#: 4dc795fdcb714bdbaa57421668654e30
+#: 67aa6052f03a463b80cfd56ecfbe67d4
 msgid "All notable changes to parsecore are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/)."
-msgstr ""
+msgstr "Todas as mudanças significativas ao parsecore estão documentadas aqui. O formato baseia-se em [Keep a Changelog](https://keepachangelog.com/)."
 
 #: ../../about/changelog.md:6
-#: 399d53d4181849e6920da76d5d0b0493
+#: 67bc9db0721445c7a9cee7a719b5bf3f
 msgid "1.0.1"
-msgstr ""
+msgstr "1.0.1"
 
 #: ../../about/changelog.md:8
-#: 1d740811d1fc475ab5e76a540f28e631
+#: b1d854bfeaa547fea1cfcf90c0b51344
 msgid "Fixed"
-msgstr ""
+msgstr "Corrigido"
 
 #: ../../about/changelog.md:10
-#: 911cfdf568bf4d979b0442b360e92c56
+#: 75f711bafb8e4d48867b12680c1b6869
 msgid "Repaired the `parsecore.Mods` package import (`game_mod_intermode` had shipped a duplicate module, which raised `ImportError`)."
-msgstr ""
+msgstr "Correção da importação do pacote `parsecore.Mods` (o `game_mode_intermode` tinha incluído um módulo duplicado, o que provocava um `Import Error`)."
 
 #: ../../about/changelog.md:13
-#: e9efc4afbe14477684a725ddfb90b290
+#: a6ac2d4557b64cb9bd38d93093b78273
 msgid "Documentation"
-msgstr ""
+msgstr "Documentação"
 
 #: ../../about/changelog.md:15
-#: 6f75ce2f72f0413ea8ac4c13fde7f4ef
+#: 825667ec7aa04459ab6cd78e5367beaa
 msgid "Added Google-style docstrings across the entire package (100% coverage)."
-msgstr ""
+msgstr "Foi adicionado docstrings com estilo do Goggle em todo o pacote (100% de cobertura)."
 
 #: ../../about/changelog.md:16
-#: b7a0fd5577c34ba0a64fa1008067f047
+#: 9640818ab96348b49755ea21c2ad2fd0
 msgid "Added this Sphinx documentation site."
-msgstr ""
+msgstr "Foi adicionado este site de documentação Sphinx."
 
 #: ../../about/changelog.md:18
-#: 57f3737f17fb4c298881788f4e3e5ec0
+#: c63f5eaff5064c70a32bbb71b1043c40
 msgid "1.0.0"
-msgstr ""
+msgstr "1.0.0"
 
 #: ../../about/changelog.md:20
-#: aebad314842d492eb99683ddbcb0e49f
+#: 3a25a78ac6114bc5ae3eaa2a1e144603
 msgid "Initial public release."
-msgstr ""
+msgstr "Lançamento público inicial."
 
 #: ../../about/changelog.md:22
-#: 14d2728837b54f0e8923440593285c02
+#: a723c194d34a439abf359d0a963928fc
 msgid "`.osu` beatmap parsing (all sections) and re-encoding."
-msgstr ""
+msgstr "Análise de beatmap `.osu` (em todas as seções) e re-codificação."
 
 #: ../../about/changelog.md:23
-#: b2626b1d3fef4e5f817cafeb16f35fcf
+#: f6020c45f4634524a8dfa63cd8ceb96e
 msgid "Complete mod system for all four rulesets, with legacy and intermode representations."
-msgstr ""
+msgstr "Sistema de mod completo para os quatro rulesets, com representações de legacy e intermode."
 
 #: ../../about/changelog.md:24
-#: 2b525c395a434c20a61c1cbef3cef9f0
+#: 28e73ed40fdb408ba0a2384c7fa3e6e4
 msgid "Star rating and pp for osu!, osu!taiko, osu!catch and osu!mania, implementing the **2026 Q2** rework and verified bit-exact against the official implementation."
-msgstr ""
+msgstr "Classificação de estrelas e pontos de desempenho para osu!, osu!taiko, osu!catch e osu!mania, implementando a reformulação do **2026 Q2** e verificada com exatidão bit a bit em relação à implementação oficial."
 
 #: ../../about/changelog.md:26
-#: 66b2e227460840f6ab732fa8551d09f8
+#: 9d23b80fdd6444b2a8fd99503e8eaadc
 msgid "Faithful osu! → taiko / catch / mania converts."
-msgstr ""
+msgstr "Conversão de beatmaps de sou"
 
 #: ../../about/changelog.md:27
-#: 8d78f2a4a1a7409788bb47d00e103224
+#: 7e7abfed9da54a05bb3742b900a3ca3c
 msgid "Lazer and stable scoring support."
-msgstr ""
+msgstr "Suporte as pontuações de Lazer e de Stable."
 
