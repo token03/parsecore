@@ -6,12 +6,14 @@
 
 [![PyPI Version](https://img.shields.io/pypi/v/parsecore?style=for-the-badge&color=pink)](https://pypi.org/project/parsecore/)
 [![Python](https://img.shields.io/pypi/pyversions/parsecore?style=for-the-badge&color=blue)](https://pypi.org/project/parsecore/)
-[![License](https://img.shields.io/github/license/O-Lib/parsecore?style=for-the-badge&color=green)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![Typing](https://img.shields.io/badge/typing-checked-blue?style=for-the-badge)](https://mypy-lang.org/)
 [![Code Style](https://img.shields.io/badge/code%20style-ruff-orange?style=for-the-badge)](https://docs.astral.sh/ruff/)
 [![Discord](https://img.shields.io/discord/1499516844711608350?style=for-the-badge&logo=discord&label=discord&color=5865F2)](https://discord.gg/9p7whE7QxQ)
 [![Docs](https://img.shields.io/readthedocs/parsecore?style=for-the-badge&logo=readthedocs&logoColor=white&label=docs)](https://parsecore.readthedocs.io)
 [![Translated with Crowdin](https://img.shields.io/badge/translated%20by-Crowdin-2E3340?style=for-the-badge&logo=crowdin&logoColor=white)](https://crowdin.com/project/parsecore)
+[![Downloads](https://img.shields.io/pepy/dt/parsecore?style=for-the-badge&color=blueviolet&logo=pypi&logoColor=white&label=downloads)](https://pepy.tech/project/parsecore)
+[![Downloads](https://img.shields.io/pypi/dm/parsecore?style=for-the-badge&color=blueviolet&logo=pypi&logoColor=white&label=downloads%2Fmonth)](https://pypi.org/project/parsecore/)
 
 </div>
 
