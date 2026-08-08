@@ -87,6 +87,7 @@ class StructuralFactors:
     """The five independent structural difficulty factors for one map."""
 
     stars: float
+    slider: float
     snap: float
     agility: float
     flow: float
@@ -1504,6 +1505,9 @@ def _factors_from_packed(packed: PackedOsuMap, adjusted: AdjustedBeatmapAttribut
     ) ** (1.0 / 1.1)
     return StructuralFactors(
         stars=(performance * 1.12) ** (1.0 / 3.0),
+        slider=(max(result[1], 0.0) / max(result[0], 1e-12)) ** 0.63
+        if result[0] > 0.0
+        else 1.0,
         snap=result[3],
         agility=result[4],
         flow=result[5],

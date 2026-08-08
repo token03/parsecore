@@ -287,7 +287,7 @@ def _execution_digest(execution: Execution) -> str:
     if execution.attributes is not None:
         for attrs in execution.attributes:
             names = (
-                ("stars", "snap", "agility", "flow", "speed", "rhythm", "object_count")
+                ("stars", "slider", "snap", "agility", "flow", "speed", "rhythm", "object_count")
                 if isinstance(attrs, StructuralFactors)
                 else ("stars", "aim", "speed", "reading", "flashlight", "max_combo")
             )
