@@ -88,6 +88,7 @@ class OsuDifficultyAttributes:
 
     stars: float = 0.0
     max_combo: int = 0
+    objects_pruned: bool = False
 
     od: float = 0.0
 

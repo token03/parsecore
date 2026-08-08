@@ -1,6 +1,7 @@
 [tool.poetry]
 name = "parsecore"
 version = "1.0.1"
+requires-python = ">=3.10,<4.0"
 description = "Python library for osu! beatmap parsing, mod handling, and performance point calculation."
 authors = [
     "Error44 <error44@olib.dev>",
@@ -30,6 +31,16 @@ packages = [{ include = "parsecore" }]
 [tool.poetry.dependencies]
 python = "^3.10"
 requests = "*"
+numpy = { version = "*", optional = true }
+numba = { version = "*", optional = true }
+
+[tool.poetry.extras]
+fast = ["numpy", "numba"]
+
+[project]
+name = "parsecore"
+version = "1.0.1"
+requires-python = ">=3.10,<4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0"
