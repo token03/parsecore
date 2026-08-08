@@ -86,6 +86,7 @@ class FastBeatmap:
 class StructuralFactors:
     """The five independent structural difficulty factors for one map."""
 
+    stars: float
     snap: float
     agility: float
     flow: float
@@ -1495,7 +1496,14 @@ def _factors_from_packed(packed: PackedOsuMap, adjusted: AdjustedBeatmapAttribut
         stack_leniency=0.7,
         cs=adjusted.cs,
     )
+    aim_rating = 0.02275 * max(result[0], 0.0) ** 0.63 * _AIM_RATING_SCALE
+    speed_rating = math.sqrt(max(result[2], 0.0)) * 0.0675 * _SPEED_RATING_SCALE
+    performance = (
+        (4.0 * aim_rating ** 3) ** 1.1
+        + (4.0 * speed_rating ** 3) ** 1.1
+    ) ** (1.0 / 1.1)
     return StructuralFactors(
+        stars=(performance * 1.12) ** (1.0 / 3.0),
         snap=result[3],
         agility=result[4],
         flow=result[5],
