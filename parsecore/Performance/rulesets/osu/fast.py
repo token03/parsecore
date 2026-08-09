@@ -199,13 +199,9 @@ def _slider_summary(
     )
 
 
-def _validate_slider_summary(
-        summary: tuple[float, float, float, float, float, float, float, float, float, int],
-) -> None:
-    if any(
-            not math.isfinite(float(value)) or abs(float(value)) > _MAX_TIME
-            for value in summary[:-1]
-    ):
+def _validate_slider_summaries(summaries: Any, kind: Any) -> None:
+    values = summaries[kind == 1, :9]
+    if not np.isfinite(values).all() or (np.abs(values) > _MAX_TIME).any():
         raise ValueError("slider summary exceeds supported limits")
 
 
@@ -432,7 +428,7 @@ def _compiled_slider_summaries(
 
 @dataclass(frozen=True, slots=True)
 class StructuralFactors:
-    """The five independent structural difficulty factors for one map."""
+    """Independent structural difficulty factors for one map."""
 
     stars: float
     aim: float
@@ -751,26 +747,26 @@ def _parse_fast_bytes(
             raise ValueError(
                 f"slider fallback failed at object {index} ({reason})"
             ) from error
+    _validate_slider_summaries(summaries, kind_array)
     stack_end_x_array = x_array.copy()
     stack_end_y_array = y_array.copy()
-    for index in range(count):
-        if kind_array[index] == 1:
-            summary = tuple(summaries[index, :10])
-            _validate_slider_summary(summary)
-            end_x_array[index] += summary[0]
-            end_y_array[index] += summary[1]
-            lazy_end_x_array[index] += summary[2]
-            lazy_end_y_array[index] += summary[3]
-            last_nested_x_array[index] += summary[4]
-            last_nested_y_array[index] += summary[5]
-            distance_array[index] = summary[6]
-            duration_array[index] = summary[7]
-            duration = summary[8]
-            end_time_array[index] = time_array[index] + duration
-            max_combo += int(summary[9])
-            n_large_ticks += int(summary[9])
-            stack_end_x_array[index] += summaries[index, 10]
-            stack_end_y_array[index] += summaries[index, 11]
+    slider_indices = array.flatnonzero(kind_array == 1)
+    end_x_array[slider_indices] += summaries[slider_indices, 0]
+    end_y_array[slider_indices] += summaries[slider_indices, 1]
+    lazy_end_x_array[slider_indices] += summaries[slider_indices, 2]
+    lazy_end_y_array[slider_indices] += summaries[slider_indices, 3]
+    last_nested_x_array[slider_indices] += summaries[slider_indices, 4]
+    last_nested_y_array[slider_indices] += summaries[slider_indices, 5]
+    distance_array[slider_indices] = summaries[slider_indices, 6]
+    duration_array[slider_indices] = summaries[slider_indices, 7]
+    end_time_array[slider_indices] = (
+        time_array[slider_indices] + summaries[slider_indices, 8]
+    )
+    nested_count = int(summaries[slider_indices, 9].sum())
+    max_combo += nested_count
+    n_large_ticks += nested_count
+    stack_end_x_array[slider_indices] += summaries[slider_indices, 10]
+    stack_end_y_array[slider_indices] += summaries[slider_indices, 11]
 
     stack_height = _stack_heights(
         time_array,
@@ -985,26 +981,24 @@ def _pack_map(
         radius,
         _internal=True,
     )
+    _validate_slider_summaries(summaries, kind)
     stack_end_x = x.copy()
     stack_end_y = y.copy()
-    for index in range(count):
-        if kind[index] == 1:
-            summary = tuple(summaries[index, :10])
-            _validate_slider_summary(summary)
-            end_x[index] += summary[0]
-            end_y[index] += summary[1]
-            lazy_end_x[index] += summary[2]
-            lazy_end_y[index] += summary[3]
-            last_nested_x[index] += summary[4]
-            last_nested_y[index] += summary[5]
-            slider_dist[index] = summary[6]
-            slider_duration[index] = summary[7]
-            duration = summary[8]
-            end_time[index] = time[index] + duration
-            max_combo += int(summary[9])
-            n_large_ticks += int(summary[9])
-            stack_end_x[index] += summaries[index, 10]
-            stack_end_y[index] += summaries[index, 11]
+    slider_indices = array.flatnonzero(kind == 1)
+    end_x[slider_indices] += summaries[slider_indices, 0]
+    end_y[slider_indices] += summaries[slider_indices, 1]
+    lazy_end_x[slider_indices] += summaries[slider_indices, 2]
+    lazy_end_y[slider_indices] += summaries[slider_indices, 3]
+    last_nested_x[slider_indices] += summaries[slider_indices, 4]
+    last_nested_y[slider_indices] += summaries[slider_indices, 5]
+    slider_dist[slider_indices] = summaries[slider_indices, 6]
+    slider_duration[slider_indices] = summaries[slider_indices, 7]
+    end_time[slider_indices] = time[slider_indices] + summaries[slider_indices, 8]
+    nested_count = int(summaries[slider_indices, 9].sum())
+    max_combo += nested_count
+    n_large_ticks += nested_count
+    stack_end_x[slider_indices] += summaries[slider_indices, 10]
+    stack_end_y[slider_indices] += summaries[slider_indices, 11]
 
     stack_height = _stack_heights(
         time,
@@ -1525,17 +1519,20 @@ if njit is not None:
         threshold = max(0.0, threshold)
         stack_distance_sq = _STACK_DISTANCE * _STACK_DISTANCE
         if version >= 6.0:
+            previous_non_spinner = np.empty(count, dtype=np.int32)
+            previous = -1
+            for i in range(count):
+                previous_non_spinner[i] = previous
+                if kind[i] != 2:
+                    previous = i
             for i in range(count - 1, 0, -1):
-                n = i
+                n = previous_non_spinner[i]
                 active = i
                 if result[active] != 0 or kind[active] == 2:
                     continue
 
                 if kind[active] == 0:
-                    while n > 0:
-                        n -= 1
-                        if kind[n] == 2:
-                            continue
+                    while n >= 0:
                         if time[active] - end_time[n] > threshold:
                             break
 
@@ -1555,11 +1552,9 @@ if njit is not None:
                         if dx * dx + dy * dy < stack_distance_sq:
                             result[n] = result[active] + 1
                             active = n
+                        n = previous_non_spinner[n]
                 elif kind[active] == 1:
-                    while n > 0:
-                        n -= 1
-                        if kind[n] == 2:
-                            continue
+                    while n >= 0:
                         if time[active] - time[n] > threshold:
                             break
 
@@ -1568,6 +1563,7 @@ if njit is not None:
                         if dx * dx + dy * dy < stack_distance_sq:
                             result[n] = result[active] + 1
                             active = n
+                        n = previous_non_spinner[n]
         else:
             for i in range(count):
                 if result[i] != 0 and kind[i] != 1:
@@ -2289,8 +2285,13 @@ if njit is not None:
         if index == 0 or kind[index] == 2:
             return 0.0, 0.0, 0.0, 0.0
 
-        travel_distance = lazy_travel_dist[index - 1] if index > 1 else 0.0
-        agility = min(travel_distance + lazy_jump[index], 120.0) / 120.0
+        travel_distance = (
+            lazy_travel_dist[index - 1]
+            if with_slider and index > 1
+            else 0.0
+        )
+        agility_distance = lazy_jump[index] if with_slider else jump[index]
+        agility = min(travel_distance + agility_distance, 120.0) / 120.0
         agility *= 1000.0 / adjusted_delta[index]
         agility *= small_bonus ** 1.5
         agility *= 1.0 / (1.0 - 0.2 ** (adjusted_delta[index] / 1000.0))
@@ -2537,8 +2538,8 @@ if njit is not None:
         snap_values = np.zeros(count, dtype=np.float64)
         agility_values = np.zeros(count, dtype=np.float64)
         flow_values = np.zeros(count, dtype=np.float64)
+        tap_values = np.zeros(count, dtype=np.float64)
         speed_values = np.zeros(count, dtype=np.float64)
-        rhythm_values = np.zeros(count, dtype=np.float64)
 
         aim_current = 0.0
         aim_no_slider_current = 0.0
@@ -2549,7 +2550,7 @@ if njit is not None:
         speed_current = 0.0
 
         for index in range(count):
-            snap_raw, agility_raw, flow_raw, aim_raw = _aim_value(
+            _, _, _, aim_raw = _aim_value(
                 index,
                 kind,
                 repeats,
@@ -2570,7 +2571,7 @@ if njit is not None:
                 small_bonus,
                 True,
             )
-            _, _, _, aim_no_slider_raw = _aim_value(
+            snap_raw, agility_raw, flow_raw, aim_no_slider_raw = _aim_value(
                 index,
                 kind,
                 repeats,
@@ -2632,7 +2633,7 @@ if njit is not None:
                 hit_window_great,
                 clock_rate,
             )
-            rhythm_values[index] = rhythm
+            tap_values[index] = speed_current
             speed_values[index] = speed_current * rhythm
 
         aim_difficulty = _variable_peak_value(
@@ -2644,8 +2645,13 @@ if njit is not None:
         snap_difficulty = _peak_value(snap_values, time)
         agility_difficulty = _peak_value(agility_values, time)
         flow_difficulty = _peak_value(flow_values, time)
+        tap_difficulty = _harmonic(tap_values, 20.0)
         speed_difficulty = _harmonic(speed_values, 20.0)
-        rhythm_difficulty = _harmonic(rhythm_values, 20.0)
+        rhythm_gain = (
+            speed_difficulty / tap_difficulty
+            if tap_difficulty > 0.0
+            else 1.0
+        )
         return (
             aim_difficulty,
             aim_no_slider_difficulty,
@@ -2653,7 +2659,8 @@ if njit is not None:
             snap_difficulty,
             agility_difficulty,
             flow_difficulty,
-            rhythm_difficulty,
+            tap_difficulty,
+            rhythm_gain,
         )
 
 def _calculate_from_packed(
@@ -2662,7 +2669,7 @@ def _calculate_from_packed(
         adjusted: AdjustedBeatmapAttributes,
         stack_leniency: float,
         cs: float,
-) -> tuple[float, float, float, float, float, float, float]:
+) -> tuple[float, float, float, float, float, float, float, float]:
     _require_numpy()
     scale = (1.0 - 0.7 * (cs - 5.0) / 5.0) / 2.0 * 1.00041
     radius = 64.0 * scale
@@ -2721,6 +2728,7 @@ def _calculate_from_packed(
         float(result[4]),
         float(result[5]),
         float(result[6]),
+        float(result[7]),
     )
 
 
@@ -2732,6 +2740,7 @@ def _factors_from_packed(packed: PackedOsuMap, adjusted: AdjustedBeatmapAttribut
         cs=adjusted.cs,
     )
     aim_rating = 0.02275 * max(result[0], 0.0) ** 0.63
+    base_aim_rating = 0.02275 * max(result[1], 0.0) ** 0.63
     speed_rating = math.sqrt(max(result[2], 0.0)) * 0.0675
     performance = (
         (4.0 * aim_rating ** 3) ** 1.1
@@ -2741,14 +2750,12 @@ def _factors_from_packed(packed: PackedOsuMap, adjusted: AdjustedBeatmapAttribut
         stars=(performance * 1.12) ** (1.0 / 3.0),
         aim=aim_rating,
         speed=speed_rating,
-        slider=(max(result[1], 0.0) / max(result[0], 1e-12)) ** 0.63
-        if result[0] > 0.0
-        else 1.0,
+        slider=max(aim_rating - base_aim_rating, 0.0),
         snap=result[3],
         agility=result[4],
         flow=result[5],
-        tap=result[2],
-        rhythm=result[6],
+        tap=result[6],
+        rhythm=result[7],
         object_count=int(packed.time.shape[0]),
         objects_pruned=packed.truncated,
     )
@@ -2945,7 +2952,7 @@ def calculate_fast_factors_bytes(
         max_objects: int = MAX_OBJECTS,
         **_: Any,
 ) -> StructuralFactors:
-    """Parse and calculate the five independent structural factors for one map."""
+    """Parse and calculate independent structural factors for one map."""
     beatmap = _parse_fast_bytes(data, max_objects, cs_override)
     if beatmap.mode != int(GameMode.OSU):
         raise NotImplementedError("the fast calculator only supports osu!standard")
