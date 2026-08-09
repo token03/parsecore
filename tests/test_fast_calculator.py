@@ -42,6 +42,27 @@ def test_fast_calculator_is_close_to_reference() -> None:
     assert actual.aim == pytest.approx(reference.aim, rel=0.3)
 
 
+def test_fast_calculator_handles_length_adjusted_sliders() -> None:
+    path = Path(__file__).parent / "data" / "4645077.osu"
+    data = path.read_bytes()
+    reference_map = PreparedBeatmap.from_user_beatmap(Beatmap.from_bytes(data))
+    reference = (
+        Difficulty()
+        .mods(0)
+        .ar(10.0, fixed=True)
+        .cs(4.0, fixed=True)
+        .hp(10.0, fixed=True)
+        .od(10.0, fixed=True)
+        .calculate(reference_map)
+    )
+    actual = _calculator().calculate_factors_bytes(data)
+
+    assert actual.stars == pytest.approx(reference.stars, rel=0.02)
+    assert actual.aim == pytest.approx(reference.aim, rel=0.02)
+    assert actual.speed == pytest.approx(reference.speed, rel=0.02)
+    assert actual.slider == pytest.approx(reference.slider_factor, abs=0.01)
+
+
 def test_fast_calculator_returns_five_independent_factors() -> None:
     path = Path(__file__).parent / "data" / "162.osu"
     data = path.read_bytes()
@@ -97,6 +118,10 @@ def test_fast_parser_prunes_after_4096_objects() -> None:
             parsed.packed.y,
             parsed.packed.end_x,
             parsed.packed.end_y,
+            parsed.packed.lazy_end_x,
+            parsed.packed.lazy_end_y,
+            parsed.packed.last_nested_x,
+            parsed.packed.last_nested_y,
             parsed.packed.kind,
             parsed.packed.repeats,
             parsed.packed.slider_dist,

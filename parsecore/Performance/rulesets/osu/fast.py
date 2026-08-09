@@ -7,11 +7,20 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from parsecore.Beatmap.section.enums import GameMode as BeatmapGameMode
+from parsecore.Beatmap.section.hit_objects.hit_objects import convert_path_str
+from parsecore.Beatmap.section.hit_objects.slider import (
+    Curve,
+    SliderEventType,
+    generate_slider_events,
+)
+from parsecore.Beatmap.utils import Pos
+
 from ...data.attributes import AdjustedBeatmapAttributes, as_override
 from ...data.hit_objects import HoldNote, Slider, Spinner
 from ...data.mode import GameMode
 from ...data.mods import PerformanceMods, Reflection
-from ...utils import get_precision_adjusted_beat_length
+from ...utils import _interpolate_curve_position, get_precision_adjusted_beat_length
 from .difficulty import OsuDifficultyAttributes
 
 np: Any = None
@@ -37,8 +46,6 @@ if TYPE_CHECKING:
     from ...data.beatmap import PerformanceBeatmap
 
 MAX_OBJECTS = 4096
-_AIM_RATING_SCALE = 3.4
-_SPEED_RATING_SCALE = 1.06
 _MIN_DELTA = 25.0
 _NORMALISED_RADIUS = 50.0
 _NORMALISED_DIAMETER = 100.0
@@ -55,6 +62,10 @@ class PackedOsuMap:
     y: Any
     end_x: Any
     end_y: Any
+    lazy_end_x: Any
+    lazy_end_y: Any
+    last_nested_x: Any
+    last_nested_y: Any
     kind: Any
     repeats: Any
     slider_dist: Any
@@ -82,6 +93,182 @@ class FastBeatmap:
     slider_tick_rate: float
 
 
+def _slider_summary(
+        curve: Curve,
+        *,
+        start_time: float,
+        repeat_count: int,
+        velocity: float,
+        tick_distance: float,
+        radius: float,
+) -> tuple[float, float, float, float, float, float, float, float, float, int]:
+    distance = curve.dist()
+    span_count = repeat_count + 1
+    if distance <= 0.0 or velocity <= 0.0:
+        return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0)
+
+    span_duration = distance / velocity
+    duration = span_count * span_duration
+    events = list(generate_slider_events(
+        start_time=start_time,
+        span_duration=span_duration,
+        velocity=velocity,
+        tick_dist=tick_distance,
+        total_dist=distance,
+        span_count=span_count,
+    ))
+    nested = [
+        (event, _interpolate_curve_position(curve, event.path_progress))
+        for event in events
+        if event.kind in {
+            SliderEventType.Tick,
+            SliderEventType.Repeat,
+            SliderEventType.Tail,
+        }
+    ]
+    tail = nested[-1][1] if nested else Pos(0.0, 0.0)
+    penultimate = nested[-2][1] if len(nested) >= 2 else Pos(0.0, 0.0)
+
+    tracking_end_time = max(
+        start_time + duration - 36.0,
+        start_time + duration / 2.0,
+    )
+    last_tick_index = -1
+    for index, (event, _) in enumerate(nested):
+        if event.kind == SliderEventType.Tick:
+            last_tick_index = index
+    lazy_nested = nested
+    if last_tick_index >= 0 and nested[last_tick_index][0].time > tracking_end_time:
+        tracking_end_time = nested[last_tick_index][0].time
+        lazy_nested = (
+            nested[:last_tick_index]
+            + nested[last_tick_index + 1:]
+            + [nested[last_tick_index]]
+        )
+
+    lazy_travel_time = tracking_end_time - start_time
+    progress = lazy_travel_time / span_duration if span_duration > 0.0 else 0.0
+    progress = 1.0 - progress % 1.0 if progress % 2.0 >= 1.0 else progress % 1.0
+    lazy_target = _interpolate_curve_position(curve, progress)
+    cursor = Pos(0.0, 0.0)
+    factor = 50.0 / radius if radius > 0.0 else 0.0
+    lazy_travel_distance = 0.0
+    for index, (event, position) in enumerate(lazy_nested):
+        movement = position - cursor
+        movement_length = factor * movement.length()
+        required_movement = (
+            50.0 if event.kind == SliderEventType.Repeat else 90.0
+        )
+        if index == len(lazy_nested) - 1:
+            lazy_movement = lazy_target - cursor
+            if lazy_movement.length() < movement.length():
+                movement = lazy_movement
+                movement_length = factor * movement.length()
+        if movement_length > required_movement:
+            fraction = (movement_length - required_movement) / movement_length
+            cursor += movement * fraction
+            lazy_travel_distance += movement_length * fraction
+
+    nested_count = sum(
+        event.kind in {SliderEventType.Tick, SliderEventType.Repeat}
+        for event, _ in nested
+    )
+    return (
+        tail.x,
+        tail.y,
+        cursor.x,
+        cursor.y,
+        penultimate.x,
+        penultimate.y,
+        lazy_travel_distance,
+        lazy_travel_time,
+        duration,
+        nested_count,
+    )
+
+
+def _approximate_slider_summary(
+        *,
+        endpoint_x: float,
+        endpoint_y: float,
+        distance: float,
+        repeat_count: int,
+        velocity: float,
+        tick_distance: float,
+        radius: float,
+) -> tuple[float, float, float, float, float, float, float, float, float, int]:
+    span_count = repeat_count + 1
+    if distance <= 0.0 or velocity <= 0.0:
+        return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0)
+
+    span_duration = distance / velocity
+    duration = span_count * span_duration
+    lazy_travel_time = max(duration - 36.0, duration / 2.0)
+    factor = 50.0 / radius if radius > 0.0 else 0.0
+    cursor_x = 0.0
+    cursor_y = 0.0
+    lazy_travel_distance = 0.0
+    for span in range(span_count):
+        is_last = span == span_count - 1
+        if is_last:
+            progress = lazy_travel_time / span_duration
+            progress = (
+                1.0 - progress % 1.0
+                if progress % 2.0 >= 1.0
+                else progress % 1.0
+            )
+            target_x = endpoint_x * progress
+            target_y = endpoint_y * progress
+            required = 90.0
+        elif span % 2 == 0:
+            target_x = endpoint_x
+            target_y = endpoint_y
+            required = 50.0
+        else:
+            target_x = 0.0
+            target_y = 0.0
+            required = 50.0
+        movement_x = target_x - cursor_x
+        movement_y = target_y - cursor_y
+        movement_length = factor * math.sqrt(
+            movement_x * movement_x + movement_y * movement_y
+        )
+        if movement_length > required:
+            fraction = (movement_length - required) / movement_length
+            cursor_x += movement_x * fraction
+            cursor_y += movement_y * fraction
+            lazy_travel_distance += movement_length * fraction
+
+    tail_x = endpoint_x if span_count % 2 == 1 else 0.0
+    tail_y = endpoint_y if span_count % 2 == 1 else 0.0
+    if span_count % 2 == 1:
+        penultimate_x = 0.0
+        penultimate_y = 0.0
+    else:
+        penultimate_x = endpoint_x
+        penultimate_y = endpoint_y
+    min_distance_from_end = velocity * 10.0
+    ticks = 0
+    if tick_distance > 0.0:
+        tick = tick_distance
+        while tick < distance - min_distance_from_end:
+            ticks += 1
+            tick += tick_distance
+    nested_count = ticks * span_count + repeat_count
+    return (
+        tail_x,
+        tail_y,
+        cursor_x,
+        cursor_y,
+        penultimate_x,
+        penultimate_y,
+        lazy_travel_distance,
+        lazy_travel_time,
+        duration,
+        nested_count,
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class StructuralFactors:
     """The five independent structural difficulty factors for one map."""
@@ -99,7 +286,11 @@ class StructuralFactors:
     objects_pruned: bool
 
 
-def _parse_fast_bytes(data: bytes, max_objects: int) -> FastBeatmap:
+def _parse_fast_bytes(
+        data: bytes,
+        max_objects: int,
+        cs_override: float | tuple[float, bool] | None = None,
+) -> FastBeatmap:
     array = _require_numpy()
     if max_objects < 1:
         raise ValueError("max_objects must be positive")
@@ -128,6 +319,7 @@ def _parse_fast_bytes(data: bytes, max_objects: int) -> FastBeatmap:
     kinds: list[int] = []
     repeat_values: list[int] = []
     distances: list[float] = []
+    slider_paths: list[bytes | None] = []
 
     section = b""
     for raw_line in data.splitlines():
@@ -208,6 +400,7 @@ def _parse_fast_bytes(data: bytes, max_objects: int) -> FastBeatmap:
             distance = 0.0
             if type_flags & 2 and len(parts) >= 7:
                 kinds.append(1)
+                slider_paths.append(parts[5])
                 repeat = max(0, int(parts[6]) - 1)
                 repeat_values.append(repeat)
                 if len(parts) > 7:
@@ -216,34 +409,15 @@ def _parse_fast_bytes(data: bytes, max_objects: int) -> FastBeatmap:
                     except ValueError:
                         distance = 0.0
 
-                previous_x = 0.0
-                previous_y = 0.0
-                endpoint_x = 0.0
-                endpoint_y = 0.0
-                for token in parts[5].split(b"|")[1:]:
-                    point = token.split(b":", 1)
-                    if len(point) != 2:
-                        continue
-                    point_x = float(point[0]) - start_x
-                    point_y = float(point[1]) - start_y
-                    dx = point_x - previous_x
-                    dy = point_y - previous_y
-                    if distance <= 0.0:
-                        distance += math.sqrt(dx * dx + dy * dy)
-                    previous_x = point_x
-                    previous_y = point_y
-                    endpoint_x = point_x
-                    endpoint_y = point_y
-                if repeat & 1:
-                    end_x_values[-1] += endpoint_x
-                    end_y_values[-1] += endpoint_y
             elif type_flags & 8 and len(parts) >= 6:
                 kinds.append(2)
+                slider_paths.append(None)
                 repeat_values.append(0)
                 end_time = float(parts[5])
                 distance = max(0.0, end_time - start)
             else:
                 kinds.append(0)
+                slider_paths.append(None)
                 repeat_values.append(0)
             distances.append(distance)
 
@@ -254,10 +428,22 @@ def _parse_fast_bytes(data: bytes, max_objects: int) -> FastBeatmap:
     y_array = array.asarray(y_values, dtype=array.float32)
     end_x_array = array.asarray(end_x_values, dtype=array.float32)
     end_y_array = array.asarray(end_y_values, dtype=array.float32)
+    lazy_end_x_array = x_array.copy()
+    lazy_end_y_array = y_array.copy()
+    last_nested_x_array = x_array.copy()
+    last_nested_y_array = y_array.copy()
     kind_array = array.asarray(kinds, dtype=array.uint8)
     repeat_array = array.asarray(repeat_values, dtype=array.int16)
     distance_array = array.asarray(distances, dtype=array.float32)
     duration_array = array.zeros(count, dtype=array.float32)
+
+    effective_cs = (
+        float(cs_override[0])
+        if isinstance(cs_override, tuple) and cs_override[1]
+        else base_cs
+    )
+    scale = (1.0 - 0.7 * (effective_cs - 5.0) / 5.0) / 2.0 * 1.00041
+    radius = 64.0 * scale
 
     timing_index = 0
     difficulty_index = 0
@@ -299,20 +485,83 @@ def _parse_fast_bytes(data: bytes, max_objects: int) -> FastBeatmap:
                 if adjusted_beat_length > 0.0
                 else 0.0
             )
-            spans = int(repeat_array[index]) + 1
-            duration = (
-                spans * distance_array[index] / velocity if velocity > 0.0 else 0.0
-            )
-            end_time_array[index] = time_array[index] + duration
-            duration_array[index] = duration
             tick_distance = (
-                100.0 * slider_multiplier / slider_velocity / slider_tick_rate
+                velocity * beat_length / slider_tick_rate
+                * (1.0 / slider_velocity if version < 8.0 else 1.0)
                 if slider_velocity > 0.0 and slider_tick_rate > 0.0
                 else 0.0
             )
-            ticks = max(0, math.ceil(distance_array[index] / tick_distance) - 1) * spans if tick_distance > 0.0 else 0
-            max_combo += ticks + int(repeat_array[index])
-            n_large_ticks += ticks + int(repeat_array[index])
+            endpoint_x = 0.0
+            endpoint_y = 0.0
+            previous_x = 0.0
+            previous_y = 0.0
+            polyline_length = 0.0
+            for token in (slider_paths[index] or b"").split(b"|")[1:]:
+                if token[:1].isalpha():
+                    continue
+                point = token.split(b":", 1)
+                if len(point) != 2:
+                    continue
+                endpoint_x = float(point[0]) - float(x_array[index])
+                endpoint_y = float(point[1]) - float(y_array[index])
+                dx = endpoint_x - previous_x
+                dy = endpoint_y - previous_y
+                polyline_length += math.sqrt(dx * dx + dy * dy)
+                previous_x = endpoint_x
+                previous_y = endpoint_y
+            distance = float(distance_array[index])
+            if distance <= 0.0:
+                distance = polyline_length
+            chord_length = math.sqrt(
+                endpoint_x * endpoint_x + endpoint_y * endpoint_y
+            )
+            needs_curve = (
+                distance < chord_length * 0.5
+                or distance > polyline_length * 1.3
+            )
+            try:
+                if needs_curve:
+                    points = convert_path_str(
+                        (slider_paths[index] or b"").decode("ascii"),
+                        Pos(float(x_array[index]), float(y_array[index])),
+                    )
+                    curve = Curve(
+                        BeatmapGameMode.Osu,
+                        points,
+                        distance,
+                    )
+                    summary = _slider_summary(
+                        curve,
+                        start_time=float(time_array[index]),
+                        repeat_count=int(repeat_array[index]),
+                        velocity=velocity,
+                        tick_distance=tick_distance,
+                        radius=radius,
+                    )
+                else:
+                    summary = _approximate_slider_summary(
+                        endpoint_x=endpoint_x,
+                        endpoint_y=endpoint_y,
+                        distance=distance,
+                        repeat_count=int(repeat_array[index]),
+                        velocity=velocity,
+                        tick_distance=tick_distance,
+                        radius=radius,
+                    )
+            except Exception:
+                summary = (0.0,) * 9 + (0,)
+            end_x_array[index] += summary[0]
+            end_y_array[index] += summary[1]
+            lazy_end_x_array[index] += summary[2]
+            lazy_end_y_array[index] += summary[3]
+            last_nested_x_array[index] += summary[4]
+            last_nested_y_array[index] += summary[5]
+            distance_array[index] = summary[6]
+            duration_array[index] = summary[7]
+            duration = summary[8]
+            end_time_array[index] = time_array[index] + duration
+            max_combo += summary[9]
+            n_large_ticks += summary[9]
         elif kind_array[index] == 2:
             n_spinners += 1
         else:
@@ -336,6 +585,10 @@ def _parse_fast_bytes(data: bytes, max_objects: int) -> FastBeatmap:
         y=y_array,
         end_x=end_x_array,
         end_y=end_y_array,
+        lazy_end_x=lazy_end_x_array,
+        lazy_end_y=lazy_end_y_array,
+        last_nested_x=last_nested_x_array,
+        last_nested_y=last_nested_y_array,
         kind=kind_array,
         repeats=repeat_array,
         slider_dist=distance_array,
@@ -369,30 +622,11 @@ def _require_numpy() -> Any:
     return np
 
 
-def _slider_length(slider: Slider) -> float:
-    expected = slider.expected_dist
-    if expected is not None and expected > 0.0:
-        return float(expected)
-
-    length = 0.0
-    previous_x = 0.0
-    previous_y = 0.0
-    for point in slider.control_points:
-        x = float(point.pos.x)
-        y = float(point.pos.y)
-        dx = x - previous_x
-        dy = y - previous_y
-        length += math.sqrt(dx * dx + dy * dy)
-        previous_x = x
-        previous_y = y
-    return length
-
-
 def _pack_map(
         beatmap: PerformanceBeatmap,
         *,
         max_objects: int,
-        clock_rate: float,
+        radius: float,
 ) -> PackedOsuMap:
     array = _require_numpy()
     if max_objects < 1:
@@ -406,6 +640,10 @@ def _pack_map(
     y = array.empty(count, dtype=array.float32)
     end_x = array.empty(count, dtype=array.float32)
     end_y = array.empty(count, dtype=array.float32)
+    lazy_end_x = array.empty(count, dtype=array.float32)
+    lazy_end_y = array.empty(count, dtype=array.float32)
+    last_nested_x = array.empty(count, dtype=array.float32)
+    last_nested_y = array.empty(count, dtype=array.float32)
     kind = array.zeros(count, dtype=array.uint8)
     repeats = array.zeros(count, dtype=array.int16)
     slider_dist = array.zeros(count, dtype=array.float32)
@@ -429,6 +667,10 @@ def _pack_map(
         y[index] = float(hit_object.pos.y)
         end_x[index] = x[index]
         end_y[index] = y[index]
+        lazy_end_x[index] = x[index]
+        lazy_end_y[index] = y[index]
+        last_nested_x[index] = x[index]
+        last_nested_y[index] = y[index]
         max_combo += 1
 
         inner = hit_object.kind
@@ -436,14 +678,6 @@ def _pack_map(
             kind[index] = 1
             n_sliders += 1
             repeats[index] = inner.repeats
-            distance = _slider_length(inner)
-            slider_dist[index] = distance
-            control_points = inner.control_points
-            if control_points:
-                endpoint = control_points[-1].pos
-                if inner.repeats % 2:
-                    end_x[index] += float(endpoint.x)
-                    end_y[index] += float(endpoint.y)
 
             while (
                     timing_index + 1 < len(timing_points)
@@ -475,20 +709,77 @@ def _pack_map(
                 if adjusted_beat_length > 0.0
                 else 0.0
             )
-            spans = inner.repeats + 1
-            duration = spans * distance / velocity if velocity > 0.0 else 0.0
+            tick_distance = (
+                velocity * beat_length / beatmap.slider_tick_rate
+                if slider_velocity > 0.0
+                and beat_length > 0.0
+                and beatmap.slider_tick_rate > 0.0
+                else 0.0
+            )
+            endpoint_x = 0.0
+            endpoint_y = 0.0
+            previous_x = 0.0
+            previous_y = 0.0
+            polyline_length = 0.0
+            for point in inner.control_points:
+                endpoint_x = float(point.pos.x)
+                endpoint_y = float(point.pos.y)
+                dx = endpoint_x - previous_x
+                dy = endpoint_y - previous_y
+                polyline_length += math.sqrt(dx * dx + dy * dy)
+                previous_x = endpoint_x
+                previous_y = endpoint_y
+            distance = (
+                float(inner.expected_dist)
+                if inner.expected_dist is not None and inner.expected_dist > 0.0
+                else polyline_length
+            )
+            chord_length = math.sqrt(
+                endpoint_x * endpoint_x + endpoint_y * endpoint_y
+            )
+            needs_curve = (
+                distance < chord_length * 0.5
+                or distance > polyline_length * 1.3
+            )
+            try:
+                if needs_curve:
+                    curve = Curve(
+                        BeatmapGameMode.Osu,
+                        inner.control_points,
+                        inner.expected_dist,
+                    )
+                    summary = _slider_summary(
+                        curve,
+                        start_time=start,
+                        repeat_count=inner.repeats,
+                        velocity=velocity,
+                        tick_distance=tick_distance,
+                        radius=radius,
+                    )
+                else:
+                    summary = _approximate_slider_summary(
+                        endpoint_x=endpoint_x,
+                        endpoint_y=endpoint_y,
+                        distance=distance,
+                        repeat_count=inner.repeats,
+                        velocity=velocity,
+                        tick_distance=tick_distance,
+                        radius=radius,
+                    )
+            except Exception:
+                summary = (0.0,) * 9 + (0,)
+            end_x[index] += summary[0]
+            end_y[index] += summary[1]
+            lazy_end_x[index] += summary[2]
+            lazy_end_y[index] += summary[3]
+            last_nested_x[index] += summary[4]
+            last_nested_y[index] += summary[5]
+            slider_dist[index] = summary[6]
+            slider_duration[index] = summary[7]
+            duration = summary[8]
             end_time[index] = start + duration
-            slider_duration[index] = duration / clock_rate
-            ticks = 0
-            if slider_velocity > 0.0 and beat_length > 0.0:
-                tick_distance = (
-                    100.0 * beatmap.slider_multiplier / slider_velocity
-                    / beatmap.slider_tick_rate
-                )
-                if tick_distance > 0.0:
-                    ticks = max(0, math.ceil(distance / tick_distance) - 1) * spans
-            max_combo += ticks + inner.repeats
-            n_large_ticks += ticks + inner.repeats
+            max_combo += summary[9]
+            n_large_ticks += summary[9]
         elif isinstance(inner, (Spinner, HoldNote)):
             kind[index] = 2
             n_spinners += 1
@@ -514,6 +805,10 @@ def _pack_map(
         y=y,
         end_x=end_x,
         end_y=end_y,
+        lazy_end_x=lazy_end_x,
+        lazy_end_y=lazy_end_y,
+        last_nested_x=last_nested_x,
+        last_nested_y=last_nested_y,
         kind=kind,
         repeats=repeats,
         slider_dist=slider_dist,
@@ -673,7 +968,152 @@ if njit is not None:
                 value *= 0.727 + (1.0 - 0.727) * scale
             result += value * weight
             weight *= 0.9
-        return result / 0.1
+        return result
+
+
+    @_compile(cache=True, fastmath=True)
+    def _variable_peak_value(values: Any, time: Any, clock_rate: float) -> float:
+        count = values.shape[0]
+        if count == 0:
+            return 0.0
+
+        capacity = count + 512
+        peak_values = np.zeros(capacity, dtype=np.float64)
+        peak_lengths = np.zeros(capacity, dtype=np.float64)
+        peak_count = 0
+        total_length = 0.0
+        queued_values = np.zeros(count, dtype=np.float64)
+        queued_times = np.zeros(count, dtype=np.float64)
+        queue_start = 0
+        queue_end = 0
+
+        section_begin = time[0] / clock_rate
+        section_end = section_begin + 400.0
+        current_peak = values[0]
+
+        for index in range(1, count):
+            current_time = time[index] / clock_rate
+            previous_time = time[index - 1] / clock_rate
+            while current_time > section_end:
+                section_length = round(section_end - section_begin)
+                insert = peak_count
+                while insert > 0 and peak_values[insert - 1] < current_peak:
+                    peak_values[insert] = peak_values[insert - 1]
+                    peak_lengths[insert] = peak_lengths[insert - 1]
+                    insert -= 1
+                peak_values[insert] = current_peak
+                peak_lengths[insert] = section_length
+                peak_count += 1
+                total_length += section_length
+                while total_length > 44_000.0 and peak_count > 0:
+                    peak_count -= 1
+                    total_length -= peak_lengths[peak_count]
+
+                section_begin = section_end
+                current_peak = values[index - 1] * _decay(
+                    0.2, section_begin - previous_time
+                )
+                if queue_start < queue_end:
+                    queued_strain = queued_values[queue_start]
+                    section_end = queued_times[queue_start] + 400.0
+                    queue_start += 1
+                    current_peak = max(current_peak, queued_strain)
+                else:
+                    section_end = section_begin + 400.0
+
+            current_strain = values[index]
+            if current_strain > current_peak:
+                queue_start = 0
+                queue_end = 0
+                section_length = round(current_time - section_begin)
+                insert = peak_count
+                while insert > 0 and peak_values[insert - 1] < current_peak:
+                    peak_values[insert] = peak_values[insert - 1]
+                    peak_lengths[insert] = peak_lengths[insert - 1]
+                    insert -= 1
+                peak_values[insert] = current_peak
+                peak_lengths[insert] = section_length
+                peak_count += 1
+                total_length += section_length
+                while total_length > 44_000.0 and peak_count > 0:
+                    peak_count -= 1
+                    total_length -= peak_lengths[peak_count]
+                section_begin = current_time
+                section_end = section_begin + 400.0
+                current_peak = current_strain
+            else:
+                while (
+                        queue_end > queue_start
+                        and queued_values[queue_end - 1] < current_strain
+                ):
+                    queue_end -= 1
+                queued_values[queue_end] = current_strain
+                queued_times[queue_end] = current_time
+                queue_end += 1
+
+        section_length = round(section_end - section_begin)
+        insert = peak_count
+        while insert > 0 and peak_values[insert - 1] < current_peak:
+            peak_values[insert] = peak_values[insert - 1]
+            peak_lengths[insert] = peak_lengths[insert - 1]
+            insert -= 1
+        peak_values[insert] = current_peak
+        peak_lengths[insert] = section_length
+        peak_count += 1
+        total_length += section_length
+        while total_length > 44_000.0 and peak_count > 0:
+            peak_count -= 1
+            total_length -= peak_lengths[peak_count]
+
+        reduced_values = np.zeros(capacity, dtype=np.float64)
+        reduced_lengths = np.zeros(capacity, dtype=np.float64)
+        reduced_count = 0
+        reduced_time = 0.0
+        skipped = 0
+        while skipped < peak_count and reduced_time < 4000.0:
+            value = peak_values[skipped]
+            length = peak_lengths[skipped]
+            added = 0.0
+            while added < length:
+                scale = math.log10(
+                    1.0
+                    + 9.0
+                    * _clamp((reduced_time + added) / 4000.0, 0.0, 1.0)
+                )
+                chunk = min(20.0, length - added)
+                reduced_values[reduced_count] = value * (
+                    0.727 + (1.0 - 0.727) * scale
+                )
+                reduced_lengths[reduced_count] = round(chunk)
+                reduced_count += 1
+                added += 20.0
+            reduced_time += length
+            skipped += 1
+
+        for index in range(skipped, peak_count):
+            reduced_values[reduced_count] = peak_values[index]
+            reduced_lengths[reduced_count] = peak_lengths[index]
+            reduced_count += 1
+
+        for index in range(1, reduced_count):
+            value = reduced_values[index]
+            length = reduced_lengths[index]
+            insert = index
+            while insert > 0 and reduced_values[insert - 1] < value:
+                reduced_values[insert] = reduced_values[insert - 1]
+                reduced_lengths[insert] = reduced_lengths[insert - 1]
+                insert -= 1
+            reduced_values[insert] = value
+            reduced_lengths[insert] = length
+
+        difficulty = 0.0
+        weighted_time = 0.0
+        for index in range(reduced_count):
+            end = weighted_time + reduced_lengths[index] / 400.0
+            weight = 0.9 ** weighted_time - 0.9 ** end
+            difficulty += reduced_values[index] * weight
+            weighted_time = end
+        return difficulty / 0.1
 
 
     @_compile(cache=True, fastmath=True)
@@ -684,6 +1124,10 @@ if njit is not None:
             y: Any,
             end_x: Any,
             end_y: Any,
+            lazy_end_x: Any,
+            lazy_end_y: Any,
+            last_nested_x: Any,
+            last_nested_y: Any,
             kind: Any,
             repeats: Any,
             slider_dist: Any,
@@ -714,15 +1158,20 @@ if njit is not None:
         sy = y + stack_height * offset_scale
         ex = end_x + stack_height * offset_scale
         ey = end_y + stack_height * offset_scale
+        lex = lazy_end_x + stack_height * offset_scale
+        ley = lazy_end_y + stack_height * offset_scale
+        lnx = last_nested_x + stack_height * offset_scale
+        lny = last_nested_y + stack_height * offset_scale
 
         for index in range(count):
             if kind[index] == 1:
-                spans = max(1.0, float(repeats[index] + 1))
-                lazy = max(slider_dist[index] - 50.0, 0.0) * 50.0 / radius
-                lazy *= spans
+                lazy = slider_dist[index]
                 lazy_travel_dist[index] = lazy
                 travel_dist[index] = lazy * max(1.0, float(repeats[index]) ** 0.3)
-                travel_time[index] = max(slider_duration[index], _MIN_DELTA)
+                travel_time[index] = max(
+                    slider_duration[index] / clock_rate,
+                    _MIN_DELTA,
+                )
 
             if index == 0:
                 delta[index] = 0.0
@@ -733,8 +1182,8 @@ if njit is not None:
 
             delta[index] = (time[index] - time[index - 1]) / clock_rate
             adjusted_delta[index] = max(delta[index], _MIN_DELTA)
-            last_x = ex[index - 1] if kind[index - 1] == 1 else sx[index - 1]
-            last_y = ey[index - 1] if kind[index - 1] == 1 else sy[index - 1]
+            last_x = lex[index - 1] if kind[index - 1] == 1 else sx[index - 1]
+            last_y = ley[index - 1] if kind[index - 1] == 1 else sy[index - 1]
             dx = sx[index] - sx[index - 1]
             dy = sy[index] - sy[index - 1]
             jump[index] = _norm2(dx, dy) * 50.0 / radius
@@ -755,8 +1204,8 @@ if njit is not None:
                 )
 
                 tail_jump = _norm2(
-                    end_x[index - 1] - sx[index],
-                    end_y[index - 1] - sy[index],
+                    ex[index - 1] - sx[index],
+                    ey[index - 1] - sy[index],
                 ) * 50.0 / radius
                 min_jump[index] = max(
                     min(lazy_jump[index] - 30.0, tail_jump - 120.0),
@@ -766,10 +1215,10 @@ if njit is not None:
             if index >= 2 and kind[index] != 2 and kind[index - 1] != 2:
                 last_cursor_x = sx[index - 1] if kind[index - 1] == 1 else last_x
                 last_cursor_y = sy[index - 1] if kind[index - 1] == 1 else last_y
-                previous_x = ex[index - 2] if kind[index - 2] == 1 else sx[index - 2]
-                previous_y = ey[index - 2] if kind[index - 2] == 1 else sy[index - 2]
-                first_x = last_cursor_x - previous_x
-                first_y = last_cursor_y - previous_y
+                previous_x = lex[index - 2] if kind[index - 2] == 1 else sx[index - 2]
+                previous_y = ley[index - 2] if kind[index - 2] == 1 else sy[index - 2]
+                first_x = previous_x - last_cursor_x
+                first_y = previous_y - last_cursor_y
                 second_x = sx[index] - last_cursor_x
                 second_y = sy[index] - last_cursor_y
                 dot = first_x * second_x + first_y * second_y
@@ -780,10 +1229,10 @@ if njit is not None:
                 direct_angle = math.atan2(cross, dot)
                 slider_angle = direct_angle
                 if kind[index - 1] == 1:
-                    slider_first_x = sx[index - 1] - ex[index - 1]
-                    slider_first_y = sy[index - 1] - ey[index - 1]
-                    slider_second_x = sx[index] - ex[index - 1]
-                    slider_second_y = sy[index] - ey[index - 1]
+                    slider_first_x = lnx[index - 1] - lex[index - 1]
+                    slider_first_y = lny[index - 1] - ley[index - 1]
+                    slider_second_x = sx[index] - lex[index - 1]
+                    slider_second_y = sy[index] - ley[index - 1]
                     slider_angle = math.atan2(
                         abs(
                             slider_first_x * slider_second_y
@@ -858,7 +1307,7 @@ if njit is not None:
             lazy_jump: Any,
             hit_window_great: float,
     ) -> float:
-        if kind[index] == 2:
+        if index == 0 or kind[index] == 2:
             return 0.0
         strain_time = adjusted_delta[index]
         next_index = index + 1
@@ -1081,11 +1530,20 @@ if njit is not None:
             normalised_vector_angle: Any,
             stacked_x: Any,
             stacked_y: Any,
+            object_radius: float,
             small_bonus: float,
             with_slider: bool,
     ) -> Any:
-        if index <= 1 or kind[index] == 2 or kind[index - 1] == 2:
+        if index == 0 or kind[index] == 2:
             return 0.0, 0.0, 0.0, 0.0
+
+        travel_distance = lazy_travel_dist[index - 1]
+        agility = min(travel_distance + lazy_jump[index], 120.0) / 120.0
+        agility *= 1000.0 / adjusted_delta[index]
+        agility *= small_bonus ** 1.5
+        agility *= 1.0 / (1.0 - 0.2 ** (adjusted_delta[index] / 1000.0))
+        if index <= 2 or kind[index - 1] == 2:
+            return 0.0, agility, 0.0, 0.0
 
         current_distance = lazy_jump[index] if with_slider else jump[index]
         current_velocity = current_distance / adjusted_delta[index]
@@ -1122,7 +1580,7 @@ if njit is not None:
                 else min(0.5 / constant_angle_count, 1.0)
             )
             vector_repetition = ratio * ratio
-            stack_factor = _smootherstep(current_distance, 0.0, 100.0)
+            stack_factor = _smootherstep(lazy_jump[index], 0.0, 100.0)
             angle_difference_adjusted = math.cos(
                 2.0
                 * min(
@@ -1142,33 +1600,40 @@ if njit is not None:
             previous_angle = angle[index - 1]
             velocity_influence = min(current_velocity, previous_velocity)
             current_angle = angle[index]
-            acute = _smoothstep(
-                current_angle, math.radians(140.0), math.radians(40.0)
-            )
-            previous_acute = _smoothstep(
-                previous_angle, math.radians(140.0), math.radians(40.0)
-            )
-            acute *= 0.08 + 0.92 * (1.0 - min(acute, previous_acute ** 3))
-            acute *= velocity_influence * _smootherstep(
-                60000.0 / adjusted_delta[index], 300.0, 400.0
-            ) * _smootherstep(current_distance, 0.0, 200.0)
+            acute = 0.0
+            if max(adjusted_delta[index], adjusted_delta[index - 1]) < 1.25 * min(
+                    adjusted_delta[index], adjusted_delta[index - 1]
+            ):
+                acute = _smoothstep(
+                    current_angle, math.radians(140.0), math.radians(40.0)
+                )
+                previous_acute = _smoothstep(
+                    previous_angle, math.radians(140.0), math.radians(40.0)
+                )
+                acute *= 0.08 + 0.92 * (1.0 - min(acute, previous_acute ** 3))
+                acute *= velocity_influence * _smootherstep(
+                    60000.0 / (adjusted_delta[index] * 2.0), 300.0, 400.0
+                ) * _smootherstep(current_distance, 0.0, 200.0)
             wide = _smoothstep(
                 current_angle, math.radians(40.0), math.radians(140.0)
             )
             previous_wide = _smoothstep(
                 previous_angle, math.radians(40.0), math.radians(140.0)
             )
-            wide *= 1.0 - min(
-                wide, previous_wide ** 3
-            )
+            wide *= 0.25 + 0.75 * (1.0 - min(wide, previous_wide ** 3))
             wide *= min(
-                current_distance / adjusted_delta[index] ** 1.45,
+                max(
+                    current_distance,
+                    lazy_travel_dist[index - 1] + lazy_jump[index]
+                    if with_slider and kind[index - 1] == 1
+                    else current_distance,
+                ) / adjusted_delta[index] ** 1.45,
                 previous_distance / adjusted_delta[index - 1] ** 1.45,
             )
-            if index >= 2:
+            if index >= 3:
                 distance = _norm2(
-                    stacked_x[index - 2] - stacked_x[index - 1],
-                    stacked_y[index - 2] - stacked_y[index - 1],
+                    stacked_x[index - 3] - stacked_x[index - 1],
+                    stacked_y[index - 3] - stacked_y[index - 1],
                 )
                 if distance < 1.0:
                     wide *= 1.0 - 0.55 * (1.0 - distance)
@@ -1214,14 +1679,6 @@ if njit is not None:
             1.0 - 0.03 ** (adjusted_delta[index] / 1000.0) ** 0.65
         )
 
-        travel_distance = (
-            lazy_travel_dist[index - 1] if index > 0 else 0.0
-        )
-        agility = min(travel_distance + lazy_jump[index], 120.0) / 120.0
-        agility *= 1000.0 / adjusted_delta[index]
-        agility *= small_bonus ** 1.5
-        agility *= 1.0 / (1.0 - 0.2 ** (adjusted_delta[index] / 1000.0))
-
         flow = current_velocity * math.sqrt(small_bonus)
         delta_difference = (
             max(adjusted_delta[index], adjusted_delta[index - 1])
@@ -1241,21 +1698,21 @@ if njit is not None:
                 stacked_y[index],
                 stacked_x[index - 1],
                 stacked_y[index - 1],
-                64.0,
+                object_radius,
             )
             o2 = _flow_overlap(
                 stacked_x[index],
                 stacked_y[index],
                 stacked_x[index - 2],
                 stacked_y[index - 2],
-                64.0,
+                object_radius,
             )
             o3 = _flow_overlap(
                 stacked_x[index - 1],
                 stacked_y[index - 1],
                 stacked_x[index - 2],
                 stacked_y[index - 2],
-                64.0,
+                object_radius,
             )
             overlap_weight = 1.0 - o1 * o2 * o3
         if has_angle[index]:
@@ -1280,13 +1737,19 @@ if njit is not None:
             flow += travel_dist[index] / max(travel_time[index], _MIN_DELTA)
         flow = flow ** 1.45 * _smootherstep(current_distance, 0.0, 50.0)
 
-        combined = (snap ** 1.2 + agility ** 1.2) ** (1.0 / 1.2)
-        ratio = flow / combined if combined > 0.0 else 0.0
+        scaled_snap = snap * 70.9
+        scaled_agility = agility * 2.35
+        scaled_flow = flow * 242.0
+        combined = (scaled_snap ** 1.2 + scaled_agility ** 1.2) ** (1.0 / 1.2)
+        ratio = scaled_flow / combined if combined > 0.0 else 0.0
         if ratio <= 0.0:
             snap_probability = 0.0
         else:
             snap_probability = ratio ** 7.27 / (1.0 + ratio ** 7.27)
-        combined = (combined * snap_probability + flow * (1.0 - snap_probability)) * 1.12
+        combined = (
+            combined * snap_probability
+            + scaled_flow * (1.0 - snap_probability)
+        ) * 1.12
         return snap, agility, flow, combined
 
 
@@ -1310,6 +1773,8 @@ if njit is not None:
             normalised_vector_angle: Any,
             stacked_x: Any,
             stacked_y: Any,
+            object_radius: float,
+            clock_rate: float,
             small_bonus: float,
             overall_difficulty: float,
             hit_window_great: float,
@@ -1349,6 +1814,7 @@ if njit is not None:
                 normalised_vector_angle,
                 stacked_x,
                 stacked_y,
+                object_radius,
                 small_bonus,
                 True,
             )
@@ -1369,6 +1835,7 @@ if njit is not None:
                 normalised_vector_angle,
                 stacked_x,
                 stacked_y,
+                object_radius,
                 small_bonus,
                 False,
             )
@@ -1402,8 +1869,7 @@ if njit is not None:
             )
             speed_current *= _decay(0.3, adjusted_delta[index])
             speed_current += speed_raw * (1.0 - _decay(0.3, adjusted_delta[index])) * 1.16
-            speed_values[index] = speed_current
-            rhythm_values[index] = _rhythm_value(
+            rhythm = _rhythm_value(
                 index,
                 time,
                 delta,
@@ -1413,9 +1879,15 @@ if njit is not None:
                 lazy_jump,
                 hit_window_great,
             )
+            rhythm_values[index] = rhythm
+            speed_values[index] = speed_current * rhythm
 
-        aim_difficulty = _peak_value(aim_values, time)
-        aim_no_slider_difficulty = _peak_value(aim_no_slider_values, time)
+        aim_difficulty = _variable_peak_value(
+            aim_values[1:], time[1:], clock_rate
+        )
+        aim_no_slider_difficulty = _variable_peak_value(
+            aim_no_slider_values[1:], time[1:], clock_rate
+        )
         snap_difficulty = _peak_value(snap_values, time)
         agility_difficulty = _peak_value(agility_values, time)
         flow_difficulty = _peak_value(flow_values, time)
@@ -1449,6 +1921,10 @@ def _calculate_from_packed(
         packed.y,
         packed.end_x,
         packed.end_y,
+        packed.lazy_end_x,
+        packed.lazy_end_y,
+        packed.last_nested_x,
+        packed.last_nested_y,
         packed.kind,
         packed.repeats,
         packed.slider_dist,
@@ -1477,6 +1953,8 @@ def _calculate_from_packed(
         preprocessed[12],
         preprocessed[13],
         preprocessed[14],
+        radius,
+        adjusted.clock_rate,
         preprocessed[15],
         (79.5 - 2.0 * great / 2.0) / 6.0,
         great,
@@ -1499,8 +1977,8 @@ def _factors_from_packed(packed: PackedOsuMap, adjusted: AdjustedBeatmapAttribut
         stack_leniency=0.7,
         cs=adjusted.cs,
     )
-    aim_rating = 0.02275 * max(result[0], 0.0) ** 0.63 * _AIM_RATING_SCALE
-    speed_rating = math.sqrt(max(result[2], 0.0)) * 0.0675 * _SPEED_RATING_SCALE
+    aim_rating = 0.02275 * max(result[0], 0.0) ** 0.63
+    speed_rating = math.sqrt(max(result[2], 0.0)) * 0.0675
     performance = (
         (4.0 * aim_rating ** 3) ** 1.1
         + (4.0 * speed_rating ** 3) ** 1.1
@@ -1537,8 +2015,8 @@ def _attributes_from_packed(
         )
     )
 
-    aim_rating = 0.02275 * max(aim_difficulty, 0.0) ** 0.63 * _AIM_RATING_SCALE
-    speed_rating = math.sqrt(max(speed_difficulty, 0.0)) * 0.0675 * _SPEED_RATING_SCALE
+    aim_rating = 0.02275 * max(aim_difficulty, 0.0) ** 0.63
+    speed_rating = math.sqrt(max(speed_difficulty, 0.0)) * 0.0675
     reading_rating = 0.0
     slider_factor = (
         max(aim_no_slider, 0.0) ** 0.63 / max(aim_difficulty, 1e-12) ** 0.63
@@ -1615,7 +2093,7 @@ def calculate_fast(
     packed = _pack_map(
         pm,
         max_objects=max_objects,
-        clock_rate=adjusted.clock_rate,
+        radius=64.0 * (1.0 - 0.7 * (adjusted.cs - 5.0) / 5.0) / 2.0 * 1.00041,
     )
     return _attributes_from_packed(
         packed,
@@ -1656,7 +2134,7 @@ def calculate_fast_factors(
     packed = _pack_map(
         pm,
         max_objects=max_objects,
-        clock_rate=adjusted.clock_rate,
+        radius=64.0 * (1.0 - 0.7 * (adjusted.cs - 5.0) / 5.0) / 2.0 * 1.00041,
     )
     return _factors_from_packed(packed, adjusted)
 
@@ -1673,7 +2151,7 @@ def calculate_fast_bytes(
         **_: Any,
 ) -> OsuDifficultyAttributes:
     """Parse only calculation-relevant sections and calculate packed difficulty."""
-    beatmap = _parse_fast_bytes(data, max_objects)
+    beatmap = _parse_fast_bytes(data, max_objects, cs_override)
     if beatmap.mode != int(GameMode.OSU):
         raise NotImplementedError("the fast calculator only supports osu!standard")
     if getattr(mods, "reflection", Reflection.NONE) != Reflection.NONE:
@@ -1710,7 +2188,7 @@ def calculate_fast_factors_bytes(
         **_: Any,
 ) -> StructuralFactors:
     """Parse and calculate the five independent structural factors for one map."""
-    beatmap = _parse_fast_bytes(data, max_objects)
+    beatmap = _parse_fast_bytes(data, max_objects, cs_override)
     if beatmap.mode != int(GameMode.OSU):
         raise NotImplementedError("the fast calculator only supports osu!standard")
     if getattr(mods, "reflection", Reflection.NONE) != Reflection.NONE:
