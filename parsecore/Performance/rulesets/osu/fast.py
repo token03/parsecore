@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from parsecore.Beatmap.section.enums import GameMode as BeatmapGameMode
+from parsecore.Beatmap.section.enums import SplineType
 from parsecore.Beatmap.section.hit_objects.hit_objects import convert_path_str
 from parsecore.Beatmap.section.hit_objects.slider import (
     Curve,
@@ -54,6 +55,13 @@ _MAX_COORDINATE = 10_000_000.0
 _MAX_TIME = 1_000_000_000.0
 _MAX_SLIDER_DISTANCE = 100_000.0
 _MAX_REPEATS = 4096
+_MAX_SEGMENT_CONTROLS = 32
+_MAX_PATH_POINTS = 2048
+_MAX_BEZIER_STACK = 128
+_PATH_CATMULL = 0
+_PATH_BEZIER = 1
+_PATH_LINEAR = 2
+_PATH_PERFECT = 3
 
 
 @dataclass(slots=True)
@@ -191,88 +199,6 @@ def _slider_summary(
     )
 
 
-def _approximate_slider_summary(
-        *,
-        endpoint_x: float,
-        endpoint_y: float,
-        distance: float,
-        repeat_count: int,
-        velocity: float,
-        tick_distance: float,
-        radius: float,
-) -> tuple[float, float, float, float, float, float, float, float, float, int]:
-    span_count = repeat_count + 1
-    if distance <= 0.0 or velocity <= 0.0:
-        return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0)
-
-    span_duration = distance / velocity
-    duration = span_count * span_duration
-    lazy_travel_time = max(duration - 36.0, duration / 2.0)
-    factor = 50.0 / radius if radius > 0.0 else 0.0
-    cursor_x = 0.0
-    cursor_y = 0.0
-    lazy_travel_distance = 0.0
-    for span in range(span_count):
-        is_last = span == span_count - 1
-        if is_last:
-            progress = lazy_travel_time / span_duration
-            progress = (
-                1.0 - progress % 1.0
-                if progress % 2.0 >= 1.0
-                else progress % 1.0
-            )
-            target_x = endpoint_x * progress
-            target_y = endpoint_y * progress
-            required = 90.0
-        elif span % 2 == 0:
-            target_x = endpoint_x
-            target_y = endpoint_y
-            required = 50.0
-        else:
-            target_x = 0.0
-            target_y = 0.0
-            required = 50.0
-        movement_x = target_x - cursor_x
-        movement_y = target_y - cursor_y
-        movement_length = factor * math.sqrt(
-            movement_x * movement_x + movement_y * movement_y
-        )
-        if movement_length > required:
-            fraction = (movement_length - required) / movement_length
-            cursor_x += movement_x * fraction
-            cursor_y += movement_y * fraction
-            lazy_travel_distance += movement_length * fraction
-
-    tail_x = endpoint_x if span_count % 2 == 1 else 0.0
-    tail_y = endpoint_y if span_count % 2 == 1 else 0.0
-    if span_count % 2 == 1:
-        penultimate_x = 0.0
-        penultimate_y = 0.0
-    else:
-        penultimate_x = endpoint_x
-        penultimate_y = endpoint_y
-    min_distance_from_end = velocity * 10.0
-    ticks = 0
-    if tick_distance > 0.0:
-        tick = tick_distance
-        while tick < distance - min_distance_from_end:
-            ticks += 1
-            tick += tick_distance
-    nested_count = ticks * span_count + repeat_count
-    return (
-        tail_x,
-        tail_y,
-        cursor_x,
-        cursor_y,
-        penultimate_x,
-        penultimate_y,
-        lazy_travel_distance,
-        lazy_travel_time,
-        duration,
-        nested_count,
-    )
-
-
 def _validate_slider_summary(
         summary: tuple[float, float, float, float, float, float, float, float, float, int],
 ) -> None:
@@ -281,6 +207,222 @@ def _validate_slider_summary(
             for value in summary[:-1]
     ):
         raise ValueError("slider summary exceeds supported limits")
+
+
+def _path_kind(marker: bytes) -> int:
+    first = marker[:1].upper()
+    if first == b"B":
+        return _PATH_BEZIER
+    if first == b"L":
+        return _PATH_LINEAR
+    if first == b"P":
+        return _PATH_PERFECT
+    return _PATH_CATMULL
+
+
+def _path_point(token: bytes, offset_x: float, offset_y: float) -> tuple[float, float]:
+    raw_x, separator, raw_y = token.partition(b":")
+    if not separator:
+        raise ValueError("invalid slider control point")
+    point_x = float(int(raw_x)) - offset_x
+    point_y = float(int(raw_y)) - offset_y
+    if abs(point_x) > _MAX_COORDINATE or abs(point_y) > _MAX_COORDINATE:
+        raise ValueError("slider control point exceeds supported limit")
+    return point_x, point_y
+
+
+def _append_path_segment(
+        tokens: list[bytes],
+        start: int,
+        end: int,
+        endpoint: bytes | None,
+        first: bool,
+        offset_x: float,
+        offset_y: float,
+        control_x: list[float],
+        control_y: list[float],
+        control_type: list[int],
+) -> None:
+    segment_x = [0.0] if first else []
+    segment_y = [0.0] if first else []
+    for token in tokens[start + 1:end]:
+        point_x, point_y = _path_point(token, offset_x, offset_y)
+        segment_x.append(point_x)
+        segment_y.append(point_y)
+    if endpoint is not None:
+        point_x, point_y = _path_point(endpoint, offset_x, offset_y)
+        segment_x.append(point_x)
+        segment_y.append(point_y)
+    if not segment_x:
+        raise ValueError("invalid slider path segment")
+
+    path_kind = _path_kind(tokens[start])
+    if path_kind == _PATH_PERFECT:
+        if len(segment_x) != 3:
+            path_kind = _PATH_BEZIER
+        else:
+            cross = (
+                (segment_y[1] - segment_y[0]) * (segment_x[2] - segment_x[0])
+                - (segment_x[1] - segment_x[0]) * (segment_y[2] - segment_y[0])
+            )
+            if abs(cross) < 1e-7:
+                path_kind = _PATH_LINEAR
+
+    segment_type = [-1] * len(segment_x)
+    segment_type[0] = path_kind
+    endpoint_len = 1 if endpoint is not None else 0
+    start_index = 0
+    end_index = 0
+    while True:
+        end_index += 1
+        if end_index >= len(segment_x) - endpoint_len:
+            break
+        if (
+                segment_x[end_index] != segment_x[end_index - 1]
+                or segment_y[end_index] != segment_y[end_index - 1]
+        ):
+            continue
+        if path_kind == _PATH_CATMULL and end_index > 1:
+            continue
+        if end_index == len(segment_x) - endpoint_len - 1:
+            continue
+        segment_type[end_index - 1] = path_kind
+        control_x.extend(segment_x[start_index:end_index])
+        control_y.extend(segment_y[start_index:end_index])
+        control_type.extend(segment_type[start_index:end_index])
+        start_index = end_index + 1
+    if end_index > start_index:
+        control_x.extend(segment_x[start_index:end_index])
+        control_y.extend(segment_y[start_index:end_index])
+        control_type.extend(segment_type[start_index:end_index])
+
+
+def _append_raw_slider_path(
+        path: bytes,
+        offset_x: float,
+        offset_y: float,
+        control_x: list[float],
+        control_y: list[float],
+        control_type: list[int],
+) -> None:
+    tokens = path.split(b"|")
+    start = 0
+    end = 0
+    first = True
+    while end < len(tokens):
+        end += 1
+        if end < len(tokens) and tokens[end][:1].isalpha():
+            endpoint = tokens[end + 1] if end + 1 < len(tokens) else None
+            _append_path_segment(
+                tokens, start, end, endpoint, first, offset_x, offset_y,
+                control_x, control_y, control_type,
+            )
+            start = end
+            first = False
+    if end > start:
+        _append_path_segment(
+            tokens, start, end, None, first, offset_x, offset_y,
+            control_x, control_y, control_type,
+        )
+
+
+def _flat_slider_summaries(
+        time: Any,
+        kind: Any,
+        repeats: Any,
+        expected_dist: Any,
+        velocity: Any,
+        tick_distance: Any,
+        offsets: Any,
+        control_x: Any,
+        control_y: Any,
+        control_type: Any,
+        radius: float,
+) -> tuple[Any, Any]:
+    return _slider_summary_kernel(
+        time,
+        kind,
+        repeats,
+        expected_dist,
+        velocity,
+        tick_distance,
+        offsets,
+        control_x,
+        control_y,
+        control_type,
+        radius,
+    )
+
+
+def _compiled_slider_summaries(
+        controls: list[list[Any]],
+        time: Any,
+        kind: Any,
+        repeats: Any,
+        expected_dist: Any,
+        velocity: Any,
+        tick_distance: Any,
+        radius: float,
+) -> Any:
+    array = _require_numpy()
+    offsets = array.empty(len(controls) + 1, dtype=array.int32)
+    offsets[0] = 0
+    xs: list[float] = []
+    ys: list[float] = []
+    types: list[int] = []
+    for index, points in enumerate(controls):
+        for point in points:
+            xs.append(float(point.pos.x))
+            ys.append(float(point.pos.y))
+            types.append(
+                -1 if point.path_type is None else int(point.path_type.kind.value)
+            )
+        offsets[index + 1] = len(xs)
+
+    summaries, slow = _flat_slider_summaries(
+        time,
+        kind,
+        repeats,
+        expected_dist,
+        velocity,
+        tick_distance,
+        offsets,
+        array.asarray(xs, dtype=array.float64),
+        array.asarray(ys, dtype=array.float64),
+        array.asarray(types, dtype=array.int8),
+        radius,
+    )
+    labels = {
+        -1: "degenerate path",
+        1: "Catmull",
+        2: "control workspace overflow",
+        3: "path workspace overflow",
+        4: "Bezier stack overflow",
+    }
+    for index in range(len(controls)):
+        status = int(slow[index])
+        if status == 0:
+            continue
+        try:
+            curve = Curve(
+                BeatmapGameMode.Osu,
+                controls[index],
+                float(expected_dist[index]) if expected_dist[index] > 0.0 else None,
+            )
+            summaries[index] = _slider_summary(
+                curve,
+                start_time=float(time[index]),
+                repeat_count=int(repeats[index]),
+                velocity=float(velocity[index]),
+                tick_distance=float(tick_distance[index]),
+                radius=radius,
+            )
+        except Exception as error:
+            reason = labels.get(status, f"slow status {status}")
+            raise ValueError(
+                f"slider fallback failed at object {index} ({reason})"
+            ) from error
+    return summaries
 
 
 @dataclass(frozen=True, slots=True)
@@ -334,6 +476,10 @@ def _parse_fast_bytes(
     repeat_values: list[int] = []
     distances: list[float] = []
     slider_paths: list[bytes | None] = []
+    control_offsets = [0]
+    flat_control_x: list[float] = []
+    flat_control_y: list[float] = []
+    flat_control_type: list[int] = []
 
     section = b""
     for raw_line in data.splitlines():
@@ -430,6 +576,14 @@ def _parse_fast_bytes(
             if type_flags & 2 and len(parts) >= 7:
                 kinds.append(1)
                 slider_paths.append(parts[5])
+                _append_raw_slider_path(
+                    parts[5],
+                    start_x,
+                    start_y,
+                    flat_control_x,
+                    flat_control_y,
+                    flat_control_type,
+                )
                 repeat = max(0, int(parts[6]) - 1)
                 if repeat > _MAX_REPEATS:
                     raise ValueError("slider repeat count exceeds supported limit")
@@ -455,6 +609,7 @@ def _parse_fast_bytes(
                 slider_paths.append(None)
                 repeat_values.append(0)
             distances.append(distance)
+            control_offsets.append(len(flat_control_x))
 
     count = len(times)
     time_array = array.asarray(times, dtype=array.float32)
@@ -470,7 +625,14 @@ def _parse_fast_bytes(
     kind_array = array.asarray(kinds, dtype=array.uint8)
     repeat_array = array.asarray(repeat_values, dtype=array.int16)
     distance_array = array.asarray(distances, dtype=array.float32)
+    expected_distance_array = array.asarray(distances, dtype=array.float64)
     duration_array = array.zeros(count, dtype=array.float32)
+    velocity_array = array.zeros(count, dtype=array.float64)
+    tick_distance_array = array.zeros(count, dtype=array.float64)
+    control_offset_array = array.asarray(control_offsets, dtype=array.int32)
+    control_x_array = array.asarray(flat_control_x, dtype=array.float64)
+    control_y_array = array.asarray(flat_control_y, dtype=array.float64)
+    control_type_array = array.asarray(flat_control_type, dtype=array.int8)
 
     effective_cs = (
         float(cs_override[0])
@@ -526,72 +688,63 @@ def _parse_fast_bytes(
                 if slider_velocity > 0.0 and slider_tick_rate > 0.0
                 else 0.0
             )
-            endpoint_x = 0.0
-            endpoint_y = 0.0
-            previous_x = 0.0
-            previous_y = 0.0
-            polyline_length = 0.0
-            for token in (slider_paths[index] or b"").split(b"|")[1:]:
-                if token[:1].isalpha():
-                    continue
-                point = token.split(b":", 1)
-                if len(point) != 2:
-                    continue
-                endpoint_x = float(point[0]) - float(x_array[index])
-                endpoint_y = float(point[1]) - float(y_array[index])
-                if (
-                        not math.isfinite(endpoint_x)
-                        or abs(endpoint_x) > _MAX_COORDINATE
-                        or not math.isfinite(endpoint_y)
-                        or abs(endpoint_y) > _MAX_COORDINATE
-                ):
-                    raise ValueError("slider control point exceeds supported limit")
-                dx = endpoint_x - previous_x
-                dy = endpoint_y - previous_y
-                polyline_length += math.sqrt(dx * dx + dy * dy)
-                previous_x = endpoint_x
-                previous_y = endpoint_y
-            distance = float(distance_array[index])
-            if distance <= 0.0:
-                distance = polyline_length
-            chord_length = math.sqrt(
-                endpoint_x * endpoint_x + endpoint_y * endpoint_y
+            velocity_array[index] = velocity
+            tick_distance_array[index] = tick_distance
+        elif kind_array[index] == 2:
+            n_spinners += 1
+        else:
+            n_circles += 1
+
+    summaries, slow = _flat_slider_summaries(
+        time_array,
+        kind_array,
+        repeat_array,
+        expected_distance_array,
+        velocity_array,
+        tick_distance_array,
+        control_offset_array,
+        control_x_array,
+        control_y_array,
+        control_type_array,
+        radius,
+    )
+    labels = {
+        -1: "degenerate path",
+        1: "Catmull",
+        2: "control workspace overflow",
+        3: "path workspace overflow",
+        4: "Bezier stack overflow",
+    }
+    for index in range(count):
+        status = int(slow[index])
+        if status == 0:
+            continue
+        try:
+            points = convert_path_str(
+                (slider_paths[index] or b"").decode("ascii"),
+                Pos(float(x_array[index]), float(y_array[index])),
             )
-            needs_curve = (
-                distance < chord_length * 0.5
-                or distance > polyline_length * 1.3
+            summaries[index] = _slider_summary(
+                Curve(
+                    BeatmapGameMode.Osu,
+                    points,
+                    float(expected_distance_array[index])
+                    if expected_distance_array[index] > 0.0 else None,
+                ),
+                start_time=float(time_array[index]),
+                repeat_count=int(repeat_array[index]),
+                velocity=float(velocity_array[index]),
+                tick_distance=float(tick_distance_array[index]),
+                radius=radius,
             )
-            try:
-                if needs_curve:
-                    points = convert_path_str(
-                        (slider_paths[index] or b"").decode("ascii"),
-                        Pos(float(x_array[index]), float(y_array[index])),
-                    )
-                    curve = Curve(
-                        BeatmapGameMode.Osu,
-                        points,
-                        distance,
-                    )
-                    summary = _slider_summary(
-                        curve,
-                        start_time=float(time_array[index]),
-                        repeat_count=int(repeat_array[index]),
-                        velocity=velocity,
-                        tick_distance=tick_distance,
-                        radius=radius,
-                    )
-                else:
-                    summary = _approximate_slider_summary(
-                        endpoint_x=endpoint_x,
-                        endpoint_y=endpoint_y,
-                        distance=distance,
-                        repeat_count=int(repeat_array[index]),
-                        velocity=velocity,
-                        tick_distance=tick_distance,
-                        radius=radius,
-                    )
-            except Exception:
-                summary = (0.0,) * 9 + (0,)
+        except Exception as error:
+            reason = labels.get(status, f"slow status {status}")
+            raise ValueError(
+                f"slider fallback failed at object {index} ({reason})"
+            ) from error
+    for index in range(count):
+        if kind_array[index] == 1:
+            summary = tuple(summaries[index])
             _validate_slider_summary(summary)
             end_x_array[index] += summary[0]
             end_y_array[index] += summary[1]
@@ -603,12 +756,8 @@ def _parse_fast_bytes(
             duration_array[index] = summary[7]
             duration = summary[8]
             end_time_array[index] = time_array[index] + duration
-            max_combo += summary[9]
-            n_large_ticks += summary[9]
-        elif kind_array[index] == 2:
-            n_spinners += 1
-        else:
-            n_circles += 1
+            max_combo += int(summary[9])
+            n_large_ticks += int(summary[9])
 
     stack_height = _stack_heights(
         time_array,
@@ -690,7 +839,11 @@ def _pack_map(
     kind = array.zeros(count, dtype=array.uint8)
     repeats = array.zeros(count, dtype=array.int16)
     slider_dist = array.zeros(count, dtype=array.float32)
+    expected_distance = array.zeros(count, dtype=array.float64)
     slider_duration = array.zeros(count, dtype=array.float32)
+    velocity_array = array.zeros(count, dtype=array.float64)
+    tick_distance_array = array.zeros(count, dtype=array.float64)
+    slider_controls: list[list[Any]] = [[] for _ in range(count)]
 
     timing_points = beatmap.timing_points
     difficulty_points = beatmap.difficulty_points
@@ -783,65 +936,43 @@ def _pack_map(
                 and beatmap.slider_tick_rate > 0.0
                 else 0.0
             )
-            endpoint_x = 0.0
-            endpoint_y = 0.0
-            previous_x = 0.0
-            previous_y = 0.0
-            polyline_length = 0.0
             for point in inner.control_points:
-                endpoint_x = float(point.pos.x)
-                endpoint_y = float(point.pos.y)
+                point_x = float(point.pos.x)
+                point_y = float(point.pos.y)
                 if (
-                        not math.isfinite(endpoint_x)
-                        or abs(endpoint_x) > _MAX_COORDINATE
-                        or not math.isfinite(endpoint_y)
-                        or abs(endpoint_y) > _MAX_COORDINATE
+                        not math.isfinite(point_x)
+                        or abs(point_x) > _MAX_COORDINATE
+                        or not math.isfinite(point_y)
+                        or abs(point_y) > _MAX_COORDINATE
                 ):
                     raise ValueError("slider control point exceeds supported limit")
-                dx = endpoint_x - previous_x
-                dy = endpoint_y - previous_y
-                polyline_length += math.sqrt(dx * dx + dy * dy)
-                previous_x = endpoint_x
-                previous_y = endpoint_y
-            distance = (
+            expected_distance[index] = (
                 float(inner.expected_dist)
                 if inner.expected_dist is not None and inner.expected_dist > 0.0
-                else polyline_length
+                else 0.0
             )
-            chord_length = math.sqrt(
-                endpoint_x * endpoint_x + endpoint_y * endpoint_y
-            )
-            needs_curve = (
-                distance < chord_length * 0.5
-                or distance > polyline_length * 1.3
-            )
-            try:
-                if needs_curve:
-                    curve = Curve(
-                        BeatmapGameMode.Osu,
-                        inner.control_points,
-                        inner.expected_dist,
-                    )
-                    summary = _slider_summary(
-                        curve,
-                        start_time=start,
-                        repeat_count=inner.repeats,
-                        velocity=velocity,
-                        tick_distance=tick_distance,
-                        radius=radius,
-                    )
-                else:
-                    summary = _approximate_slider_summary(
-                        endpoint_x=endpoint_x,
-                        endpoint_y=endpoint_y,
-                        distance=distance,
-                        repeat_count=inner.repeats,
-                        velocity=velocity,
-                        tick_distance=tick_distance,
-                        radius=radius,
-                    )
-            except Exception:
-                summary = (0.0,) * 9 + (0,)
+            slider_controls[index] = inner.control_points
+            velocity_array[index] = velocity
+            tick_distance_array[index] = tick_distance
+        elif isinstance(inner, (Spinner, HoldNote)):
+            kind[index] = 2
+            n_spinners += 1
+        else:
+            n_circles += 1
+
+    summaries = _compiled_slider_summaries(
+        slider_controls,
+        time,
+        kind,
+        repeats,
+        expected_distance,
+        velocity_array,
+        tick_distance_array,
+        radius,
+    )
+    for index in range(count):
+        if kind[index] == 1:
+            summary = tuple(summaries[index])
             _validate_slider_summary(summary)
             end_x[index] += summary[0]
             end_y[index] += summary[1]
@@ -853,13 +984,8 @@ def _pack_map(
             slider_duration[index] = summary[7]
             duration = summary[8]
             end_time[index] = start + duration
-            max_combo += summary[9]
-            n_large_ticks += summary[9]
-        elif isinstance(inner, (Spinner, HoldNote)):
-            kind[index] = 2
-            n_spinners += 1
-        else:
-            n_circles += 1
+            max_combo += int(summary[9])
+            n_large_ticks += int(summary[9])
 
     stack_height = _stack_heights(
         time,
@@ -899,10 +1025,460 @@ def _pack_map(
 
 
 _stack_heights: Any = None
+_slider_summary_kernel: Any = None
 _preprocess: Any = None
 _calculate_kernel: Any = None
 
 if njit is not None:
+
+    @_compile(cache=True)
+    def _path_position(
+            path_x: Any,
+            path_y: Any,
+            lengths: Any,
+            path_count: int,
+            progress: float,
+            distance: float,
+    ) -> tuple[float, float]:
+        target = max(0.0, min(1.0, progress)) * distance
+        index = 1
+        while index < path_count and lengths[index] < target:
+            index += 1
+        if index >= path_count:
+            return path_x[path_count - 1], path_y[path_count - 1]
+        previous = index - 1
+        span = lengths[index] - lengths[previous]
+        if span <= 0.0:
+            return path_x[index], path_y[index]
+        fraction = (target - lengths[previous]) / span
+        return (
+            path_x[previous] + (path_x[index] - path_x[previous]) * fraction,
+            path_y[previous] + (path_y[index] - path_y[previous]) * fraction,
+        )
+
+    @_compile(cache=True)
+    def _lazy_step(
+            cursor_x: float,
+            cursor_y: float,
+            travel: float,
+            position_x: float,
+            position_y: float,
+            required: float,
+            final: bool,
+            target_x: float,
+            target_y: float,
+            factor: float,
+    ) -> tuple[float, float, float]:
+        movement_x = position_x - cursor_x
+        movement_y = position_y - cursor_y
+        if final:
+            target_dx = target_x - cursor_x
+            target_dy = target_y - cursor_y
+            if (
+                    target_dx * target_dx + target_dy * target_dy
+                    < movement_x * movement_x + movement_y * movement_y
+            ):
+                movement_x = target_dx
+                movement_y = target_dy
+        movement_length = factor * math.sqrt(
+            movement_x * movement_x + movement_y * movement_y
+        )
+        if movement_length > required:
+            fraction = (movement_length - required) / movement_length
+            cursor_x += movement_x * fraction
+            cursor_y += movement_y * fraction
+            travel += movement_length * fraction
+        return cursor_x, cursor_y, travel
+
+    @_compile(cache=True)
+    def _slider_summary_kernel(
+            time: Any,
+            kind: Any,
+            repeats: Any,
+            expected_dist: Any,
+            velocity: Any,
+            tick_distance: Any,
+            offsets: Any,
+            control_x: Any,
+            control_y: Any,
+            control_type: Any,
+            radius: float,
+    ) -> tuple[Any, Any]:
+        count = time.shape[0]
+        summaries = np.zeros((count, 10), dtype=np.float64)
+        slow = np.zeros(count, dtype=np.int8)
+        path_x = np.empty(_MAX_PATH_POINTS, dtype=np.float64)
+        path_y = np.empty(_MAX_PATH_POINTS, dtype=np.float64)
+        lengths = np.empty(_MAX_PATH_POINTS, dtype=np.float64)
+        stack_x = np.empty(
+            (_MAX_BEZIER_STACK, _MAX_SEGMENT_CONTROLS), dtype=np.float64
+        )
+        stack_y = np.empty(
+            (_MAX_BEZIER_STACK, _MAX_SEGMENT_CONTROLS), dtype=np.float64
+        )
+        stack_count = np.empty(_MAX_BEZIER_STACK, dtype=np.int16)
+        left_x = np.empty(_MAX_SEGMENT_CONTROLS, dtype=np.float64)
+        left_y = np.empty(_MAX_SEGMENT_CONTROLS, dtype=np.float64)
+        right_x = np.empty(_MAX_SEGMENT_CONTROLS, dtype=np.float64)
+        right_y = np.empty(_MAX_SEGMENT_CONTROLS, dtype=np.float64)
+        mid_x = np.empty(_MAX_SEGMENT_CONTROLS, dtype=np.float64)
+        mid_y = np.empty(_MAX_SEGMENT_CONTROLS, dtype=np.float64)
+        lr_x = np.empty(_MAX_SEGMENT_CONTROLS * 2 - 1, dtype=np.float64)
+        lr_y = np.empty(_MAX_SEGMENT_CONTROLS * 2 - 1, dtype=np.float64)
+
+        for obj in range(count):
+            if kind[obj] != 1:
+                continue
+            first = offsets[obj]
+            last = offsets[obj + 1]
+            if last - first < 2:
+                slow[obj] = -1
+                continue
+            path_count = 0
+            segment_start = first
+            failed = 0
+            for point_index in range(first, last):
+                if control_type[point_index] < 0 and point_index < last - 1:
+                    continue
+                segment_count = point_index - segment_start + 1
+                segment_type = control_type[segment_start]
+                if segment_type < 0:
+                    segment_type = SplineType.Linear.value
+                if segment_type == SplineType.Catmull.value:
+                    failed = 1
+                    break
+                if segment_count > _MAX_SEGMENT_CONTROLS:
+                    failed = 2
+                    break
+                old_count = path_count
+                if segment_type == SplineType.Linear.value:
+                    if path_count + segment_count > _MAX_PATH_POINTS:
+                        failed = 3
+                        break
+                    for control in range(segment_count):
+                        path_x[path_count] = control_x[segment_start + control]
+                        path_y[path_count] = control_y[segment_start + control]
+                        path_count += 1
+                elif (
+                        segment_type == SplineType.PerfectCurve.value
+                        and segment_count == 3
+                ):
+                    ax = control_x[segment_start]
+                    ay = control_y[segment_start]
+                    bx = control_x[segment_start + 1]
+                    by = control_y[segment_start + 1]
+                    cx = control_x[segment_start + 2]
+                    cy = control_y[segment_start + 2]
+                    cross = (by - ay) * (cx - ax) - (bx - ax) * (cy - ay)
+                    arc_valid = abs(cross) > np.finfo(np.float32).eps
+                    if arc_valid:
+                        d = 2.0 * (
+                            ax * (by - cy) + bx * (cy - ay) + cx * (ay - by)
+                        )
+                        a_sq = ax * ax + ay * ay
+                        b_sq = bx * bx + by * by
+                        c_sq = cx * cx + cy * cy
+                        centre_x = (
+                            a_sq * (by - cy)
+                            + b_sq * (cy - ay)
+                            + c_sq * (ay - by)
+                        ) / d
+                        centre_y = (
+                            a_sq * (cx - bx)
+                            + b_sq * (ax - cx)
+                            + c_sq * (bx - ax)
+                        ) / d
+                        da_x = ax - centre_x
+                        da_y = ay - centre_y
+                        radius_arc = math.sqrt(da_x * da_x + da_y * da_y)
+                        theta_start = math.atan2(da_y, da_x)
+                        theta_end = math.atan2(cy - centre_y, cx - centre_x)
+                        while theta_end < theta_start:
+                            theta_end += 2.0 * math.pi
+                        direction = 1.0
+                        theta_range = theta_end - theta_start
+                        if ((cy - ay) * (bx - ax) - (cx - ax) * (by - ay)) < 0.0:
+                            direction = -1.0
+                            theta_range = 2.0 * math.pi - theta_range
+                        if 2.0 * radius_arc <= 0.1:
+                            sub_points = 2
+                        else:
+                            divisor = 2.0 * math.acos(1.0 - 0.1 / radius_arc)
+                            sub_points = (
+                                2 if abs(divisor) <= np.finfo(np.float32).eps
+                                else max(2, math.ceil(theta_range / divisor))
+                            )
+                        if sub_points >= 1000:
+                            arc_valid = False
+                        elif path_count + sub_points > _MAX_PATH_POINTS:
+                            failed = 3
+                            break
+                        else:
+                            for sample in range(sub_points):
+                                fraction = sample / float(sub_points - 1)
+                                theta = theta_start + fraction * direction * theta_range
+                                path_x[path_count] = centre_x + math.cos(theta) * radius_arc
+                                path_y[path_count] = centre_y + math.sin(theta) * radius_arc
+                                path_count += 1
+                    if arc_valid:
+                        pass
+                    else:
+                        segment_type = SplineType.BSpline.value
+                if segment_type == SplineType.BSpline.value:
+                    stack_size = 1
+                    stack_count[0] = segment_count
+                    for control in range(segment_count):
+                        stack_x[0, control] = control_x[segment_start + control]
+                        stack_y[0, control] = control_y[segment_start + control]
+                    while stack_size > 0 and failed == 0:
+                        stack_size -= 1
+                        controls_count = int(stack_count[stack_size])
+                        flat = True
+                        for control in range(controls_count - 2):
+                            ddx = (
+                                stack_x[stack_size, control]
+                                - 2.0 * stack_x[stack_size, control + 1]
+                                + stack_x[stack_size, control + 2]
+                            )
+                            ddy = (
+                                stack_y[stack_size, control]
+                                - 2.0 * stack_y[stack_size, control + 1]
+                                + stack_y[stack_size, control + 2]
+                            )
+                            if ddx * ddx + ddy * ddy > 0.25:
+                                flat = False
+                                break
+                        for control in range(controls_count):
+                            mid_x[control] = stack_x[stack_size, control]
+                            mid_y[control] = stack_y[stack_size, control]
+                        for level in range(controls_count - 1, 0, -1):
+                            target = controls_count - level - 1
+                            left_x[target] = mid_x[0]
+                            left_y[target] = mid_y[0]
+                            right_x[level] = mid_x[level]
+                            right_y[level] = mid_y[level]
+                            for control in range(level):
+                                mid_x[control] = (mid_x[control] + mid_x[control + 1]) * 0.5
+                                mid_y[control] = (mid_y[control] + mid_y[control + 1]) * 0.5
+                        left_x[controls_count - 1] = mid_x[0]
+                        left_y[controls_count - 1] = mid_y[0]
+                        right_x[0] = mid_x[0]
+                        right_y[0] = mid_y[0]
+                        if flat:
+                            needed = 1 + max(0, controls_count - 2)
+                            if path_count + needed > _MAX_PATH_POINTS:
+                                failed = 3
+                                break
+                            path_x[path_count] = stack_x[stack_size, 0]
+                            path_y[path_count] = stack_y[stack_size, 0]
+                            path_count += 1
+                            lr_count = controls_count * 2 - 1
+                            for control in range(controls_count):
+                                lr_x[control] = left_x[control]
+                                lr_y[control] = left_y[control]
+                            for control in range(1, controls_count):
+                                lr_x[controls_count - 1 + control] = right_x[control]
+                                lr_y[controls_count - 1 + control] = right_y[control]
+                            control = 1
+                            while control < lr_count - 2:
+                                path_x[path_count] = (
+                                    lr_x[control]
+                                    + 2.0 * lr_x[control + 1]
+                                    + lr_x[control + 2]
+                                ) * 0.25
+                                path_y[path_count] = (
+                                    lr_y[control]
+                                    + 2.0 * lr_y[control + 1]
+                                    + lr_y[control + 2]
+                                ) * 0.25
+                                path_count += 1
+                                control += 2
+                        else:
+                            if stack_size + 2 > _MAX_BEZIER_STACK:
+                                failed = 4
+                                break
+                            stack_count[stack_size] = controls_count
+                            for control in range(controls_count):
+                                stack_x[stack_size, control] = right_x[control]
+                                stack_y[stack_size, control] = right_y[control]
+                            stack_size += 1
+                            stack_count[stack_size] = controls_count
+                            for control in range(controls_count):
+                                stack_x[stack_size, control] = left_x[control]
+                                stack_y[stack_size, control] = left_y[control]
+                            stack_size += 1
+                    if failed != 0:
+                        break
+                    if path_count >= _MAX_PATH_POINTS:
+                        failed = 3
+                        break
+                    path_x[path_count] = control_x[point_index]
+                    path_y[path_count] = control_y[point_index]
+                    path_count += 1
+                if (
+                        old_count > 0
+                        and old_count < path_count
+                        and path_x[old_count - 1] == path_x[old_count]
+                        and path_y[old_count - 1] == path_y[old_count]
+                ):
+                    for path_index in range(old_count, path_count - 1):
+                        path_x[path_index] = path_x[path_index + 1]
+                        path_y[path_index] = path_y[path_index + 1]
+                    path_count -= 1
+                segment_start = point_index
+            if failed != 0:
+                slow[obj] = failed
+                continue
+            if path_count < 2:
+                slow[obj] = -1
+                continue
+
+            lengths[0] = 0.0
+            calculated = 0.0
+            for path_index in range(1, path_count):
+                dx = path_x[path_index] - path_x[path_index - 1]
+                dy = path_y[path_index] - path_y[path_index - 1]
+                calculated += math.sqrt(dx * dx + dy * dy)
+                lengths[path_index] = calculated
+            distance = expected_dist[obj] if expected_dist[obj] > 0.0 else calculated
+            if abs(calculated - distance) >= 2.220446049250313e-16:
+                path_index = 1
+                while path_index < path_count and lengths[path_index] < distance:
+                    path_index += 1
+                if path_index >= path_count:
+                    path_index = path_count - 1
+                previous = path_index - 1
+                dx = path_x[path_index] - path_x[previous]
+                dy = path_y[path_index] - path_y[previous]
+                segment_length = math.sqrt(dx * dx + dy * dy)
+                if segment_length <= 0.0:
+                    slow[obj] = -1
+                    continue
+                scale = (distance - lengths[previous]) / segment_length
+                path_x[path_index] = path_x[previous] + dx * scale
+                path_y[path_index] = path_y[previous] + dy * scale
+                lengths[path_index] = distance
+                path_count = path_index + 1
+
+            speed = velocity[obj]
+            if distance <= 0.0 or speed <= 0.0:
+                continue
+            span_count = int(repeats[obj]) + 1
+            span_duration = distance / speed
+            duration = span_count * span_duration
+            tick_dist = max(0.0, min(tick_distance[obj], distance))
+            min_end = speed * 10.0
+            tick_count = 0
+            d_tick = tick_dist
+            if d_tick > 0.0:
+                while d_tick <= distance and d_tick < distance - min_end:
+                    tick_count += 1
+                    d_tick += tick_dist
+            nested_count = tick_count * span_count + span_count - 1
+
+            previous_x = 0.0
+            previous_y = 0.0
+            nested_seen = 0
+            late_d = 0.0
+            late_time = -1.0
+            for span in range(span_count):
+                reversed_span = span % 2 == 1
+                for tick_index in range(tick_count):
+                    d_tick = (
+                        (tick_count - tick_index) * tick_dist
+                        if reversed_span else (tick_index + 1) * tick_dist
+                    )
+                    position_x, position_y = _path_position(
+                        path_x, path_y, lengths, path_count, d_tick / distance, distance
+                    )
+                    previous_x = position_x
+                    previous_y = position_y
+                    nested_seen += 1
+                    if span == span_count - 1:
+                        time_progress = (
+                            1.0 - d_tick / distance
+                            if reversed_span else d_tick / distance
+                        )
+                        late_d = d_tick
+                        late_time = time[obj] + span * span_duration + time_progress * span_duration
+                if span < span_count - 1:
+                    previous_x, previous_y = _path_position(
+                        path_x,
+                        path_y,
+                        lengths,
+                        path_count,
+                        float((span + 1) % 2),
+                        distance,
+                    )
+                    nested_seen += 1
+            tail_x, tail_y = _path_position(
+                path_x, path_y, lengths, path_count, float(span_count % 2), distance
+            )
+            penultimate_x = previous_x if nested_seen > 0 else 0.0
+            penultimate_y = previous_y if nested_seen > 0 else 0.0
+
+            tracking = max(duration - 36.0, duration / 2.0)
+            late = late_time > time[obj] + tracking
+            if late:
+                tracking = late_time - time[obj]
+            progress = tracking / span_duration
+            progress_mod = progress % 1.0
+            lazy_progress = 1.0 - progress_mod if progress % 2.0 >= 1.0 else progress_mod
+            target_x, target_y = _path_position(
+                path_x, path_y, lengths, path_count, lazy_progress, distance
+            )
+            cursor_x = 0.0
+            cursor_y = 0.0
+            travel = 0.0
+            factor = 50.0 / radius if radius > 0.0 else 0.0
+            for span in range(span_count):
+                reversed_span = span % 2 == 1
+                for tick_index in range(tick_count):
+                    d_tick = (
+                        (tick_count - tick_index) * tick_dist
+                        if reversed_span else (tick_index + 1) * tick_dist
+                    )
+                    if late and span == span_count - 1 and d_tick == late_d:
+                        continue
+                    position_x, position_y = _path_position(
+                        path_x, path_y, lengths, path_count, d_tick / distance, distance
+                    )
+                    cursor_x, cursor_y, travel = _lazy_step(
+                        cursor_x, cursor_y, travel, position_x, position_y, 90.0,
+                        False, target_x, target_y, factor,
+                    )
+                if span < span_count - 1:
+                    position_x, position_y = _path_position(
+                        path_x, path_y, lengths, path_count,
+                        float((span + 1) % 2), distance,
+                    )
+                    cursor_x, cursor_y, travel = _lazy_step(
+                        cursor_x, cursor_y, travel, position_x, position_y, 50.0,
+                        False, target_x, target_y, factor,
+                    )
+            cursor_x, cursor_y, travel = _lazy_step(
+                cursor_x, cursor_y, travel, tail_x, tail_y, 90.0,
+                not late, target_x, target_y, factor,
+            )
+            if late:
+                position_x, position_y = _path_position(
+                    path_x, path_y, lengths, path_count, late_d / distance, distance
+                )
+                cursor_x, cursor_y, travel = _lazy_step(
+                    cursor_x, cursor_y, travel, position_x, position_y, 90.0,
+                    True, target_x, target_y, factor,
+                )
+            summaries[obj, 0] = tail_x
+            summaries[obj, 1] = tail_y
+            summaries[obj, 2] = cursor_x
+            summaries[obj, 3] = cursor_y
+            summaries[obj, 4] = penultimate_x
+            summaries[obj, 5] = penultimate_y
+            summaries[obj, 6] = travel
+            summaries[obj, 7] = tracking
+            summaries[obj, 8] = duration
+            summaries[obj, 9] = nested_count
+        return summaries, slow
 
     @_compile(cache=True, fastmath=True)
     def _stack_heights(

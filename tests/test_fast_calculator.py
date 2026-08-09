@@ -5,9 +5,20 @@ from pathlib import Path
 import pytest
 
 from parsecore.Beatmap.beatmap import Beatmap
+from parsecore.Beatmap.section.enums import GameMode
+from parsecore.Beatmap.section.hit_objects.hit_objects import convert_path_str
+from parsecore.Beatmap.section.hit_objects.slider import Curve
+from parsecore.Beatmap.utils import Pos
 from parsecore.Performance.api import Beatmap as PreparedBeatmap
 from parsecore.Performance.api import Difficulty
-from parsecore.Performance.rulesets.osu.fast import FastDifficulty, _parse_fast_bytes
+from parsecore.Performance.rulesets.osu import fast
+from parsecore.Performance.rulesets.osu.fast import (
+    FastDifficulty,
+    _append_raw_slider_path,
+    _compiled_slider_summaries,
+    _parse_fast_bytes,
+    _slider_summary,
+)
 
 
 def _calculator() -> FastDifficulty:
@@ -146,3 +157,127 @@ def test_fast_parser_rejects_oversized_slider_distance() -> None:
 
     with pytest.raises(ValueError, match="slider distance"):
         _calculator().calculate_factors_bytes(data)
+
+
+@pytest.mark.parametrize(
+    ("path", "distance", "repeats", "velocity", "tick_distance"),
+    [
+        ("L|356:192|356:292", 250.0, 2, 0.28, 28.0),
+        ("P|306:142|356:192", 157.0, 0, 0.28, 28.0),
+        ("B|306:92|406:292|456:192", 260.0, 1, 0.28, 28.0),
+        ("L|356:192", 100.0, 0, 0.28, 90.0),
+    ],
+)
+def test_compiled_slider_summary_matches_reference(
+    monkeypatch: pytest.MonkeyPatch,
+    path: str,
+    distance: float,
+    repeats: int,
+    velocity: float,
+    tick_distance: float,
+) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("numba")
+    points = convert_path_str(path, Pos(256.0, 192.0))
+    reference = _slider_summary(
+        Curve(GameMode.Osu, points, distance),
+        start_time=1000.0,
+        repeat_count=repeats,
+        velocity=velocity,
+        tick_distance=tick_distance,
+        radius=36.48,
+    )
+
+    def fail_fallback(*args: object, **kwargs: object) -> None:
+        raise AssertionError("unexpected Python slider fallback")
+
+    monkeypatch.setattr(fast, "_slider_summary", fail_fallback)
+    actual = _compiled_slider_summaries(
+        [points],
+        np.asarray([1000.0]),
+        np.asarray([1], dtype=np.uint8),
+        np.asarray([repeats], dtype=np.int16),
+        np.asarray([distance]),
+        np.asarray([velocity]),
+        np.asarray([tick_distance]),
+        36.48,
+    )[0]
+
+    assert actual == pytest.approx(reference, abs=1e-4)
+
+
+def test_fast_parser_batches_common_sliders(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("numpy")
+    pytest.importorskip("numba")
+    calls = 0
+    kernel = fast._slider_summary_kernel
+
+    def counted_kernel(*args: object) -> object:
+        nonlocal calls
+        calls += 1
+        return kernel(*args)
+
+    def fail_fallback(*args: object, **kwargs: object) -> None:
+        raise AssertionError("unexpected Python slider fallback")
+
+    monkeypatch.setattr(fast, "_slider_summary_kernel", counted_kernel)
+    monkeypatch.setattr(fast, "_slider_summary", fail_fallback)
+    monkeypatch.setattr(fast, "convert_path_str", fail_fallback)
+    data = b"\n".join([
+        b"osu file format v14",
+        b"[General]",
+        b"Mode:0",
+        b"[Difficulty]",
+        b"CircleSize:4",
+        b"SliderMultiplier:1.4",
+        b"SliderTickRate:5",
+        b"[TimingPoints]",
+        b"0,500,4,1,0,100,1,0",
+        b"[HitObjects]",
+        b"256,192,0,2,0,L|356:192|356:292,3,250",
+        b"256,192,3000,2,0,P|306:142|356:192,1,157",
+        b"256,192,4000,2,0,B|306:92|406:292|456:192,2,260",
+        b"256,192,5000,2,0,B|306:92|356:192|L|406:192|406:292,1,260",
+        b"256,192,6000,2,0,B|306:92|356:192|356:192|406:292,1,220",
+    ])
+
+    packed = _parse_fast_bytes(data, 32).packed
+
+    assert calls == 1
+    assert packed.n_sliders == 5
+    assert packed.max_combo > 5
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "B|306:92|356:192|L|406:192|406:292",
+        "B|306:92|356:192|356:192|406:292",
+        "L|306:192|306:192|406:292",
+        "P|306:192|356:192",
+        "P|306:92|356:192|406:292",
+    ],
+)
+def test_raw_slider_path_matches_object_parser(path: str) -> None:
+    expected = convert_path_str(path, Pos(256.0, 192.0))
+    control_x: list[float] = []
+    control_y: list[float] = []
+    control_type: list[int] = []
+
+    _append_raw_slider_path(
+        path.encode("ascii"),
+        256.0,
+        192.0,
+        control_x,
+        control_y,
+        control_type,
+    )
+
+    assert list(zip(control_x, control_y, control_type, strict=True)) == [
+        (
+            point.pos.x,
+            point.pos.y,
+            -1 if point.path_type is None else point.path_type.kind.value,
+        )
+        for point in expected
+    ]
