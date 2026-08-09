@@ -50,6 +50,10 @@ _MIN_DELTA = 25.0
 _NORMALISED_RADIUS = 50.0
 _NORMALISED_DIAMETER = 100.0
 _STACK_DISTANCE = 3.0
+_MAX_COORDINATE = 10_000_000.0
+_MAX_TIME = 1_000_000_000.0
+_MAX_SLIDER_DISTANCE = 100_000.0
+_MAX_REPEATS = 4096
 
 
 @dataclass(slots=True)
@@ -269,6 +273,16 @@ def _approximate_slider_summary(
     )
 
 
+def _validate_slider_summary(
+        summary: tuple[float, float, float, float, float, float, float, float, float, int],
+) -> None:
+    if any(
+            not math.isfinite(float(value)) or abs(float(value)) > _MAX_TIME
+            for value in summary[:-1]
+    ):
+        raise ValueError("slider summary exceeds supported limits")
+
+
 @dataclass(frozen=True, slots=True)
 class StructuralFactors:
     """The five independent structural difficulty factors for one map."""
@@ -350,6 +364,8 @@ def _parse_fast_bytes(
             if not separator:
                 continue
             numeric_value = float(raw_value)
+            if not math.isfinite(numeric_value) or abs(numeric_value) > _MAX_COORDINATE:
+                raise ValueError("difficulty value exceeds supported limit")
             if key == b"ApproachRate":
                 base_ar = numeric_value
             elif key == b"CircleSize":
@@ -368,7 +384,11 @@ def _parse_fast_bytes(
                 continue
             point_time = float(parts[0])
             beat_length = float(parts[1])
-            if math.isnan(beat_length):
+            if (
+                    not math.isfinite(point_time)
+                    or abs(point_time) > _MAX_TIME
+                    or not math.isfinite(beat_length)
+            ):
                 continue
             timing_change = len(parts) <= 6 or parts[6].strip().startswith(b"1")
             if beat_length > 0.0 and timing_change:
@@ -391,6 +411,15 @@ def _parse_fast_bytes(
             type_flags = int(parts[3])
             start_x = float(parts[0])
             start_y = float(parts[1])
+            if (
+                    not math.isfinite(start)
+                    or abs(start) > _MAX_TIME
+                    or not math.isfinite(start_x)
+                    or abs(start_x) > _MAX_COORDINATE
+                    or not math.isfinite(start_y)
+                    or abs(start_y) > _MAX_COORDINATE
+            ):
+                raise ValueError("hit object exceeds supported limits")
             times.append(start)
             x_values.append(start_x)
             y_values.append(start_y)
@@ -402,18 +431,24 @@ def _parse_fast_bytes(
                 kinds.append(1)
                 slider_paths.append(parts[5])
                 repeat = max(0, int(parts[6]) - 1)
+                if repeat > _MAX_REPEATS:
+                    raise ValueError("slider repeat count exceeds supported limit")
                 repeat_values.append(repeat)
                 if len(parts) > 7:
                     try:
                         distance = max(0.0, float(parts[7]))
                     except ValueError:
                         distance = 0.0
+                if not math.isfinite(distance) or distance > _MAX_SLIDER_DISTANCE:
+                    raise ValueError("slider distance exceeds supported limit")
 
             elif type_flags & 8 and len(parts) >= 6:
                 kinds.append(2)
                 slider_paths.append(None)
                 repeat_values.append(0)
                 end_time = float(parts[5])
+                if not math.isfinite(end_time) or abs(end_time) > _MAX_TIME:
+                    raise ValueError("spinner end time exceeds supported limit")
                 distance = max(0.0, end_time - start)
             else:
                 kinds.append(0)
@@ -504,6 +539,13 @@ def _parse_fast_bytes(
                     continue
                 endpoint_x = float(point[0]) - float(x_array[index])
                 endpoint_y = float(point[1]) - float(y_array[index])
+                if (
+                        not math.isfinite(endpoint_x)
+                        or abs(endpoint_x) > _MAX_COORDINATE
+                        or not math.isfinite(endpoint_y)
+                        or abs(endpoint_y) > _MAX_COORDINATE
+                ):
+                    raise ValueError("slider control point exceeds supported limit")
                 dx = endpoint_x - previous_x
                 dy = endpoint_y - previous_y
                 polyline_length += math.sqrt(dx * dx + dy * dy)
@@ -550,6 +592,7 @@ def _parse_fast_bytes(
                     )
             except Exception:
                 summary = (0.0,) * 9 + (0,)
+            _validate_slider_summary(summary)
             end_x_array[index] += summary[0]
             end_y_array[index] += summary[1]
             lazy_end_x_array[index] += summary[2]
@@ -661,10 +704,24 @@ def _pack_map(
 
     for index, hit_object in enumerate(source[:count]):
         start = float(hit_object.start_time)
+        source_x = float(hit_object.pos.x)
+        source_y = float(hit_object.pos.y)
+        source_end_time = float(hit_object.end_time)
+        if (
+                not math.isfinite(start)
+                or abs(start) > _MAX_TIME
+                or not math.isfinite(source_end_time)
+                or abs(source_end_time) > _MAX_TIME
+                or not math.isfinite(source_x)
+                or abs(source_x) > _MAX_COORDINATE
+                or not math.isfinite(source_y)
+                or abs(source_y) > _MAX_COORDINATE
+        ):
+            raise ValueError("hit object exceeds supported limits")
         time[index] = start
-        end_time[index] = float(hit_object.end_time)
-        x[index] = float(hit_object.pos.x)
-        y[index] = float(hit_object.pos.y)
+        end_time[index] = source_end_time
+        x[index] = source_x
+        y[index] = source_y
         end_x[index] = x[index]
         end_y[index] = y[index]
         lazy_end_x[index] = x[index]
@@ -675,6 +732,16 @@ def _pack_map(
 
         inner = hit_object.kind
         if isinstance(inner, Slider):
+            if inner.repeats > _MAX_REPEATS:
+                raise ValueError("slider repeat count exceeds supported limit")
+            if (
+                    inner.expected_dist is not None
+                    and (
+                        not math.isfinite(float(inner.expected_dist))
+                        or float(inner.expected_dist) > _MAX_SLIDER_DISTANCE
+                    )
+            ):
+                raise ValueError("slider distance exceeds supported limit")
             kind[index] = 1
             n_sliders += 1
             repeats[index] = inner.repeats
@@ -724,6 +791,13 @@ def _pack_map(
             for point in inner.control_points:
                 endpoint_x = float(point.pos.x)
                 endpoint_y = float(point.pos.y)
+                if (
+                        not math.isfinite(endpoint_x)
+                        or abs(endpoint_x) > _MAX_COORDINATE
+                        or not math.isfinite(endpoint_y)
+                        or abs(endpoint_y) > _MAX_COORDINATE
+                ):
+                    raise ValueError("slider control point exceeds supported limit")
                 dx = endpoint_x - previous_x
                 dy = endpoint_y - previous_y
                 polyline_length += math.sqrt(dx * dx + dy * dy)
@@ -768,6 +842,7 @@ def _pack_map(
                     )
             except Exception:
                 summary = (0.0,) * 9 + (0,)
+            _validate_slider_summary(summary)
             end_x[index] += summary[0]
             end_y[index] += summary[1]
             lazy_end_x[index] += summary[2]
@@ -953,6 +1028,8 @@ if njit is not None:
                 current_peak = current
 
         if count:
+            if peak_count >= count:
+                raise ValueError("strain peak capacity exceeded")
             peaks[peak_count] = current_peak
             peak_count += 1
 
@@ -995,6 +1072,8 @@ if njit is not None:
             current_time = time[index] / clock_rate
             previous_time = time[index - 1] / clock_rate
             while current_time > section_end:
+                if peak_count >= capacity:
+                    raise ValueError("strain peak capacity exceeded")
                 section_length = round(section_end - section_begin)
                 insert = peak_count
                 while insert > 0 and peak_values[insert - 1] < current_peak:
@@ -1025,6 +1104,8 @@ if njit is not None:
             if current_strain > current_peak:
                 queue_start = 0
                 queue_end = 0
+                if peak_count >= capacity:
+                    raise ValueError("strain peak capacity exceeded")
                 section_length = round(current_time - section_begin)
                 insert = peak_count
                 while insert > 0 and peak_values[insert - 1] < current_peak:
@@ -1047,10 +1128,14 @@ if njit is not None:
                         and queued_values[queue_end - 1] < current_strain
                 ):
                     queue_end -= 1
+                if queue_end >= count:
+                    raise ValueError("strain queue capacity exceeded")
                 queued_values[queue_end] = current_strain
                 queued_times[queue_end] = current_time
                 queue_end += 1
 
+        if peak_count >= capacity:
+            raise ValueError("strain peak capacity exceeded")
         section_length = round(section_end - section_begin)
         insert = peak_count
         while insert > 0 and peak_values[insert - 1] < current_peak:

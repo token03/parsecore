@@ -129,3 +129,20 @@ def test_fast_parser_prunes_after_4096_objects() -> None:
             parsed.packed.stack_height,
         )
     ) < 300_000
+
+
+def test_fast_parser_rejects_oversized_slider_distance() -> None:
+    data = b"\n".join([
+        b"osu file format v14",
+        b"[General]",
+        b"Mode:0",
+        b"[Difficulty]",
+        b"SliderMultiplier:1.4",
+        b"[TimingPoints]",
+        b"0,500,4,1,0,100,1,0",
+        b"[HitObjects]",
+        b"256,192,0,2,0,L|300:192,1,1e400",
+    ])
+
+    with pytest.raises(ValueError, match="slider distance"):
+        _calculator().calculate_factors_bytes(data)
