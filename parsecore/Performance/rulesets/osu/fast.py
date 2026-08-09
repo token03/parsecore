@@ -2003,7 +2003,8 @@ def _calculate_from_packed(
     _require_numpy()
     scale = (1.0 - 0.7 * (cs - 5.0) / 5.0) / 2.0 * 1.00041
     radius = 64.0 * scale
-    great = float(adjusted.hit_windows.od_great or 20.0)
+    great_half = float(adjusted.hit_windows.od_great or 20.0)
+    hit_window_great = 2.0 * great_half
     preprocessed = _preprocess(
         packed.time,
         packed.end_time,
@@ -2046,8 +2047,8 @@ def _calculate_from_packed(
         radius,
         adjusted.clock_rate,
         preprocessed[15],
-        (79.5 - 2.0 * great / 2.0) / 6.0,
-        great,
+        (79.5 - hit_window_great / 2.0) / 6.0,
+        hit_window_great,
     )
     return (
         float(result[0]),
