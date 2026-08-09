@@ -330,6 +330,25 @@ def test_modern_odd_repeat_stacking_uses_generated_tail() -> None:
     assert packed.stack_height.tolist() == [0, 0]
 
 
+@pytest.mark.parametrize(
+    ("ratio", "expected"),
+    [
+        (1.0, 1.0),
+        (1.1, 3.704),
+        (1.2, 10.152),
+        (1.25, 14.0),
+        (1.5, 14.0),
+        (1.75, 14.0),
+        (1.9, 3.704),
+        (2.0, 1.0),
+    ],
+)
+def test_rhythm_effective_bell_curve(ratio: float, expected: float) -> None:
+    pytest.importorskip("numba")
+
+    assert fast._rhythm_effective(ratio) == pytest.approx(expected)
+
+
 def test_fast_parser_batches_common_sliders(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("numpy")
     pytest.importorskip("numba")

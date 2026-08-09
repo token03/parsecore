@@ -2086,9 +2086,8 @@ if njit is not None:
     @_compile(cache=True, inline="always", fastmath=True)
     def _rhythm_effective(ratio: float) -> float:
         fraction = ratio - math.trunc(ratio)
-        x = _clamp((fraction - 0.5) / 0.5, -1.0, 1.0)
-        distance = 0.5 - abs(x) * 0.5
-        smooth = distance * distance * (3.0 - 2.0 * distance)
+        distance = 0.5 - abs(fraction - 0.5)
+        smooth = _smoothstep(distance, 0.0, 0.5)
         return 1.0 + 26.0 * min(0.5, smooth)
 
 
