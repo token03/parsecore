@@ -49,10 +49,12 @@ def test_fast_calculator_returns_five_independent_factors() -> None:
 
     assert actual.object_count > 0
     assert actual.stars > 0.0
+    assert actual.aim > 0.0
+    assert actual.speed > 0.0
     assert actual.snap > 0.0
     assert actual.agility > 0.0
     assert actual.flow > 0.0
-    assert actual.speed > 0.0
+    assert actual.tap > 0.0
     assert actual.rhythm > 0.0
 
 
