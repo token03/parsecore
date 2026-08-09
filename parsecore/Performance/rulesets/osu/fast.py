@@ -363,6 +363,8 @@ def _compiled_slider_summaries(
         velocity: Any,
         tick_distance: Any,
         radius: float,
+        *,
+        _internal: bool = False,
 ) -> Any:
     array = _require_numpy()
     offsets = array.empty(len(controls) + 1, dtype=array.int32)
@@ -409,7 +411,7 @@ def _compiled_slider_summaries(
                 controls[index],
                 float(expected_dist[index]) if expected_dist[index] > 0.0 else None,
             )
-            summaries[index] = _slider_summary(
+            summaries[index, :10] = _slider_summary(
                 curve,
                 start_time=float(time[index]),
                 repeat_count=int(repeats[index]),
@@ -417,12 +419,15 @@ def _compiled_slider_summaries(
                 tick_distance=float(tick_distance[index]),
                 radius=radius,
             )
+            geometric_end = _interpolate_curve_position(curve, 1.0)
+            summaries[index, 10] = geometric_end.x
+            summaries[index, 11] = geometric_end.y
         except Exception as error:
             reason = labels.get(status, f"slow status {status}")
             raise ValueError(
                 f"slider fallback failed at object {index} ({reason})"
             ) from error
-    return summaries
+    return summaries if _internal else summaries[:, :10]
 
 
 @dataclass(frozen=True, slots=True)
@@ -724,27 +729,33 @@ def _parse_fast_bytes(
                 (slider_paths[index] or b"").decode("ascii"),
                 Pos(float(x_array[index]), float(y_array[index])),
             )
-            summaries[index] = _slider_summary(
-                Curve(
-                    BeatmapGameMode.Osu,
-                    points,
-                    float(expected_distance_array[index])
-                    if expected_distance_array[index] > 0.0 else None,
-                ),
+            curve = Curve(
+                BeatmapGameMode.Osu,
+                points,
+                float(expected_distance_array[index])
+                if expected_distance_array[index] > 0.0 else None,
+            )
+            summaries[index, :10] = _slider_summary(
+                curve,
                 start_time=float(time_array[index]),
                 repeat_count=int(repeat_array[index]),
                 velocity=float(velocity_array[index]),
                 tick_distance=float(tick_distance_array[index]),
                 radius=radius,
             )
+            geometric_end = _interpolate_curve_position(curve, 1.0)
+            summaries[index, 10] = geometric_end.x
+            summaries[index, 11] = geometric_end.y
         except Exception as error:
             reason = labels.get(status, f"slow status {status}")
             raise ValueError(
                 f"slider fallback failed at object {index} ({reason})"
             ) from error
+    stack_end_x_array = x_array.copy()
+    stack_end_y_array = y_array.copy()
     for index in range(count):
         if kind_array[index] == 1:
-            summary = tuple(summaries[index])
+            summary = tuple(summaries[index, :10])
             _validate_slider_summary(summary)
             end_x_array[index] += summary[0]
             end_y_array[index] += summary[1]
@@ -758,16 +769,18 @@ def _parse_fast_bytes(
             end_time_array[index] = time_array[index] + duration
             max_combo += int(summary[9])
             n_large_ticks += int(summary[9])
+            stack_end_x_array[index] += summaries[index, 10]
+            stack_end_y_array[index] += summaries[index, 11]
 
     stack_height = _stack_heights(
         time_array,
         end_time_array,
         x_array,
         y_array,
-        end_x_array,
-        end_y_array,
+        end_x_array if version >= 6.0 else stack_end_x_array,
+        end_y_array if version >= 6.0 else stack_end_y_array,
         kind_array,
-        stack_leniency,
+        450.0 * stack_leniency,
         version,
     )
     packed = PackedOsuMap(
@@ -819,6 +832,7 @@ def _pack_map(
         *,
         max_objects: int,
         radius: float,
+        stack_threshold: float,
 ) -> PackedOsuMap:
     array = _require_numpy()
     if max_objects < 1:
@@ -969,10 +983,13 @@ def _pack_map(
         velocity_array,
         tick_distance_array,
         radius,
+        _internal=True,
     )
+    stack_end_x = x.copy()
+    stack_end_y = y.copy()
     for index in range(count):
         if kind[index] == 1:
-            summary = tuple(summaries[index])
+            summary = tuple(summaries[index, :10])
             _validate_slider_summary(summary)
             end_x[index] += summary[0]
             end_y[index] += summary[1]
@@ -983,19 +1000,21 @@ def _pack_map(
             slider_dist[index] = summary[6]
             slider_duration[index] = summary[7]
             duration = summary[8]
-            end_time[index] = start + duration
+            end_time[index] = time[index] + duration
             max_combo += int(summary[9])
             n_large_ticks += int(summary[9])
+            stack_end_x[index] += summaries[index, 10]
+            stack_end_y[index] += summaries[index, 11]
 
     stack_height = _stack_heights(
         time,
         end_time,
         x,
         y,
-        end_x,
-        end_y,
+        end_x if float(getattr(beatmap, "version", 14)) >= 6.0 else stack_end_x,
+        end_y if float(getattr(beatmap, "version", 14)) >= 6.0 else stack_end_y,
         kind,
-        float(getattr(beatmap, "stack_leniency", 0.7)),
+        stack_threshold,
         float(getattr(beatmap, "version", 14)),
     )
 
@@ -1105,7 +1124,7 @@ if njit is not None:
             radius: float,
     ) -> tuple[Any, Any]:
         count = time.shape[0]
-        summaries = np.zeros((count, 10), dtype=np.float64)
+        summaries = np.zeros((count, 12), dtype=np.float64)
         slow = np.zeros(count, dtype=np.int8)
         path_x = np.empty(_MAX_PATH_POINTS, dtype=np.float64)
         path_y = np.empty(_MAX_PATH_POINTS, dtype=np.float64)
@@ -1360,6 +1379,12 @@ if njit is not None:
                 lengths[path_index] = distance
                 path_count = path_index + 1
 
+            geometric_x, geometric_y = _path_position(
+                path_x, path_y, lengths, path_count, 1.0, distance
+            )
+            summaries[obj, 10] = geometric_x
+            summaries[obj, 11] = geometric_y
+
             speed = velocity[obj]
             if distance <= 0.0 or speed <= 0.0:
                 continue
@@ -1480,7 +1505,7 @@ if njit is not None:
             summaries[obj, 9] = nested_count
         return summaries, slow
 
-    @_compile(cache=True, fastmath=True)
+    @_compile(cache=True)
     def _stack_heights(
             time: Any,
             end_time: Any,
@@ -1489,7 +1514,7 @@ if njit is not None:
             end_x: Any,
             end_y: Any,
             kind: Any,
-            stack_leniency: float,
+            threshold: float,
             version: float,
     ) -> Any:
         count = time.shape[0]
@@ -1497,31 +1522,73 @@ if njit is not None:
         if count == 0:
             return result
 
-        threshold = max(0.0, time[0] * 0.0 + 450.0 * stack_leniency)
-        for i in range(count - 1, 0, -1):
-            if kind[i] == 2:
-                continue
-            j = i - 1
-            while j >= 0:
-                if version >= 6.0:
-                    if time[i] - end_time[j] > threshold:
-                        break
-                elif time[i] - time[j] > threshold:
-                    break
+        threshold = max(0.0, threshold)
+        stack_distance_sq = _STACK_DISTANCE * _STACK_DISTANCE
+        if version >= 6.0:
+            for i in range(count - 1, 0, -1):
+                n = i
+                active = i
+                if result[active] != 0 or kind[active] == 2:
+                    continue
 
-                if kind[j] != 2:
+                if kind[active] == 0:
+                    while n > 0:
+                        n -= 1
+                        if kind[n] == 2:
+                            continue
+                        if time[active] - end_time[n] > threshold:
+                            break
+
+                        dx = end_x[n] - x[active]
+                        dy = end_y[n] - y[active]
+                        if kind[n] == 1 and dx * dx + dy * dy < stack_distance_sq:
+                            offset = result[active] - result[n] + 1
+                            for j in range(n + 1, i + 1):
+                                dx = end_x[n] - x[j]
+                                dy = end_y[n] - y[j]
+                                if dx * dx + dy * dy < stack_distance_sq:
+                                    result[j] -= offset
+                            break
+
+                        dx = x[n] - x[active]
+                        dy = y[n] - y[active]
+                        if dx * dx + dy * dy < stack_distance_sq:
+                            result[n] = result[active] + 1
+                            active = n
+                elif kind[active] == 1:
+                    while n > 0:
+                        n -= 1
+                        if kind[n] == 2:
+                            continue
+                        if time[active] - time[n] > threshold:
+                            break
+
+                        dx = end_x[n] - x[active]
+                        dy = end_y[n] - y[active]
+                        if dx * dx + dy * dy < stack_distance_sq:
+                            result[n] = result[active] + 1
+                            active = n
+        else:
+            for i in range(count):
+                if result[i] != 0 and kind[i] != 1:
+                    continue
+                start_time = end_time[i]
+                slider_stack = 0
+                for j in range(i + 1, count):
+                    if time[j] - threshold > start_time:
+                        break
                     dx = x[j] - x[i]
                     dy = y[j] - y[i]
-                    if dx * dx + dy * dy < _STACK_DISTANCE * _STACK_DISTANCE:
-                        result[j] = result[i] + 1
-                        break
-
-                    dx = end_x[j] - x[i]
-                    dy = end_y[j] - y[i]
-                    if kind[j] == 1 and dx * dx + dy * dy < _STACK_DISTANCE * _STACK_DISTANCE:
-                        result[j] = result[i] + 1
-                        break
-                j -= 1
+                    if dx * dx + dy * dy < stack_distance_sq:
+                        result[i] += 1
+                        start_time = time[j]
+                    else:
+                        dx = x[j] - end_x[i]
+                        dy = y[j] - end_y[i]
+                        if dx * dx + dy * dy < stack_distance_sq:
+                            slider_stack += 1
+                            result[j] -= slider_stack
+                            start_time = time[j]
         return result
 
 
@@ -1848,8 +1915,28 @@ if njit is not None:
 
             delta[index] = (time[index] - time[index - 1]) / clock_rate
             adjusted_delta[index] = max(delta[index], _MIN_DELTA)
-            last_x = lex[index - 1] if kind[index - 1] == 1 else sx[index - 1]
-            last_y = ley[index - 1] if kind[index - 1] == 1 else sy[index - 1]
+            min_jump_time[index] = adjusted_delta[index]
+            if index == 1:
+                last_object_end_delta_time[index] = adjusted_delta[index]
+            else:
+                last_object_end_delta_time[index] = max(
+                    (time[index] - end_time[index - 1]) / clock_rate,
+                    _MIN_DELTA,
+                )
+
+            if kind[index] == 2 or kind[index - 1] == 2:
+                continue
+
+            last_x = (
+                lex[index - 1]
+                if index > 1 and kind[index - 1] == 1
+                else sx[index - 1]
+            )
+            last_y = (
+                ley[index - 1]
+                if index > 1 and kind[index - 1] == 1
+                else sy[index - 1]
+            )
             dx = sx[index] - sx[index - 1]
             dy = sy[index] - sy[index - 1]
             jump[index] = _norm2(dx, dy) * 50.0 / radius
@@ -1857,13 +1944,8 @@ if njit is not None:
             dy = sy[index] - last_y
             lazy_jump[index] = _norm2(dx, dy) * 50.0 / radius
             min_jump[index] = lazy_jump[index]
-            min_jump_time[index] = adjusted_delta[index]
-            last_object_end_delta_time[index] = max(
-                (time[index] - end_time[index - 1]) / clock_rate,
-                _MIN_DELTA,
-            )
 
-            if kind[index - 1] == 1:
+            if index > 1 and kind[index - 1] == 1:
                 previous_travel_time = max(travel_time[index - 1], _MIN_DELTA)
                 min_jump_time[index] = max(
                     adjusted_delta[index] - previous_travel_time, _MIN_DELTA
@@ -1878,9 +1960,12 @@ if njit is not None:
                     0.0,
                 )
 
-            if index >= 2 and kind[index] != 2 and kind[index - 1] != 2:
-                last_cursor_x = sx[index - 1] if kind[index - 1] == 1 else last_x
-                last_cursor_y = sy[index - 1] if kind[index - 1] == 1 else last_y
+            if index >= 3 and kind[index - 2] != 2:
+                previous_slider_travel = (
+                    kind[index - 1] == 1 and travel_dist[index - 1] > 0.0
+                )
+                last_cursor_x = sx[index - 1] if previous_slider_travel else last_x
+                last_cursor_y = sy[index - 1] if previous_slider_travel else last_y
                 previous_x = lex[index - 2] if kind[index - 2] == 1 else sx[index - 2]
                 previous_y = ley[index - 2] if kind[index - 2] == 1 else sy[index - 2]
                 first_x = previous_x - last_cursor_x
@@ -1894,7 +1979,7 @@ if njit is not None:
                 )
                 direct_angle = math.atan2(cross, dot)
                 slider_angle = direct_angle
-                if kind[index - 1] == 1:
+                if previous_slider_travel:
                     slider_first_x = lnx[index - 1] - lex[index - 1]
                     slider_first_y = lny[index - 1] - ley[index - 1]
                     slider_second_x = sx[index] - lex[index - 1]
@@ -2017,6 +2102,7 @@ if njit is not None:
             last_object_end_delta_time: Any,
             lazy_jump: Any,
             hit_window_great: float,
+            clock_rate: float,
     ) -> float:
         if index <= 0 or kind[index] == 2:
             return 0.0
@@ -2024,11 +2110,12 @@ if njit is not None:
         history_time_max = 5000.0
         history_objects_max = 32
         epsilon = hit_window_great * 0.3
-        historical_note_count = min(index, history_objects_max)
+        historical_note_count = min(max(index - 1, 0), history_objects_max)
         rhythm_start = 0
         while (
                 rhythm_start < historical_note_count - 2
-                and time[index] - time[index - rhythm_start - 1] < history_time_max
+                and (time[index] - time[index - rhythm_start - 1]) / clock_rate
+                < history_time_max
         ):
             rhythm_start += 1
 
@@ -2056,7 +2143,7 @@ if njit is not None:
                 continue
 
             time_decay = (
-                history_time_max - (time[index] - time[current_index])
+                history_time_max - (time[index] - time[current_index]) / clock_rate
             ) / history_time_max
             note_decay = (historical_note_count - history_index) / historical_note_count
             historical_decay = min(note_decay, time_decay)
@@ -2065,7 +2152,7 @@ if njit is not None:
             difference = abs(previous_delta - current_delta)
 
             if island_delta == max_int:
-                island_delta = int(current_delta)
+                island_delta = max(int(current_delta), 25)
             ratio = max(previous_delta, current_delta) / min(
                 previous_delta, current_delta
             )
@@ -2159,7 +2246,7 @@ if njit is not None:
                         first_delta_switch = False
                     previous_island_delta = island_delta
                     previous_island_count = island_count
-                    island_delta = int(current_delta)
+                    island_delta = max(int(current_delta), 25)
                     island_count = 1
             elif previous_delta > current_delta + epsilon:
                 first_delta_switch = True
@@ -2168,7 +2255,7 @@ if njit is not None:
                 if kind[prev_index] == 1:
                     effective *= 0.6
                 start_difficulty = effective
-                island_delta = int(current_delta)
+                island_delta = max(int(current_delta), 25)
                 island_count = 1
 
             prev_prev_index = prev_index
@@ -2203,7 +2290,7 @@ if njit is not None:
         if index == 0 or kind[index] == 2:
             return 0.0, 0.0, 0.0, 0.0
 
-        travel_distance = lazy_travel_dist[index - 1]
+        travel_distance = lazy_travel_dist[index - 1] if index > 1 else 0.0
         agility = min(travel_distance + lazy_jump[index], 120.0) / 120.0
         agility *= 1000.0 / adjusted_delta[index]
         agility *= small_bonus ** 1.5
@@ -2227,7 +2314,7 @@ if njit is not None:
 
         if has_angle[index] and has_angle[index - 1]:
             constant_angle_count = 0.0
-            lower = max(0, index - 6)
+            lower = max(1, index - 6)
             for previous in range(index - 1, lower - 1, -1):
                 if max(adjusted_delta[index], adjusted_delta[previous]) > 1.1 * min(
                     adjusted_delta[index], adjusted_delta[previous]
@@ -2296,7 +2383,7 @@ if njit is not None:
                 ) / adjusted_delta[index] ** 1.45,
                 previous_distance / adjusted_delta[index - 1] ** 1.45,
             )
-            if index >= 3:
+            if index >= 4:
                 distance = _norm2(
                     stacked_x[index - 3] - stacked_x[index - 1],
                     stacked_y[index - 3] - stacked_y[index - 1],
@@ -2358,7 +2445,7 @@ if njit is not None:
             )
             flow *= 0.8 + math.sqrt(max(angular_velocity / 270.0, 0.0))
         overlap_weight = 1.0
-        if index > 2:
+        if index > 3:
             o1 = _flow_overlap(
                 stacked_x[index],
                 stacked_y[index],
@@ -2544,6 +2631,7 @@ if njit is not None:
                 last_object_end_delta_time,
                 lazy_jump,
                 hit_window_great,
+                clock_rate,
             )
             rhythm_values[index] = rhythm
             speed_values[index] = speed_current * rhythm
@@ -2761,6 +2849,8 @@ def calculate_fast(
         pm,
         max_objects=max_objects,
         radius=64.0 * (1.0 - 0.7 * (adjusted.cs - 5.0) / 5.0) / 2.0 * 1.00041,
+        stack_threshold=float(int((adjusted.hit_windows.ar or 0.0) * adjusted.clock_rate))
+        * float(getattr(pm, "stack_leniency", 0.7)),
     )
     return _attributes_from_packed(
         packed,
@@ -2802,6 +2892,8 @@ def calculate_fast_factors(
         pm,
         max_objects=max_objects,
         radius=64.0 * (1.0 - 0.7 * (adjusted.cs - 5.0) / 5.0) / 2.0 * 1.00041,
+        stack_threshold=float(int((adjusted.hit_windows.ar or 0.0) * adjusted.clock_rate))
+        * float(getattr(pm, "stack_leniency", 0.7)),
     )
     return _factors_from_packed(packed, adjusted)
 

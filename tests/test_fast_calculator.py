@@ -206,6 +206,130 @@ def test_compiled_slider_summary_matches_reference(
     assert actual == pytest.approx(reference, abs=1e-4)
 
 
+@pytest.mark.parametrize("version", [5.0, 6.0])
+def test_stack_heights_positive_circle_chain(version: float) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("numba")
+
+    actual = fast._stack_heights(
+        np.asarray([0.0, 100.0, 200.0]),
+        np.asarray([0.0, 100.0, 200.0]),
+        np.asarray([64.0, 64.0, 64.0]),
+        np.asarray([64.0, 64.0, 64.0]),
+        np.asarray([64.0, 64.0, 64.0]),
+        np.asarray([64.0, 64.0, 64.0]),
+        np.asarray([0, 0, 0], dtype=np.uint8),
+        315.0,
+        version,
+    )
+
+    assert actual.tolist() == [2, 1, 0]
+
+
+@pytest.mark.parametrize("version", [5.0, 6.0])
+def test_stack_heights_slider_tail_negative_correction(version: float) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("numba")
+
+    actual = fast._stack_heights(
+        np.asarray([0.0, 100.0, 200.0]),
+        np.asarray([300.0, 100.0, 200.0]),
+        np.asarray([0.0, 100.0, 100.0]),
+        np.asarray([0.0, 0.0, 0.0]),
+        np.asarray([100.0, 100.0, 100.0]),
+        np.asarray([0.0, 0.0, 0.0]),
+        np.asarray([1, 0, 0], dtype=np.uint8),
+        315.0,
+        version,
+    )
+
+    assert actual.tolist() == [0, -1, -2]
+
+
+def test_modern_stack_heights_slider_start_chain_and_spinner() -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("numba")
+
+    slider_chain = fast._stack_heights(
+        np.asarray([0.0, 100.0, 200.0]),
+        np.asarray([50.0, 150.0, 250.0]),
+        np.asarray([32.0, 32.0, 32.0]),
+        np.asarray([32.0, 32.0, 32.0]),
+        np.asarray([32.0, 32.0, 32.0]),
+        np.asarray([32.0, 32.0, 32.0]),
+        np.asarray([1, 1, 1], dtype=np.uint8),
+        315.0,
+        6.0,
+    )
+    with_spinner = fast._stack_heights(
+        np.asarray([0.0, 100.0, 200.0]),
+        np.asarray([0.0, 150.0, 200.0]),
+        np.asarray([32.0, 32.0, 32.0]),
+        np.asarray([32.0, 32.0, 32.0]),
+        np.asarray([32.0, 32.0, 32.0]),
+        np.asarray([32.0, 32.0, 32.0]),
+        np.asarray([0, 2, 0], dtype=np.uint8),
+        315.0,
+        6.0,
+    )
+
+    assert slider_chain.tolist() == [2, 1, 0]
+    assert with_spinner.tolist() == [1, 0, 0]
+
+
+def test_modern_circle_stacking_preserves_fractional_times() -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("numba")
+
+    actual = fast._stack_heights(
+        np.asarray([685.1, 1000.9]),
+        np.asarray([685.1, 1000.9]),
+        np.asarray([32.0, 32.0]),
+        np.asarray([32.0, 32.0]),
+        np.asarray([32.0, 32.0]),
+        np.asarray([32.0, 32.0]),
+        np.asarray([0, 0], dtype=np.uint8),
+        315.0,
+        6.0,
+    )
+
+    assert actual.tolist() == [0, 0]
+
+
+def test_modern_odd_repeat_stacking_uses_generated_tail() -> None:
+    data = b"\n".join([
+        b"osu file format v14",
+        b"[General]",
+        b"Mode:0",
+        b"StackLeniency:0.7",
+        b"[Difficulty]",
+        b"ApproachRate:10",
+        b"CircleSize:4",
+        b"SliderMultiplier:1.4",
+        b"SliderTickRate:1",
+        b"[TimingPoints]",
+        b"0,500,4,1,0,100,1,0",
+        b"[HitObjects]",
+        b"256,192,0,2,0,L|356:192,2,100",
+        b"356,192,800,1,0",
+    ])
+
+    direct = _parse_fast_bytes(data, 32).packed
+    prepared = PreparedBeatmap.from_user_beatmap(Beatmap.from_bytes(data))
+    prepared_inner = getattr(prepared, "inner", prepared)
+    packed = fast._pack_map(
+        prepared_inner,
+        max_objects=32,
+        radius=36.48,
+        stack_threshold=315.0,
+    )
+
+    assert direct.end_x.tolist() == pytest.approx([256.0, 356.0])
+    assert direct.stack_height.tolist() == [0, 0]
+    assert packed.end_x.tolist() == pytest.approx([256.0, 356.0])
+    assert packed.stack_height.tolist() == [0, 0]
+
+
 def test_fast_parser_batches_common_sliders(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("numpy")
     pytest.importorskip("numba")
