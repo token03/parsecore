@@ -1074,6 +1074,9 @@ if njit is not None:
             value = peak_values[skipped]
             length = peak_lengths[skipped]
             added = 0.0
+            chunks = math.ceil(length / 20.0)
+            if reduced_count + chunks > capacity:
+                raise ValueError("reduced strain capacity exceeded")
             while added < length:
                 scale = math.log10(
                     1.0
@@ -1090,6 +1093,8 @@ if njit is not None:
             reduced_time += length
             skipped += 1
 
+        if reduced_count + peak_count - skipped > capacity:
+            raise ValueError("reduced strain capacity exceeded")
         for index in range(skipped, peak_count):
             reduced_values[reduced_count] = peak_values[index]
             reduced_lengths[reduced_count] = peak_lengths[index]
