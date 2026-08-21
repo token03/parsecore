@@ -1053,10 +1053,20 @@ if njit is not None:
             progress: float,
             distance: float,
     ) -> tuple[float, float]:
-        target = max(0.0, min(1.0, progress)) * distance
-        index = 1
-        while index < path_count and lengths[index] < target:
-            index += 1
+        if progress <= 0.0:
+            return path_x[0], path_y[0]
+        if progress >= 1.0:
+            return path_x[path_count - 1], path_y[path_count - 1]
+        target = progress * distance
+        lower = 1
+        upper = path_count
+        while lower < upper:
+            middle = (lower + upper) >> 1
+            if lengths[middle] < target:
+                lower = middle + 1
+            else:
+                upper = middle
+        index = lower
         if index >= path_count:
             return path_x[path_count - 1], path_y[path_count - 1]
         previous = index - 1
@@ -1851,8 +1861,6 @@ if njit is not None:
             end_time: Any,
             x: Any,
             y: Any,
-            end_x: Any,
-            end_y: Any,
             lazy_end_x: Any,
             lazy_end_y: Any,
             last_nested_x: Any,
@@ -1871,7 +1879,6 @@ if njit is not None:
         adjusted_delta = np.zeros(count, dtype=np.float64)
         jump = np.zeros(count, dtype=np.float64)
         lazy_jump = np.zeros(count, dtype=np.float64)
-        min_jump = np.zeros(count, dtype=np.float64)
         min_jump_time = np.zeros(count, dtype=np.float64)
         travel_dist = np.zeros(count, dtype=np.float64)
         travel_time = np.zeros(count, dtype=np.float64)
@@ -1885,8 +1892,6 @@ if njit is not None:
         offset_scale = scale * -6.4
         sx = x + stack_height * offset_scale
         sy = y + stack_height * offset_scale
-        ex = end_x + stack_height * offset_scale
-        ey = end_y + stack_height * offset_scale
         lex = lazy_end_x + stack_height * offset_scale
         ley = lazy_end_y + stack_height * offset_scale
         lnx = last_nested_x + stack_height * offset_scale
@@ -1939,21 +1944,11 @@ if njit is not None:
             dx = sx[index] - last_x
             dy = sy[index] - last_y
             lazy_jump[index] = _norm2(dx, dy) * 50.0 / radius
-            min_jump[index] = lazy_jump[index]
 
             if index > 1 and kind[index - 1] == 1:
                 previous_travel_time = max(travel_time[index - 1], _MIN_DELTA)
                 min_jump_time[index] = max(
                     adjusted_delta[index] - previous_travel_time, _MIN_DELTA
-                )
-
-                tail_jump = _norm2(
-                    ex[index - 1] - sx[index],
-                    ey[index - 1] - sy[index],
-                ) * 50.0 / radius
-                min_jump[index] = max(
-                    min(lazy_jump[index] - 30.0, tail_jump - 120.0),
-                    0.0,
                 )
 
             if index >= 3 and kind[index - 2] != 2:
@@ -1996,7 +1991,6 @@ if njit is not None:
             adjusted_delta,
             jump,
             lazy_jump,
-            min_jump,
             min_jump_time,
             travel_dist,
             travel_time,
@@ -2053,6 +2047,7 @@ if njit is not None:
             adjusted_delta: Any,
             lazy_jump: Any,
             hit_window_great: float,
+            bpm_bonus: float,
     ) -> float:
         if index == 0 or kind[index] == 2:
             return 0.0
@@ -2075,7 +2070,7 @@ if njit is not None:
             base = (75.0 - strain_time) / 40.0
             speed_bonus = 0.75 * base * base
         speed = (1.0 + speed_bonus) * 1000.0 / strain_time
-        speed *= 1.0 / (1.0 - 0.3 ** (adjusted_delta[index] / 1000.0))
+        speed *= bpm_bonus
         return float(speed * double_tap)
 
 
@@ -2098,6 +2093,9 @@ if njit is not None:
             lazy_jump: Any,
             hit_window_great: float,
             clock_rate: float,
+            island_deltas: Any,
+            island_counts: Any,
+            island_occurrences: Any,
     ) -> float:
         if index <= 0 or kind[index] == 2:
             return 0.0
@@ -2124,9 +2122,6 @@ if njit is not None:
         island_count = 1
         previous_island_delta = max_int
         previous_island_count = 1
-        island_deltas = np.empty(history_objects_max, dtype=np.int64)
-        island_counts = np.empty(history_objects_max, dtype=np.int64)
-        island_occurrences = np.ones(history_objects_max, dtype=np.int64)
         island_total = 0
         start_difficulty = 0.0
         first_delta_switch = False
@@ -2222,6 +2217,7 @@ if njit is not None:
                     if not found and island_total < history_objects_max:
                         island_deltas[island_total] = island_delta
                         island_counts[island_total] = island_count
+                        island_occurrences[island_total] = 1
                         island_total += 1
 
                     previous_feasibility = _double_tap_feasibility(
@@ -2264,12 +2260,9 @@ if njit is not None:
     def _aim_value(
             index: int,
             kind: Any,
-            repeats: Any,
             adjusted_delta: Any,
             jump: Any,
             lazy_jump: Any,
-            min_jump: Any,
-            min_jump_time: Any,
             travel_dist: Any,
             travel_time: Any,
             lazy_travel_dist: Any,
@@ -2280,21 +2273,13 @@ if njit is not None:
             stacked_y: Any,
             object_radius: float,
             small_bonus: float,
+            sqrt_small_bonus: float,
+            agility: float,
             with_slider: bool,
     ) -> Any:
         if index == 0 or kind[index] == 2:
             return 0.0, 0.0, 0.0, 0.0
 
-        travel_distance = (
-            lazy_travel_dist[index - 1]
-            if with_slider and index > 1
-            else 0.0
-        )
-        agility_distance = lazy_jump[index] if with_slider else jump[index]
-        agility = min(travel_distance + agility_distance, 120.0) / 120.0
-        agility *= 1000.0 / adjusted_delta[index]
-        agility *= small_bonus ** 1.5
-        agility *= 1.0 / (1.0 - 0.2 ** (adjusted_delta[index] / 1000.0))
         if index <= 2 or kind[index - 1] == 2:
             return 0.0, agility, 0.0, 0.0
 
@@ -2309,6 +2294,7 @@ if njit is not None:
                 (lazy_travel_dist[index - 1] + lazy_jump[index])
                 / adjusted_delta[index],
             )
+        flow_velocity = current_velocity
 
         snap = current_velocity
 
@@ -2432,7 +2418,8 @@ if njit is not None:
             1.0 - 0.03 ** (adjusted_delta[index] / 1000.0) ** 0.65
         )
 
-        flow = current_velocity * math.sqrt(small_bonus)
+        current_velocity = flow_velocity
+        flow = current_velocity * sqrt_small_bonus
         delta_difference = (
             max(adjusted_delta[index], adjusted_delta[index - 1])
             - min(adjusted_delta[index], adjusted_delta[index - 1])
@@ -2510,12 +2497,10 @@ if njit is not None:
     def _calculate_kernel(
             time: Any,
             kind: Any,
-            repeats: Any,
             delta: Any,
             adjusted_delta: Any,
             jump: Any,
             lazy_jump: Any,
-            min_jump: Any,
             min_jump_time: Any,
             travel_dist: Any,
             travel_time: Any,
@@ -2548,17 +2533,36 @@ if njit is not None:
         flow_current = 0.0
 
         speed_current = 0.0
+        od_multiplier = 0.985 + max(overall_difficulty, 0.0) ** 2 / 4000.0
+        sqrt_small_bonus = math.sqrt(small_bonus)
+        small_bonus_1p5 = small_bonus ** 1.5
+        island_deltas = np.empty(32, dtype=np.int64)
+        island_counts = np.empty(32, dtype=np.int64)
+        island_occurrences = np.empty(32, dtype=np.int64)
 
         for index in range(count):
-            _, _, _, aim_raw = _aim_value(
+            dt = adjusted_delta[index]
+            aim_decay = 0.2 ** (dt / 1000.0)
+            aim_gain = 1.0 - aim_decay
+            speed_decay = 0.3 ** (dt / 1000.0)
+            speed_gain = 1.0 - speed_decay
+            agility_raw = 0.0
+            if index > 0 and kind[index] != 2:
+                travel_distance = (
+                    lazy_travel_dist[index - 1] if index > 1 else 0.0
+                )
+                agility_raw = min(
+                    travel_distance + lazy_jump[index], 120.0
+                ) / 120.0
+                agility_raw *= 1000.0 / dt
+                agility_raw *= small_bonus_1p5
+                agility_raw *= 1.0 / aim_gain
+            snap_raw, _, flow_raw, aim_raw = _aim_value(
                 index,
                 kind,
-                repeats,
                 adjusted_delta,
                 jump,
                 lazy_jump,
-                min_jump,
-                min_jump_time,
                 travel_dist,
                 travel_time,
                 lazy_travel_dist,
@@ -2569,43 +2573,50 @@ if njit is not None:
                 stacked_y,
                 object_radius,
                 small_bonus,
+                sqrt_small_bonus,
+                agility_raw,
                 True,
             )
-            snap_raw, agility_raw, flow_raw, aim_no_slider_raw = _aim_value(
-                index,
-                kind,
-                repeats,
-                adjusted_delta,
-                jump,
-                lazy_jump,
-                min_jump,
-                min_jump_time,
-                travel_dist,
-                travel_time,
-                lazy_travel_dist,
-                angle,
-                has_angle,
-                normalised_vector_angle,
-                stacked_x,
-                stacked_y,
-                object_radius,
-                small_bonus,
-                False,
+            slider_sensitive = (
+                kind[index] == 1
+                or (index > 0 and kind[index - 1] == 1)
+                or (index > 1 and kind[index - 2] == 1)
             )
-            aim_raw *= 0.985 + max(overall_difficulty, 0.0) ** 2 / 4000.0
-            aim_no_slider_raw *= 0.985 + max(overall_difficulty, 0.0) ** 2 / 4000.0
-            aim_current *= _decay(0.2, adjusted_delta[index])
-            aim_no_slider_current *= _decay(0.2, adjusted_delta[index])
-            aim_current += aim_raw * (1.0 - _decay(0.2, adjusted_delta[index]))
-            aim_no_slider_current += aim_no_slider_raw * (
-                1.0 - _decay(0.2, adjusted_delta[index])
+            if slider_sensitive:
+                snap_raw, _, flow_raw, aim_no_slider_raw = _aim_value(
+                    index,
+                    kind,
+                    adjusted_delta,
+                    jump,
+                    lazy_jump,
+                    travel_dist,
+                    travel_time,
+                    lazy_travel_dist,
+                    angle,
+                    has_angle,
+                    normalised_vector_angle,
+                    stacked_x,
+                    stacked_y,
+                    object_radius,
+                    small_bonus,
+                    sqrt_small_bonus,
+                    agility_raw,
+                    False,
+                )
+            else:
+                aim_no_slider_raw = aim_raw
+            aim_raw *= od_multiplier
+            aim_no_slider_raw *= od_multiplier
+            aim_current = aim_current * aim_decay + aim_raw * aim_gain
+            aim_no_slider_current = (
+                aim_no_slider_current * aim_decay
+                + aim_no_slider_raw * aim_gain
             )
-            snap_current *= _decay(0.2, adjusted_delta[index])
-            agility_current *= _decay(0.2, adjusted_delta[index])
-            flow_current *= _decay(0.2, adjusted_delta[index])
-            snap_current += snap_raw * (1.0 - _decay(0.2, adjusted_delta[index]))
-            agility_current += agility_raw * (1.0 - _decay(0.2, adjusted_delta[index]))
-            flow_current += flow_raw * (1.0 - _decay(0.2, adjusted_delta[index]))
+            snap_current = snap_current * aim_decay + snap_raw * aim_gain
+            agility_current = (
+                agility_current * aim_decay + agility_raw * aim_gain
+            )
+            flow_current = flow_current * aim_decay + flow_raw * aim_gain
             aim_values[index] = aim_current
             aim_no_slider_values[index] = aim_no_slider_current
             snap_values[index] = snap_current
@@ -2619,9 +2630,11 @@ if njit is not None:
                 adjusted_delta,
                 lazy_jump,
                 hit_window_great,
+                1.0 / speed_gain,
             )
-            speed_current *= _decay(0.3, adjusted_delta[index])
-            speed_current += speed_raw * (1.0 - _decay(0.3, adjusted_delta[index])) * 1.16
+            speed_current = (
+                speed_current * speed_decay + speed_raw * speed_gain * 1.16
+            )
             rhythm = _rhythm_value(
                 index,
                 time,
@@ -2632,6 +2645,9 @@ if njit is not None:
                 lazy_jump,
                 hit_window_great,
                 clock_rate,
+                island_deltas,
+                island_counts,
+                island_occurrences,
             )
             tap_values[index] = speed_current
             speed_values[index] = speed_current * rhythm
@@ -2680,8 +2696,6 @@ def _calculate_from_packed(
         packed.end_time,
         packed.x,
         packed.y,
-        packed.end_x,
-        packed.end_y,
         packed.lazy_end_x,
         packed.lazy_end_y,
         packed.last_nested_x,
@@ -2698,7 +2712,6 @@ def _calculate_from_packed(
     result = _calculate_kernel(
         packed.time,
         packed.kind,
-        packed.repeats,
         preprocessed[0],
         preprocessed[1],
         preprocessed[2],
@@ -2713,10 +2726,9 @@ def _calculate_from_packed(
         preprocessed[11],
         preprocessed[12],
         preprocessed[13],
-        preprocessed[14],
         radius,
         adjusted.clock_rate,
-        preprocessed[15],
+        preprocessed[14],
         (79.5 - hit_window_great / 2.0) / 6.0,
         hit_window_great,
     )
